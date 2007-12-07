@@ -1,5 +1,5 @@
 # vtwm version
-VERSION = 0.1
+VERSION = 0.01
 
 # Customize below to fit your system
 
