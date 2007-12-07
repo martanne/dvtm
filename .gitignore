@@ -1,0 +1,11 @@
+# normal ignores
+.*
+*.[ao]
+*.lo
+*.so
+tags
+!.gitignore
+
+# top-level ignores
+/dvtm
+/log
