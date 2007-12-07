@@ -1,0 +1,35 @@
+dvtm - dynamic virtual terminal manager
+=======================================
+
+dvtm brings dwm and it's concept of tiling window management to 
+the console. See http://www.brain-dump.org/projects/dvtm for
+the latest version.
+
+Requirements
+------------
+In order to build dvtm you will need:
+
+ * librote (http://librote.sf.net patched with librote.patch)
+ * libncurses
+
+Installation
+------------
+Edit config.mk to match your local setup (dvtm is installed into
+the /usr/local namespace by default).
+
+Afterwards enter the following command to build and install dvtm (if
+necessary as root):
+
+    make clean install
+
+Running dvtm
+------------
+Just run dvtm from the console, redirect stderr to a file (just in
+case something goes wrong you will see it there).
+
+    dvtm 2> log
+
+Configuration
+-------------
+The configuration of dvtm is done by creating a custom config.h
+and (re)compiling the source code.
