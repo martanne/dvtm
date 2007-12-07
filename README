@@ -9,7 +9,7 @@ Requirements
 ------------
 In order to build dvtm you will need:
 
- * librote (http://librote.sf.net patched with librote.patch)
+ * librote (http://rote.sf.net patched with librote.patch)
  * libncurses
 
 Installation
