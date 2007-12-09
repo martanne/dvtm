@@ -9,3 +9,6 @@ tags
 # top-level ignores
 /dvtm
 /log
+/log
+/debug
+/patches
