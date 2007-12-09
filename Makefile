@@ -21,6 +21,10 @@ dvtm: ${OBJ}
 	@echo CC -o $@
 	@${CC} -o $@ ${OBJ} ${LDFLAGS}
 
+debug: clean
+#	@echo make CFLAGS='"${DEBUG_CFLAGS}"'
+	@make CFLAGS='${DEBUG_CFLAGS}'
+
 clean:
 	@echo cleaning
 	@rm -f dvtm ${OBJ} dvtm-${VERSION}.tar.gz
@@ -35,6 +39,8 @@ dist: clean
 	@rm -rf dvtm-${VERSION}
 
 install: all
+	@echo stripping executable
+	@strip -s dvtm
 	@echo installing executable file to ${DESTDIR}${PREFIX}/bin
 	@mkdir -p ${DESTDIR}${PREFIX}/bin
 	@cp -f dvtm ${DESTDIR}${PREFIX}/bin
