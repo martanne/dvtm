@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <rote/rote.h>
+#include <stdbool.h>
 
 typedef struct {
 	const char *symbol;
@@ -410,7 +411,11 @@ void
 resize_screen(){
 	debug("resize_screen(), w: %d h: %d\n",width, height);
 	if(need_screen_resize){
+	#if defined(__OpenBSD__) || defined(__NetBSD__)
+		resizeterm(height,width);
+	#else
 		resize_term(height,width);
+	#endif
 		wresize(stdscr,height,width);
 		wrefresh(curscr);
 		refresh();
