@@ -488,7 +488,7 @@ int
 main(int argc, char *argv[]) {
 	int code;
 	if(argc == 2 && !strcmp("-v", argv[1])){
-		eprint("dvtm-"VERSION", (c) 2007 Marc Andre Tanner\n");
+		printf("dvtm-"VERSION" (c) 2007 Marc Andre Tanner\n");
 		exit(EXIT_SUCCESS);
 	} else if(argc != 1){
 		eprint("usage: dvtm [-v]\n");
