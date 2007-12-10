@@ -486,8 +486,7 @@ quit(const char *arg){
 
 int 
 main(int argc, char *argv[]) {
-	int i,code;
-
+	int code;
 	if(argc == 2 && !strcmp("-v", argv[1])){
 		eprint("dvtm-"VERSION", (c) 2007 Marc Andre Tanner\n");
 		exit(EXIT_SUCCESS);
@@ -495,34 +494,22 @@ main(int argc, char *argv[]) {
 		eprint("usage: dvtm [-v]\n");
 		exit(EXIT_FAILURE);
 	}
-
-	Key *keybind[KEY_MAX];
-	for(i = 0; i < KEY_MAX; i++)
-		keybind[i] = NULL;
-	for(i = 0; i < countof(keys); i++)
-		keybind[keys[i].code] = &keys[i];
-
 	setup();
 	while((code = getch())){
 		/* if no key was pressed then just update the screen */
-		if(code < 0)
-			goto update;
-
-		if(is_modifier(code)){
-			int mod = code;
-			do {
-				code = getch();
-			} while (code < 0);
-			Key* key = keybinding(mod,code);
-			if(key)
-				key->action(key->arg);
-		} else if(keybind[code] && keybind[code]->mod == 0){
-			keybind[code]->action(keybind[code]->arg);
-		} else if(sel){
-			rote_vt_keypress(sel->term, code);
+		if(code >= 0){
+			if(is_modifier(code)){
+				int mod = code;
+				do {
+					code = getch();
+				} while (code < 0);
+				Key* key = keybinding(mod,code);
+				if(key)
+					key->action(key->arg);
+			} else if(sel)
+				rote_vt_keypress(sel->term, code);
 		}
 
-	update:
 		if(clients)
 			draw_all(false);
 		if(need_screen_resize)
