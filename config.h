@@ -6,8 +6,8 @@
 #define TITLE "[ %s ]"
 /* master width factor [0.1 .. 0.9] */
 #define MWFACT  0.5	
-/* timeout for keypresses in millicseconds */
-#define TIMEOUT 150 
+/* defines how often all window's are repainted (in milliseconds) */
+#define REDRAW_TIMEOUT  50 
 
 #include "tile.c"
 #include "grid.c"

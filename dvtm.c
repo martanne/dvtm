@@ -275,17 +275,26 @@ draw_content(Client *c){
 
 void
 draw_all(bool border){
-	int x,y;
 	Client *c;
 	curs_set(0);
-	getsyx(y,x);
 	for(c = clients; c; c = c->next){
+		if(c == sel)
+			continue;
 		draw_content(c);
 		if(border)
 			draw_border(c);
 		wnoutrefresh(c->window);
 	}
-	setsyx(y,x);
+	/* as a last step the selected window is redrawn,
+	 * this has the effect that the cursor position is
+	 * accurate
+	 */
+	if(sel){
+		draw_content(sel);
+		if(border)
+			draw_border(sel);
+		wnoutrefresh(sel->window);
+	}
 	curs_set(1);
 	doupdate();
 }
@@ -440,7 +449,7 @@ setup(){
 	start_color();
 	noecho();
    	keypad(stdscr, TRUE);
-	timeout(TIMEOUT);
+	timeout(REDRAW_TIMEOUT);
 	raw();
 	/* initialize the color pairs the way rote_vt_draw expects it. You might
 	 * initialize them differently, but in that case you would need
@@ -477,7 +486,7 @@ quit(const char *arg){
 
 int 
 main(int argc, char *argv[]) {
-	int i,code,error = 1,interval = 0;
+	int i,code;
 
 	if(argc == 2 && !strcmp("-v", argv[1])){
 		eprint("dvtm-"VERSION", (c) 2007 Marc Andre Tanner\n");
@@ -514,15 +523,8 @@ main(int argc, char *argv[]) {
 		}
 
 	update:
-		if(sel){
-			if(++interval == 10){
-				draw_all(false);
-				interval = 0;
-			} else {
-				draw_content(sel);
-				wrefresh(sel->window);
-			}
-		}
+		if(clients)
+			draw_all(false);
 		if(need_screen_resize)
 			resize_screen();
 		if(client_killed){
