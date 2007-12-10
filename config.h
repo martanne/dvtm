@@ -19,7 +19,7 @@ Layout layouts[] = {
 	{ "TTT", bstack },
 };
 
-#define MOD CTRL('a')
+#define MOD CTRL('g')
 
 Key keys[] = {
 	{ MOD, 'q', quit , NULL },
