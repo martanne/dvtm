@@ -30,6 +30,7 @@ struct Client {
 	RoteTerm *term;
 	const char *cmd;
 	const char *title;
+	unsigned char order;
 	pid_t pid;
 	short int x;
 	short int y;
@@ -107,19 +108,26 @@ int width,height;
 
 void
 attach(Client *c) {
+	unsigned char order;
 	if(clients)
 		clients->prev = c;
 	c->next = clients;
 	c->prev = NULL;
 	clients = c;
+	for(order = 1; c; c = c->next,order++)
+		c->order = order;
 }
 
 void
 detach(Client *c) {
+	Client *d;
 	if(c->prev)
 		c->prev->next = c->next;
-	if(c->next)
+	if(c->next){
 		c->next->prev = c->prev;
+		for (d = c->next; d; d = d->next)
+			--d->order;
+	}
 	if(c == clients)
 		clients = c->next;
 	c->next = c->prev = NULL;
@@ -132,7 +140,7 @@ zoom(const char *arg) {
 	if(!sel)
 		return;
 	if((c = sel) == clients)
-		if(!(c =c->next))
+		if(!(c = c->next))
 			return;
 	detach(c);
 	attach(c);
@@ -154,11 +162,10 @@ focus(Client *c){
 
 void
 focusn(const char *arg){
-	unsigned int i;
 	Client *c;
 
-	for(i = 0, c = clients; c; c = c->next,i++){
-		if(i == atoi(arg)){
+	for(c = clients; c; c = c->next){
+		if (c->order == atoi(arg)){
 			focus(c);
 			break;
 		}
@@ -252,20 +259,21 @@ draw(Client *c){
 
 void
 draw_border(Client *c){
+	int x,y;
 	if(sel == c)
 		wattron(c->window,ATTR_SELECTED);
 	else
 		wattrset(c->window,ATTR_NORMAL);
 
-	wborder(c->window, 0, 0, 0, 0, 0, 0, 0, 0);
-	if(c->title){
-		curs_set(0);
-		int x,y;
-		getyx(c->window,y,x);
-		mvwprintw(c->window,0,2, TITLE, c->title);
-		wmove(c->window,y,x);
-		curs_set(1);
-	}
+	box(c->window,0,0);
+	curs_set(0);
+	getyx(c->window,y,x);
+	mvwprintw(c->window,0,2, TITLE,
+	          c->title ? c->title : "",
+	          c->title ? SEPARATOR : "",
+		  c->order);
+	wmove(c->window,y,x);
+	curs_set(1);
 }
 
 void
@@ -311,6 +319,7 @@ create(const char *cmd){
 	c->h = height;
 	c->x = 0;
 	c->y = 0;
+	c->order = 0;
 	debug("client with pid %d forked\n",c->pid);
 	attach(c);
 	focus(c);
@@ -363,9 +372,7 @@ move_client(Client *c,int x, int y){
 		c->x = x;
 		c->y = y;
 	}
-		
 }
-
 
 int
 is_modifier(unsigned int mod){

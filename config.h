@@ -2,8 +2,12 @@
 #define ATTR_SELECTED COLOR(COLOR_BLACK,COLOR_RED)
 /* curses attributes for normal (not selected) windows */
 #define ATTR_NORMAL   A_NORMAL
-/* printf format string for the window title %s is replaced by the title */
-#define TITLE "[ %s ]"
+/* separator between window title and window number */
+#define SEPARATOR " | "
+/* printf format string for the window title, first %s 
+ * is replaced by the title, second %s is replaced by
+ * the SEPARATOR, %d stands for the window number */
+#define TITLE "[%s%s#%d]"
 /* master width factor [0.1 .. 0.9] */
 #define MWFACT  0.5	
 /* defines how often all window's are repainted (in milliseconds) */
