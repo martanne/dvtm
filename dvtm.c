@@ -497,8 +497,15 @@ main(int argc, char *argv[]) {
 	if(argc == 2 && !strcmp("-v", argv[1])){
 		printf("dvtm-"VERSION" (c) 2007 Marc Andre Tanner\n");
 		exit(EXIT_SUCCESS);
+	} else if(argc == 3 && !strcmp("-m", argv[1])){
+		unsigned int i;
+		char *mod = argv[2];
+		if(mod[0] == '^' && mod[1])
+			*mod = CTRL(mod[1]);
+		for(i = 0; i < countof(keys); i++)
+			keys[i].mod = *mod;
 	} else if(argc != 1){
-		eprint("usage: dvtm [-v]\n");
+		eprint("usage: dvtm [-v] [-m mod]\n");
 		exit(EXIT_FAILURE);
 	}
 	setup();
