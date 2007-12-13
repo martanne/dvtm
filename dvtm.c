@@ -88,15 +88,18 @@ void focusprev(const char *arg);
 bool isarrange(void (*func)());
 void setmwfact(const char *arg);
 void setlayout(const char *arg);
+void settimeout(const char *arg);
 void eprint(const char *errstr, ...);
 Client* get_client_by_pid(pid_t pid);
 
 unsigned int waw,wah,wax = 0,way = 0;
-double mwfact = 0.5;
 Client *clients = NULL;
+extern double mwfact;
 
 #include "config.h"
 
+double mwfact = MWFACT;
+int redraw_timeout = REDRAW_TIMEOUT;
 Client *sel = NULL;
 /* should probably be a linked list? */
 Client *client_killed = NULL;
@@ -226,6 +229,23 @@ setlayout(const char *arg) {
 		ltidx = i;
 	}
 	arrange();
+}
+
+void
+settimeout(const char *arg) {
+	int delta;
+	
+	if(arg == NULL)
+		redraw_timeout = REDRAW_TIMEOUT;
+	else if(1 == sscanf(arg, "%d", &delta)) {
+		if(arg[0] == '+' || arg[0] == '-')
+			redraw_timeout += delta;
+		else
+			redraw_timeout = delta;
+		if(redraw_timeout < 0)
+			redraw_timeout = 0;
+	}
+	timeout(redraw_timeout);
 }
 
 void
