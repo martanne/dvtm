@@ -13,6 +13,7 @@
 #include <ncurses.h>
 #include <stdio.h>
 #include <signal.h>
+#include <locale.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
@@ -472,6 +473,7 @@ eprint(const char *errstr, ...) {
 
 void
 setup(){
+	setlocale(LC_ALL,"");
 	initscr();
 	start_color();
 	noecho();

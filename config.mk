@@ -7,10 +7,11 @@ PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 
 INCS = -I. -I/usr/include -I/usr/local/include 
-LIBS = -L/usr/lib -L/usr/local/lib -lc -lcurses -lrote
+LIBS = -lc -lcurses -lrote
+LIBS_UTF8 = -lc -lncursesw -lrotew
 
 CFLAGS = -Os ${INCS} -DVERSION=\"${VERSION}\"
-LDFLAGS = ${LIBS}
+LDFLAGS = -L/usr/lib -L/usr/local/lib ${LIBS}
 
 DEBUG_CFLAGS = -O0 -g -ggdb ${INCS} -Wall -DVERSION=\"${VERSION}\" -DDEBUG
 

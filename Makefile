@@ -21,8 +21,10 @@ dvtm: ${OBJ}
 	@echo CC -o $@
 	@${CC} -o $@ ${OBJ} ${LDFLAGS}
 
+unicode:
+	@make LIBS='${LIBS_UTF8}'
+
 debug: clean
-#	@echo make CFLAGS='"${DEBUG_CFLAGS}"'
 	@make CFLAGS='${DEBUG_CFLAGS}'
 
 clean:
@@ -56,4 +58,4 @@ uninstall:
 #	@echo removing manual page from ${DESTDIR}${MANPREFIX}/man1
 #	@rm -f ${DESTDIR}${MANPREFIX}/man1/dvtm.1
 
-.PHONY: all options clean dist install uninstall
+.PHONY: all options clean dist install uninstall debug unicode
