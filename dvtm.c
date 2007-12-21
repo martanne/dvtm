@@ -42,6 +42,7 @@ struct Client {
 	short int y;
 	short int w;
 	short int h;
+	bool minimized;
 	Client *next;
 	Client *prev;
 };
@@ -90,7 +91,10 @@ void move_client(Client *c,int x, int y);
 void focus(Client *c);
 void focusn(const char *arg);
 void focusnext(const char *arg);
+void focusnextnm(const char *arg);
 void focusprev(const char *arg);
+void focusprevnm(const char *arg);
+void toggleminimize(const char *arg);
 bool isarrange(void (*func)());
 void setmwfact(const char *arg);
 void setlayout(const char *arg);
@@ -176,7 +180,9 @@ focusn(const char *arg){
 	for(c = clients; c; c = c->next){
 		if (c->order == atoi(arg)){
 			focus(c);
-			break;
+			if(c->minimized)
+				toggleminimize(NULL);
+			return;
 		}
 	}
 }
@@ -196,7 +202,24 @@ focusnext(const char *arg) {
 }
 
 void
-focusprev(const char *arg) {
+focusnextnm(const char *arg) {
+	Client *c;
+
+	if(!sel)
+		return;
+	c = sel;
+	do {
+		c = c->next;
+		if(c == sel)
+			break;
+		if(!c)
+			c = clients;
+	} while(c->minimized);
+	focus(c);
+}
+
+void
+focusprev(const char *arg){
 	Client *c;
 
 	if(!sel)
@@ -206,6 +229,81 @@ focusprev(const char *arg) {
 		for(c = clients; c && c->next; c = c->next);
 	if(c)
 		focus(c);
+}
+
+void
+focusprevnm(const char *arg){
+	Client *c;
+
+	if(!sel)
+		return;
+	c = sel;
+	do {
+		c = c->prev;
+		if(c == sel)
+			break;
+		if(!c)
+			for(c = clients; c && c->next; c = c->next);
+	} while(c->minimized);
+	focus(c);
+}
+
+void
+attachafter(Client *c, Client *a){ /* attach c after a */
+	unsigned int o;
+	if(c == a)
+		return;
+	if(!a)
+		for(a = clients; a && a->next; a = a->next);
+		
+	if(a){
+		if(a->next)
+			a->next->prev = c;
+		c->next = a->next;
+		c->prev = a;
+		a->next = c;
+		for(o = a->order; c; c = c->next)
+			c->order = ++o;
+	}
+}
+
+void
+toggleminimize(const char *arg){
+	Client *c,*m;
+	unsigned int n;
+	if(!sel)
+		return;
+	/* the last window can't be minimized */
+	if(!sel->minimized){
+		for(n = 0, c = clients; c; c = c->next)
+			if(!c->minimized)
+				n++;
+		if(n == 1)
+			return;
+	}
+	sel->minimized = !sel->minimized;
+	m = sel;
+	/* check whether the master client was minimized */ 
+	if(sel == clients && sel->minimized){
+		c = sel->next;
+		detach(c);
+		attach(c);
+		focus(c);
+		detach(m);
+		for(; c && c->next && !c->next->minimized; c = c->next);
+		attachafter(m,c);
+	} else if(m->minimized){
+		/* non master window got minimized move it above all other 
+		 * minimized ones */
+		focusnextnm(NULL);
+		detach(m);
+		for(c = clients; c && c->next && !c->next->minimized; c = c->next);
+		attachafter(m,c);
+	} else { /* window is no longer minimized, move it to the master area */
+		detach(m);
+		attach(m);
+	}
+	arrange();
 }
 
 void
@@ -290,8 +388,10 @@ draw_border(Client *c){
 		wattron(c->window,ATTR_SELECTED);
 	else
 		wattrset(c->window,ATTR_NORMAL);
-
-	box(c->window,0,0);
+	if(c->minimized)
+		mvwhline(c->window,0,0,ACS_HLINE,c->w);
+	else
+		box(c->window,0,0);
 	curs_set(0);
 	getyx(c->window,y,x);
 	mvwprintw(c->window,0,2, TITLE,
@@ -304,7 +404,8 @@ draw_border(Client *c){
 
 void
 draw_content(Client *c){
-	rote_vt_draw(c->term,c->window,1,1,NULL);
+	if(!c->minimized)
+		rote_vt_draw(c->term,c->window,1,1,NULL);
 }
 
 void
@@ -329,23 +430,25 @@ draw_all(bool border){
 			draw_border(sel);
 		wnoutrefresh(sel->window);
 	}
-	curs_set(1);
+	if(!sel || !sel->minimized)
+		curs_set(1);
 	doupdate();
 }
 
 void
 create(const char *cmd){
 	Client *c = malloc(sizeof(Client));
-	c->window = newwin(height,width,0,0);
+	c->window = newwin(height,width,way,wax);
 	c->term = rote_vt_create(height-2,width-2);
 	c->cmd = cmd;
 	c->title = cmd;
 	c->pid = rote_vt_forkpty(c->term,cmd);
 	c->w = width;
 	c->h = height;
-	c->x = 0;
-	c->y = 0;
+	c->x = wax;
+	c->y = way;
 	c->order = 0;
+	c->minimized = false;
 	debug("client with pid %d forked\n",c->pid);
 	attach(c);
 	focus(c);
@@ -355,10 +458,15 @@ create(const char *cmd){
 void
 destroy(Client *c){
 	if(sel == c)
-		focusnext(NULL);
-	if(sel == c)
-		sel = NULL;
+		focusnextnm(NULL);
 	detach(c);
+	if(sel == c){
+		if(clients){
+			focus(clients);
+			toggleminimize(NULL);
+		} else
+			sel = NULL;
+	}
 	werase(c->window);
 	wrefresh(c->window);
 	rote_vt_destroy(c->term);
@@ -462,8 +570,8 @@ resize_screen(){
 		wrefresh(curscr);
 		refresh();
 	}
-	waw = width;
-	wah = height;
+	waw = width - wax;
+	wah = height - way;
 	arrange();
 	need_screen_resize = false;
 }
@@ -547,7 +655,7 @@ main(int argc, char *argv[]) {
 				Key* key = keybinding(mod,code);
 				if(key)
 					key->action(key->arg);
-			} else if(sel)
+			} else if(sel && !sel->minimized)
 				rote_vt_keypress(sel->term, code);
 		}
 
