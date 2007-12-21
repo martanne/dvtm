@@ -3,7 +3,7 @@ include config.mk
 SRC += dvtm.c
 OBJ = ${SRC:.c=.o}
 
-all: options dvtm
+all: clean options dvtm
 
 options:
 	@echo dvtm build options:
@@ -21,8 +21,8 @@ dvtm: ${OBJ}
 	@echo CC -o $@
 	@${CC} -o $@ ${OBJ} ${LDFLAGS}
 
-unicode:
-	@make LIBS='${LIBS_UTF8}'
+unicode: clean
+	@make LIBS='${LIBS_UTF8}' CFLAGS='${CFLAGS} -DUSE_UTF8'
 
 debug: clean
 	@make CFLAGS='${DEBUG_CFLAGS}'

@@ -10,14 +10,19 @@
  * See LICENSE for details.
  */
 
-#include <ncurses.h>
+#ifdef USE_UTF8
+#  include <ncursesw/ncurses.h>
+#  include <rote/rotew.h>
+#else
+#  include <ncurses.h>
+#  include <rote/rote.h>
+#endif
 #include <stdio.h>
 #include <signal.h>
 #include <locale.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
-#include <rote/rote.h>
 #include <stdbool.h>
 
 typedef struct {
