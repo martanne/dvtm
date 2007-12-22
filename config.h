@@ -16,11 +16,13 @@
 #include "tile.c"
 #include "grid.c"
 #include "bstack.c"
+#include "fullscreen.c"
 
 Layout layouts[] = {
 	{ "[]=", tile },
 	{ "+++", grid },
 	{ "TTT", bstack },
+	{ "[ ]", fullscreen },
 };
 
 #define MOD CTRL('g')
@@ -35,6 +37,7 @@ Key keys[] = {
 	{ MOD, 't', setlayout , "[]=" },
 	{ MOD, 'g', setlayout , "+++" },
 	{ MOD, 'b', setlayout , "TTT" },
+	{ MOD, 'f', setlayout , "[ ]" },
 	{ MOD, ' ', setlayout , NULL },
 	{ MOD, 'h', setmwfact , "-0.05" },
 	{ MOD, 'l', setmwfact , "+0.05" },

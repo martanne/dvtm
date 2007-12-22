@@ -105,12 +105,12 @@ Client* get_client_by_pid(pid_t pid);
 unsigned int waw,wah,wax = 0,way = 0;
 Client *clients = NULL;
 extern double mwfact;
+Client *sel = NULL;
 
 #include "config.h"
 
 double mwfact = MWFACT;
 int redraw_timeout = REDRAW_TIMEOUT;
-Client *sel = NULL;
 /* should probably be a linked list? */
 Client *client_killed = NULL;
 
@@ -388,7 +388,7 @@ draw_border(Client *c){
 		wattron(c->window,ATTR_SELECTED);
 	else
 		wattrset(c->window,ATTR_NORMAL);
-	if(c->minimized)
+	if(c->minimized && !isarrange(fullscreen))
 		mvwhline(c->window,0,0,ACS_HLINE,c->w);
 	else
 		box(c->window,0,0);
@@ -404,7 +404,7 @@ draw_border(Client *c){
 
 void
 draw_content(Client *c){
-	if(!c->minimized)
+	if(!c->minimized || isarrange(fullscreen))
 		rote_vt_draw(c->term,c->window,1,1,NULL);
 }
 
@@ -655,7 +655,7 @@ main(int argc, char *argv[]) {
 				Key* key = keybinding(mod,code);
 				if(key)
 					key->action(key->arg);
-			} else if(sel && !sel->minimized)
+			} else if(sel && (!sel->minimized || isarrange(fullscreen)))
 				rote_vt_keypress(sel->term, code);
 		}
 
