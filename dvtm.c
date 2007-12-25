@@ -23,7 +23,11 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <stdbool.h>
+#include <errno.h>
 
 typedef struct {
 	const char *symbol;
@@ -62,6 +66,7 @@ typedef struct {
 
 #define COLOR(bg,fg) COLOR_PAIR(bg * 8 + 7 - fg)
 #define countof(arr) (sizeof (arr) / sizeof((arr)[0])) 
+#define max(x,y) ((x) > (y) ? (x) : (y))
 
 #ifdef DEBUG
  #define debug eprint
@@ -98,19 +103,17 @@ void toggleminimize(const char *arg);
 bool isarrange(void (*func)());
 void setmwfact(const char *arg);
 void setlayout(const char *arg);
-void settimeout(const char *arg);
 void eprint(const char *errstr, ...);
 Client* get_client_by_pid(pid_t pid);
 
 unsigned int waw,wah,wax = 0,way = 0;
 Client *clients = NULL;
 extern double mwfact;
-Client *sel = NULL;
 
 #include "config.h"
 
+Client *sel = NULL;
 double mwfact = MWFACT;
-int redraw_timeout = REDRAW_TIMEOUT;
 /* should probably be a linked list? */
 Client *client_killed = NULL;
 
@@ -333,23 +336,6 @@ setlayout(const char *arg) {
 		ltidx = i;
 	}
 	arrange();
-}
-
-void
-settimeout(const char *arg) {
-	int delta;
-	
-	if(arg == NULL)
-		redraw_timeout = REDRAW_TIMEOUT;
-	else if(1 == sscanf(arg, "%d", &delta)) {
-		if(arg[0] == '+' || arg[0] == '-')
-			redraw_timeout += delta;
-		else
-			redraw_timeout = delta;
-		if(redraw_timeout < 0)
-			redraw_timeout = 0;
-	}
-	timeout(redraw_timeout);
 }
 
 void
@@ -591,7 +577,6 @@ setup(){
 	start_color();
 	noecho();
    	keypad(stdscr, TRUE);
-	timeout(REDRAW_TIMEOUT);
 	raw();
 	/* initialize the color pairs the way rote_vt_draw expects it. You might
 	 * initialize them differently, but in that case you would need
@@ -628,7 +613,6 @@ quit(const char *arg){
 
 int 
 main(int argc, char *argv[]) {
-	int code;
 	if(argc == 2 && !strcmp("-v", argv[1])){
 		printf("dvtm-"VERSION" (c) 2007 Marc Andre Tanner\n");
 		exit(EXIT_SUCCESS);
@@ -644,29 +628,69 @@ main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	setup();
-	while((code = getch())){
-		/* if no key was pressed then just update the screen */
-		if(code >= 0){
-			if(is_modifier(code)){
-				int mod = code;
-				do {
-					code = getch();
-				} while (code < 0);
-				Key* key = keybinding(mod,code);
-				if(key)
-					key->action(key->arg);
-			} else if(sel && (!sel->minimized || isarrange(fullscreen)))
-				rote_vt_keypress(sel->term, code);
-		}
+	for(;;){
+		Client *c;
+		int r, nfds = 0;
+		fd_set rd;
 
-		if(clients)
-			draw_all(false);
 		if(need_screen_resize)
 			resize_screen();
+
 		if(client_killed){
 			destroy(client_killed);
 			client_killed = NULL;
 		}
+		
+		FD_ZERO(&rd);
+		FD_SET(STDIN_FILENO, &rd);
+		for(c = clients; c; c = c->next){
+			FD_SET(rote_vt_get_pty_fd(c->term),&rd);
+			nfds = max(nfds,rote_vt_get_pty_fd(c->term));
+		}
+		r = select(nfds + 1, &rd, NULL, NULL, NULL);
+
+		if(r == -1 && errno == EINTR)
+			continue;
+
+		if(r < 0){
+			perror("select()");
+			exit(EXIT_FAILURE);
+		}
+		
+		if(FD_ISSET(STDIN_FILENO, &rd)){
+			int code = getch();
+			if(code >= 0){
+				if(is_modifier(code)){
+					int mod = code;
+					code = getch();
+					if(code >= 0){
+						Key* key = keybinding(mod,code);
+						if(key)
+							key->action(key->arg);
+					}
+				} else if(sel && (!sel->minimized || isarrange(fullscreen))){
+					rote_vt_keypress(sel->term, code);
+					if(r == 1){
+						draw_content(sel);
+						wrefresh(sel->window);
+					}
+				}
+			}
+			if(r == 1) /* no data available on pty's */
+				continue;
+		}
+		
+		for(c = clients; c; c = c->next){
+			if(c != sel && FD_ISSET(rote_vt_get_pty_fd(c->term),&rd)){
+				draw_content(c);
+				wnoutrefresh(c->window);
+			}
+		}
+		if(sel){
+			draw_content(sel);
+			wnoutrefresh(sel->window);
+		}
+		doupdate();
 	}
 
 	return 0;

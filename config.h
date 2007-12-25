@@ -10,8 +10,6 @@
 #define TITLE "[%s%s#%d]"
 /* master width factor [0.1 .. 0.9] */
 #define MWFACT  0.5	
-/* defines how often all window's are repainted (in milliseconds) */
-#define REDRAW_TIMEOUT  50 
 
 #include "tile.c"
 #include "grid.c"
