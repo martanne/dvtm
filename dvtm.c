@@ -123,6 +123,7 @@ char stext[512];
 unsigned int ltidx = 0;
 bool need_screen_resize = false;
 int width,height;
+bool running = true;
 
 void
 attach(Client *c) {
@@ -550,6 +551,7 @@ get_client_by_pid(pid_t pid){
 
 void
 sigchld_handler(int sig){
+	signal(SIGCHLD,sigchld_handler);
 	int child_status;
 	pid_t pid = wait(&child_status);
 	debug("child with pid %d died\n",pid);
@@ -558,6 +560,7 @@ sigchld_handler(int sig){
 
 void 
 sigwinch_handler(int sig){
+	signal(SIGWINCH,sigwinch_handler);
 	struct winsize ws;
 	if(ioctl(0, TIOCGWINSZ, &ws) == -1)
 		return;
@@ -565,6 +568,12 @@ sigwinch_handler(int sig){
 	width = ws.ws_col;
 	height = ws.ws_row;
 	need_screen_resize = true;
+}
+
+void 
+sigterm_handler(int sig){
+	signal(SIGTERM,sigterm_handler);
+	running = false;
 }
 
 void
@@ -623,6 +632,7 @@ setup(){
 	resize_screen();
 	signal(SIGWINCH,sigwinch_handler);
 	signal(SIGCHLD,sigchld_handler);
+	signal(SIGTERM,sigterm_handler);
 }
 
 void
@@ -686,7 +696,7 @@ main(int argc, char *argv[]) {
 		}
 	}
 	setup();
-	for(;;){
+	while(running){
 		Client *c;
 		int r, nfds = 0;
 		fd_set rd;
@@ -778,5 +788,6 @@ main(int argc, char *argv[]) {
 		doupdate();
 	}
 
+	cleanup();
 	return 0;
 }
