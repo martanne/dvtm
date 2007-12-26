@@ -21,7 +21,9 @@
 #include <signal.h>
 #include <locale.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/fcntl.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -79,6 +81,7 @@ void draw(Client *c);
 void draw_all(bool border);
 void draw_border(Client *c);
 void draw_content(Client *c);
+void drawbar();
 void attach(Client *c);
 void detach(Client *c);
 void zoom(const char *arg);
@@ -114,12 +117,11 @@ extern double mwfact;
 
 Client *sel = NULL;
 double mwfact = MWFACT;
-/* should probably be a linked list? */
 Client *client_killed = NULL;
-
+int statusfd = -1;
+char stext[512];
 unsigned int ltidx = 0;
 bool need_screen_resize = false;
-
 int width,height;
 
 void
@@ -422,6 +424,28 @@ draw_all(bool border){
 }
 
 void
+drawbar(){
+	int s,l;
+	curs_set(0);
+	attrset(BAR_ATTR);
+	mvaddch(0,0,'[');
+	stext[width - 2] = '\0';
+	l = strlen(stext);
+	if(BAR_ALIGN_RIGHT)
+		for(s = 0; s + l < width - 2; s++)
+			addch(' ');
+	else
+		for(; l < width - 2; l++)
+			stext[l] = ' ';
+	addstr(stext);
+	addch(']');
+	attrset(ATTR_NORMAL);
+	if(sel)
+		curs_set(1);
+	refresh();
+}
+
+void
 create(const char *cmd){
 	Client *c = malloc(sizeof(Client));
 	c->window = newwin(height,width,way,wax);
@@ -558,6 +582,7 @@ resize_screen(){
 	}
 	waw = width - wax;
 	wah = height - way;
+	drawbar();
 	arrange();
 	need_screen_resize = false;
 }
@@ -603,6 +628,8 @@ setup(){
 void
 cleanup(){
 	endwin();
+	if(statusfd > 0)
+		close(statusfd);
 }
 
 void 
@@ -611,21 +638,52 @@ quit(const char *arg){
 	exit(EXIT_SUCCESS);
 }
 
+void
+usage(){
+	cleanup();
+	eprint("usage: dvtm [-v] [-m mod] [-s status]\n");
+	exit(EXIT_FAILURE);
+}
+
+
 int 
 main(int argc, char *argv[]) {
-	if(argc == 2 && !strcmp("-v", argv[1])){
-		printf("dvtm-"VERSION" (c) 2007 Marc Andre Tanner\n");
-		exit(EXIT_SUCCESS);
-	} else if(argc == 3 && !strcmp("-m", argv[1])){
-		unsigned int i;
-		char *mod = argv[2];
-		if(mod[0] == '^' && mod[1])
-			*mod = CTRL(mod[1]);
-		for(i = 0; i < countof(keys); i++)
-			keys[i].mod = *mod;
-	} else if(argc != 1){
-		eprint("usage: dvtm [-v] [-m mod]\n");
-		exit(EXIT_FAILURE);
+	int arg; 
+	for(arg = 1; arg < argc; arg++){
+		if(argv[arg][0] != '-')
+			usage();
+		switch(argv[arg][1]){
+			case 'v':
+				printf("dvtm-"VERSION" (c) 2007 Marc Andre Tanner\n");
+				exit(EXIT_SUCCESS);
+			case 'm':
+				if(++arg >= argc)
+					usage();
+				unsigned int i;
+				char *mod = argv[arg];
+				if(mod[0] == '^' && mod[1])
+					*mod = CTRL(mod[1]);
+				for(i = 0; i < countof(keys); i++)
+					keys[i].mod = *mod;
+				break;
+			case 's':
+				if(++arg >= argc)
+					usage();
+				struct stat info;
+				if((statusfd = open(argv[arg],O_RDONLY|O_NONBLOCK)) == - 1 ||
+				    fstat(statusfd,&info) == -1){
+					perror("status");
+					exit(EXIT_FAILURE);
+				}
+				if(!S_ISFIFO(info.st_mode)){
+					eprint("%s is not a named pipe.\n",argv[arg]);
+					exit(EXIT_FAILURE);
+				}
+				way = 1;
+				break;
+			default:
+				usage();
+		}
 	}
 	setup();
 	for(;;){
@@ -643,6 +701,12 @@ main(int argc, char *argv[]) {
 		
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
+
+		if(statusfd != -1){
+			FD_SET(statusfd,&rd);
+			nfds = max(nfds,statusfd);
+		}
+
 		for(c = clients; c; c = c->next){
 			FD_SET(rote_vt_get_pty_fd(c->term),&rd);
 			nfds = max(nfds,rote_vt_get_pty_fd(c->term));
@@ -679,7 +743,28 @@ main(int argc, char *argv[]) {
 			if(r == 1) /* no data available on pty's */
 				continue;
 		}
-		
+	
+		if(statusfd != -1 && FD_ISSET(statusfd, &rd)){
+			char *p;
+			switch(r = read(statusfd, stext, sizeof stext - 1)) {
+				case -1:
+					strncpy(stext, strerror(errno), sizeof stext - 1);
+					stext[sizeof stext - 1] = '\0';
+					statusfd = -1;
+					break;
+				case 0:
+					statusfd = -1;
+					break;
+				default:
+					stext[r] = '\0'; p = stext + strlen(stext) - 1;
+					for(; p >= stext && *p == '\n'; *p-- = '\0');
+					for(; p >= stext && *p != '\n'; --p);
+					if(p > stext)
+						strncpy(stext, p + 1, sizeof stext);
+					drawbar();
+				}
+		}
+
 		for(c = clients; c; c = c->next){
 			if(c != sel && FD_ISSET(rote_vt_get_pty_fd(c->term),&rd)){
 				draw_content(c);
