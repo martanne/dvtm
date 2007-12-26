@@ -1,0 +1,16 @@
+#!/bin/sh
+
+FIFO="/tmp/dvtm-status.$$"
+
+[ -e "$FIFO" ] || mkfifo "$FIFO"
+chmod 600 $FIFO
+
+while true; do
+	date +%H:%M
+	sleep 60
+done > $FIFO &
+
+STATUS_PID=$!
+./dvtm -s $FIFO 2> /dev/null 
+kill $STATUS_PID
+rm $FIFO
