@@ -216,11 +216,9 @@ focusnextnm(const char *arg) {
 	c = sel;
 	do {
 		c = c->next;
-		if(c == sel)
-			break;
 		if(!c)
 			c = clients;
-	} while(c->minimized);
+	} while(c->minimized && c != sel);
 	focus(c);
 }
 
@@ -246,11 +244,9 @@ focusprevnm(const char *arg){
 	c = sel;
 	do {
 		c = c->prev;
-		if(c == sel)
-			break;
 		if(!c)
 			for(c = clients; c && c->next; c = c->next);
-	} while(c->minimized);
+	} while(c->minimized && c != sel);
 	focus(c);
 }
 
@@ -591,7 +587,8 @@ resize_screen(){
 	}
 	waw = width - wax;
 	wah = height - way;
-	drawbar();
+	if(*stext)
+		drawbar();
 	arrange();
 	need_screen_resize = false;
 }
@@ -776,15 +773,15 @@ main(int argc, char *argv[]) {
 		}
 
 		for(c = clients; c; c = c->next){
-			if(c != sel && FD_ISSET(rote_vt_get_pty_fd(c->term),&rd)){
+			if(FD_ISSET(rote_vt_get_pty_fd(c->term),&rd)){
 				draw_content(c);
-				wnoutrefresh(c->window);
+				if(c != sel)
+					wnoutrefresh(c->window);
 			}
 		}
-		if(sel){
-			draw_content(sel);
+
+		if(sel)
 			wnoutrefresh(sel->window);
-		}
 		doupdate();
 	}
 
