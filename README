@@ -9,8 +9,7 @@ Requirements
 ------------
 In order to build dvtm you will need:
 
- * librote (http://rote.sf.net patched with librote.patch)
- * libncurses
+ * libncurses or libncursesw for wide character support
 
 Installation
 ------------
@@ -18,9 +17,16 @@ Edit config.mk to match your local setup (dvtm is installed into
 the /usr/local namespace by default).
 
 Afterwards enter the following command to build and install dvtm (if
-necessary as root):
+necessary as root). If you are building for a system with wide characters 
+(check whether $LANG or the output of "locale" contains UTF-8) then do:
 
-    make clean install
+    make unicode && make install
+
+Otherwise a plain:
+
+    make && make install
+
+should suffice.
 
 Running dvtm
 ------------
@@ -28,6 +34,11 @@ Just run dvtm from the console, redirect stderr to a file (just in
 case something goes wrong you will see it there).
 
     dvtm 2> log
+
+If you want to display a one line status bar you can create a named
+pipe and pass it's name to dvtm via it's -s command line option.
+Make sure that the pipe remains open until dvtm is closed, see the
+included dvtm-status script as an example.
 
 Configuration
 -------------
