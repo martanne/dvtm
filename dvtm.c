@@ -514,14 +514,14 @@ move_client(Client *c,int x, int y){
 	}
 }
 
-int
+bool
 is_modifier(unsigned int mod){
 	unsigned int i;
 	for(i = 0; i < countof(keys); i++){
 		if(keys[i].mod == mod)
-			return 1;
+			return true;
 	}
-	return 0;
+	return false;
 }
 
 Key*
