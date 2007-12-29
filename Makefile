@@ -41,7 +41,7 @@ dist: clean
 	@gzip dvtm-${VERSION}.tar
 	@rm -rf dvtm-${VERSION}
 
-install: all
+install: dvtm
 	@echo stripping executable
 	@strip -s dvtm
 	@echo installing executable file to ${DESTDIR}${PREFIX}/bin
