@@ -442,13 +442,13 @@ drawbar(){
 
 void
 create(const char *cmd){
-	const char *args[] = { cmd, NULL };
+	const char *args[] = { "/bin/sh", "-c", cmd, NULL };
 	Client *c = malloc(sizeof(Client));
 	c->window = newwin(height-way,width-wax,way,wax);
 	c->term = madtty_create(height-2,width-2);
 	c->cmd = cmd;
 	c->title = cmd;
-	c->pid = madtty_forkpty(c->term,cmd,args,&c->pty);
+	c->pid = madtty_forkpty(c->term,"/bin/sh",args,&c->pty);
 	c->w = width;
 	c->h = height;
 	c->x = wax;
