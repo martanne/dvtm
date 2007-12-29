@@ -1,9 +1,9 @@
 /* curses attributes for the currently focused window */
-#define ATTR_SELECTED   COLOR(COLOR_BLACK,COLOR_RED)
+#define ATTR_SELECTED   COLOR(COLOR_RED,COLOR_BLACK)
 /* curses attributes for normal (not selected) windows */
 #define ATTR_NORMAL     A_NORMAL
 /* curses attributes for the status bar */
-#define BAR_ATTR        COLOR(COLOR_BLACK,COLOR_RED)
+#define BAR_ATTR        COLOR(COLOR_RED,COLOR_BLACK)
 /* true if the statusbar text should be right aligned, 
  * set to false if you prefer it left aligned */
 #define BAR_ALIGN_RIGHT true

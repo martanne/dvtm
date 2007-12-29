@@ -10,13 +10,7 @@
  * See LICENSE for details.
  */
 
-#ifdef USE_UTF8
-#  include <ncursesw/ncurses.h>
-#  include <rote/rotew.h>
-#else
-#  include <ncurses.h>
-#  include <rote/rote.h>
-#endif
+#include <ncurses.h>
 #include <stdio.h>
 #include <signal.h>
 #include <locale.h>
@@ -30,6 +24,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <errno.h>
+#include "madtty.h"
 
 typedef struct {
 	const char *symbol;
@@ -39,11 +34,12 @@ typedef struct {
 typedef struct Client Client;
 struct Client {
 	WINDOW *window;
-	RoteTerm *term;
+	madtty_t *term;
 	const char *cmd;
 	const char *title;
 	unsigned char order;
 	pid_t pid;
+	int pty;
 	short int x;
 	short int y;
 	short int w;
@@ -66,7 +62,7 @@ typedef struct {
 	const char *arg;
 } Key;
 
-#define COLOR(bg,fg) COLOR_PAIR(bg * 8 + 7 - fg)
+#define COLOR(fg,bg) madtty_color_pair(fg,bg) 
 #define countof(arr) (sizeof (arr) / sizeof((arr)[0])) 
 #define max(x,y) ((x) > (y) ? (x) : (y))
 
@@ -390,7 +386,7 @@ draw_border(Client *c){
 void
 draw_content(Client *c){
 	if(!c->minimized || isarrange(fullscreen))
-		rote_vt_draw(c->term,c->window,1,1,NULL);
+		madtty_draw(c->term,c->window,1,1);
 }
 
 void
@@ -418,6 +414,8 @@ draw_all(bool border){
 	if(!sel || !sel->minimized)
 		curs_set(1);
 	doupdate();
+	if(sel && isarrange(fullscreen))
+		redrawwin(sel->window);
 }
 
 void
@@ -444,12 +442,13 @@ drawbar(){
 
 void
 create(const char *cmd){
+	const char *args[] = { cmd, NULL };
 	Client *c = malloc(sizeof(Client));
-	c->window = newwin(height,width,way,wax);
-	c->term = rote_vt_create(height-2,width-2);
+	c->window = newwin(height-way,width-wax,way,wax);
+	c->term = madtty_create(height-2,width-2);
 	c->cmd = cmd;
 	c->title = cmd;
-	c->pid = rote_vt_forkpty(c->term,cmd);
+	c->pid = madtty_forkpty(c->term,cmd,args,&c->pty);
 	c->w = width;
 	c->h = height;
 	c->x = wax;
@@ -476,7 +475,7 @@ destroy(Client *c){
 	}
 	werase(c->window);
 	wrefresh(c->window);
-	rote_vt_destroy(c->term);
+	madtty_destroy(c->term);
 	delwin(c->window);
 	free(c);
 	arrange();
@@ -499,7 +498,7 @@ resize_client(Client *c,int w, int h){
 		c->w = w;
 		c->h = h;
 	}
-	rote_vt_resize(c->term,h-2,w-2);
+	madtty_resize(c->term,h-2,w-2);
 }
 
 void
@@ -568,7 +567,6 @@ sigwinch_handler(int sig){
 
 void 
 sigterm_handler(int sig){
-	signal(SIGTERM,sigterm_handler);
 	running = false;
 }
 
@@ -609,22 +607,8 @@ setup(){
 	noecho();
    	keypad(stdscr, TRUE);
 	raw();
-	/* initialize the color pairs the way rote_vt_draw expects it. You might
-	 * initialize them differently, but in that case you would need
-	 * to supply a custom conversion function for rote_vt_draw to
-	 * call when setting attributes. The idea of this "default" mapping
-	 * is to map (fg,bg) to the color pair bg * 8 + 7 - fg. This way,
-	 * the pair (white,black) ends up mapped to 0, which means that
-	 * it does not need a color pair (since it is the default). Since
-	 * there are only 63 available color pairs (and 64 possible fg/bg
-	 * combinations), we really have to save 1 pair by assigning no pair
-	 * to the combination white/black.
-	 */
-	int i, j;
-	for (i = 0; i < 8; i++) for (j = 0; j < 8; j++)
-		if (i != 7 || j != 0)
-			init_pair(j*8+7-i, i, j);
-	
+	madtty_init_colors();	
+	madtty_init_vt100_graphics();
 	getmaxyx(stdscr,height,width);
 	resize_screen();
 	signal(SIGWINCH,sigwinch_handler);
@@ -715,8 +699,8 @@ main(int argc, char *argv[]) {
 		}
 
 		for(c = clients; c; c = c->next){
-			FD_SET(rote_vt_get_pty_fd(c->term),&rd);
-			nfds = max(nfds,rote_vt_get_pty_fd(c->term));
+			FD_SET(c->pty,&rd);
+			nfds = max(nfds,c->pty);
 		}
 		r = select(nfds + 1, &rd, NULL, NULL, NULL);
 
@@ -740,7 +724,7 @@ main(int argc, char *argv[]) {
 							key->action(key->arg);
 					}
 				} else if(sel && (!sel->minimized || isarrange(fullscreen))){
-					rote_vt_keypress(sel->term, code);
+					madtty_keypress(sel->term, code);
 					if(r == 1){
 						draw_content(sel);
 						wrefresh(sel->window);
@@ -773,16 +757,22 @@ main(int argc, char *argv[]) {
 		}
 
 		for(c = clients; c; c = c->next){
-			if(FD_ISSET(rote_vt_get_pty_fd(c->term),&rd)){
-				draw_content(c);
-				if(c != sel)
+			if(FD_ISSET(c->pty,&rd)){
+				madtty_process(c->term);
+				if(c != sel){
+					draw_content(c);
 					wnoutrefresh(c->window);
+				}
 			}
 		}
 
-		if(sel)
+		if(sel) { 
+			draw_content(sel);
 			wnoutrefresh(sel->window);
+		}
 		doupdate();
+		if(sel && isarrange(fullscreen))
+			redrawwin(sel->window);
 	}
 
 	cleanup();

@@ -1,6 +1,6 @@
 include config.mk
 
-SRC += dvtm.c
+SRC += dvtm.c madtty.c
 OBJ = ${SRC:.c=.o}
 
 all: clean options dvtm
@@ -35,7 +35,8 @@ dist: clean
 	@echo creating dist tarball
 	@mkdir -p dvtm-${VERSION}
 	@cp -R LICENSE Makefile README config.h config.mk \
-		${SRC} tile.c bstack.c grid.c fullscreen.c dvtm-${VERSION}
+		${SRC} tile.c bstack.c grid.c fullscreen.c \
+		madtty.h dvtm-status dvtm-${VERSION}
 	@tar -cf dvtm-${VERSION}.tar dvtm-${VERSION}
 	@gzip dvtm-${VERSION}.tar
 	@rm -rf dvtm-${VERSION}
