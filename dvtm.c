@@ -719,15 +719,20 @@ main(int argc, char *argv[]) {
 					int mod = code;
 					code = getch();
 					if(code >= 0){
+						if(code == mod)
+							goto keypress;
 						Key* key = keybinding(mod,code);
 						if(key)
 							key->action(key->arg);
 					}
-				} else if(sel && (!sel->minimized || isarrange(fullscreen))){
-					madtty_keypress(sel->term, code);
-					if(r == 1){
-						draw_content(sel);
-						wrefresh(sel->window);
+				} else {
+			keypress:
+					if(sel && (!sel->minimized || isarrange(fullscreen))){
+						madtty_keypress(sel->term, code);
+						if(r == 1){
+							draw_content(sel);
+							wrefresh(sel->window);
+						}
 					}
 				}
 			}
