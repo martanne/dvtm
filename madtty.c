@@ -691,9 +691,15 @@ bool is_utf8 = true;
 
 static void is_utf8_locale(void)
 {
-    const char *l = getenv("LANG");
-    if (l)
-        is_utf8 = (strstr(l, "UTF-8") != NULL);
+    char *s, *l = getenv("LANG");
+    if (l) {
+        for(s = l; *s; s++)
+            *s = toupper(*s);
+        is_utf8 = (strstr(l, "UTF") != NULL);
+    }
+#ifdef DEBUG
+    fprintf(stderr,"lang: %s utf:%d\n",l,is_utf8);
+#endif
 }
 
 // vt100 special graphics and line drawing
