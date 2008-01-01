@@ -62,6 +62,11 @@ typedef struct {
 	const char *arg;
 } Key;
 
+typedef struct {
+	mmask_t mask;
+	void (*action)(Client *c);
+} Button;
+
 #define COLOR(fg,bg) madtty_color_pair(fg,bg) 
 #define countof(arr) (sizeof (arr) / sizeof((arr)[0])) 
 #define max(x,y) ((x) > (y) ? (x) : (y))
@@ -103,6 +108,9 @@ bool isarrange(void (*func)());
 void setmwfact(const char *arg);
 void setlayout(const char *arg);
 void eprint(const char *errstr, ...);
+void mouse_focus(Client *c);
+void mouse_minimize(Client *c);
+void mouse_zoom(Client *c);
 Client* get_client_by_pid(pid_t pid);
 
 unsigned int waw,wah,wax = 0,way = 0;
@@ -534,6 +542,52 @@ keybinding(unsigned int mod,unsigned int code){
 	return NULL;
 }
 
+void
+mouse_focus(Client *c){
+	focus(c);
+	if(c->minimized)
+		toggleminimize(NULL);
+}
+
+void
+mouse_minimize(Client *c){
+	focus(c);
+	toggleminimize(NULL);
+}
+
+void
+mouse_zoom(Client *c){
+	focus(c);
+	zoom(NULL);
+}
+
+Client*
+get_client_by_coord(int x, int y){
+	Client *c;
+	for(c = clients; c; c = c->next){
+		if(x >= c->x && x < c->x + c->w && y >= c->y && y < c->y + c->h){
+			debug("mouse event, x: %d y: %d client: %d\n",x,y,c->order);
+			return c;
+		}
+	}
+	return NULL;
+}
+
+void
+handle_mouse(){
+	MEVENT event;
+	unsigned int i;
+	Client *c;
+	if(getmouse(&event) != OK)
+		return;
+	c = get_client_by_coord(event.x, event.y);
+	if(!c)
+		return;
+	for(i = 0; i < countof(buttons); i++)
+		if(event.bstate & buttons[i].mask)
+			buttons[i].action(c);
+}
+
 Client*
 get_client_by_pid(pid_t pid){
 	Client *c;
@@ -601,11 +655,17 @@ eprint(const char *errstr, ...) {
 
 void
 setup(){
+	int i;
+	mmask_t mask;
 	setlocale(LC_ALL,"");
 	initscr();
 	start_color();
 	noecho();
    	keypad(stdscr, TRUE);
+	for(i = 0, mask = 0; i < countof(buttons); i++){
+		mask |= buttons[i].mask;	
+	}
+	mousemask(mask, NULL);
 	raw();
 	madtty_init_colors();	
 	madtty_init_vt100_graphics();
@@ -635,7 +695,6 @@ usage(){
 	eprint("usage: dvtm [-v] [-m mod] [-s status]\n");
 	exit(EXIT_FAILURE);
 }
-
 
 int 
 main(int argc, char *argv[]) {
@@ -715,7 +774,9 @@ main(int argc, char *argv[]) {
 		if(FD_ISSET(STDIN_FILENO, &rd)){
 			int code = getch();
 			if(code >= 0){
-				if(is_modifier(code)){
+				if(code == KEY_MOUSE){
+					handle_mouse();
+				} else if(is_modifier(code)){
 					int mod = code;
 					code = getch();
 					if(code >= 0){

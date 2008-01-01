@@ -57,3 +57,9 @@ Key keys[] = {
 	{ MOD, '8', focusn, "8" },
 	{ MOD, '9', focusn, "9" },
 };
+
+Button buttons[] = {
+	{ BUTTON1_CLICKED, mouse_focus },
+	{ BUTTON1_DOUBLE_CLICKED, mouse_zoom },
+	{ BUTTON2_CLICKED, mouse_minimize },
+};
