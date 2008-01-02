@@ -2,6 +2,8 @@
 #define ATTR_SELECTED   COLOR(COLOR_RED,COLOR_BLACK)
 /* curses attributes for normal (not selected) windows */
 #define ATTR_NORMAL     A_NORMAL
+/* status bar (command line option -s) position */
+#define BARPOS		BarTop /* BarBot, BarOff */
 /* curses attributes for the status bar */
 #define BAR_ATTR        COLOR(COLOR_RED,COLOR_BLACK)
 /* true if the statusbar text should be right aligned, 
@@ -45,6 +47,7 @@ Key keys[] = {
 	{ MOD, 'h', setmwfact , "-0.05" },
 	{ MOD, 'l', setmwfact , "+0.05" },
 	{ MOD, 'n', toggleminimize , NULL },
+	{ MOD, 's', togglebar, NULL },
 	{ MOD, 'z', zoom , NULL },
 	{ MOD, '0', focusn, "0" },
 	{ MOD, '1', focusn, "1" },

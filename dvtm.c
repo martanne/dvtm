@@ -67,6 +67,8 @@ typedef struct {
 	void (*action)(Client *c);
 } Button;
 
+enum { BarTop, BarBot, BarOff };
+
 #define COLOR(fg,bg) madtty_color_pair(fg,bg) 
 #define countof(arr) (sizeof (arr) / sizeof((arr)[0])) 
 #define max(x,y) ((x) > (y) ? (x) : (y))
@@ -104,6 +106,7 @@ void focusnextnm(const char *arg);
 void focusprev(const char *arg);
 void focusprevnm(const char *arg);
 void toggleminimize(const char *arg);
+void togglebar(const char *arg);
 bool isarrange(void (*func)());
 void setmwfact(const char *arg);
 void setlayout(const char *arg);
@@ -113,7 +116,7 @@ void mouse_minimize(Client *c);
 void mouse_zoom(Client *c);
 Client* get_client_by_pid(pid_t pid);
 
-unsigned int waw,wah,wax = 0,way = 0;
+unsigned int bh = 1, by, waw, wah, wax, way;
 Client *clients = NULL;
 extern double mwfact;
 
@@ -124,6 +127,7 @@ double mwfact = MWFACT;
 Client *client_killed = NULL;
 int statusfd = -1;
 char stext[512];
+int barpos = BARPOS;
 unsigned int ltidx = 0;
 bool need_screen_resize = false;
 int width,height;
@@ -313,6 +317,35 @@ toggleminimize(const char *arg){
 }
 
 void
+updatebarpos(void) {
+	by = 0;
+	wax = 0;
+	way = 0;
+	waw = width;
+	wah = height;
+	if(statusfd == -1)
+		return;
+	if(barpos == BarTop){
+		wah -= bh;
+		way += bh;
+	} else if(barpos == BarBot){
+		wah -= bh;
+		by = wah;
+	}
+}
+
+void
+togglebar(const char *arg) {
+	if(barpos == BarOff)
+		barpos = (BARPOS == BarOff) ? BarTop : BARPOS;
+	else
+		barpos = BarOff;
+	updatebarpos();
+	arrange();
+	drawbar();
+}
+
+void
 arrange(){
 	layouts[ltidx].arrange();
 	draw_all(true);
@@ -429,9 +462,11 @@ draw_all(bool border){
 void
 drawbar(){
 	int s,l;
+	if(barpos == BarOff || !*stext)
+		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
-	mvaddch(0,0,'[');
+	mvaddch(by, 0, '[');
 	stext[width - 2] = '\0';
 	l = strlen(stext);
 	if(BAR_ALIGN_RIGHT)
@@ -452,7 +487,7 @@ void
 create(const char *cmd){
 	const char *args[] = { "/bin/sh", "-c", cmd, NULL };
 	Client *c = malloc(sizeof(Client));
-	c->window = newwin(height-way,width-wax,way,wax);
+	c->window = newwin(wah,waw,way,wax);
 	c->term = madtty_create(height-2,width-2);
 	c->cmd = cmd;
 	c->title = cmd;
@@ -637,10 +672,8 @@ resize_screen(){
 		wrefresh(curscr);
 		refresh();
 	}
-	waw = width - wax;
-	wah = height - way;
-	if(*stext)
-		drawbar();
+	updatebarpos();	
+	drawbar();
 	arrange();
 	need_screen_resize = false;
 }
@@ -729,7 +762,7 @@ main(int argc, char *argv[]) {
 					eprint("%s is not a named pipe.\n",argv[arg]);
 					exit(EXIT_FAILURE);
 				}
-				way = 1;
+				updatebarpos();
 				break;
 			default:
 				usage();
