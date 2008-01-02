@@ -73,6 +73,12 @@ enum { BarTop, BarBot, BarOff };
 #define countof(arr) (sizeof (arr) / sizeof((arr)[0])) 
 #define max(x,y) ((x) > (y) ? (x) : (y))
 
+#ifdef __linux__
+# define SHELL "/bin/sh --login"
+#else
+# define SHELL "/bin/sh"
+#endif
+
 #ifdef DEBUG
  #define debug eprint
 #else

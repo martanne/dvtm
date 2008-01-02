@@ -34,7 +34,7 @@ Layout layouts[] = {
 
 Key keys[] = {
 	{ MOD, 'q', quit , NULL },
-	{ MOD, 'c', create , "/bin/sh --login" },
+	{ MOD, 'c', create , SHELL },
 	{ MOD, 'j', focusnext , NULL },
 	{ MOD, 'u', focusnextnm , NULL },
 	{ MOD, 'i', focusprevnm , NULL },
