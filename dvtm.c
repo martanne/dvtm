@@ -1,5 +1,5 @@
 /*
- * The initial "port" of dwm to curses was done by 
+ * The initial "port" of dwm to curses was done by
  * (c) 2007 Marc Andre Tanner <mat at brain-dump dot org>
  *
  * It is highly inspired by the original X11 dwm and
@@ -69,8 +69,8 @@ typedef struct {
 
 enum { BarTop, BarBot, BarOff };
 
-#define COLOR(fg,bg) madtty_color_pair(fg,bg) 
-#define countof(arr) (sizeof (arr) / sizeof((arr)[0])) 
+#define COLOR(fg,bg) madtty_color_pair(fg,bg)
+#define countof(arr) (sizeof (arr) / sizeof((arr)[0]))
 #define max(x,y) ((x) > (y) ? (x) : (y))
 
 #ifdef __linux__
@@ -271,7 +271,7 @@ attachafter(Client *c, Client *a){ /* attach c after a */
 		return;
 	if(!a)
 		for(a = clients; a && a->next; a = a->next);
-		
+
 	if(a){
 		if(a->next)
 			a->next->prev = c;
@@ -299,7 +299,7 @@ toggleminimize(const char *arg){
 	}
 	sel->minimized = !sel->minimized;
 	m = sel;
-	/* check whether the master client was minimized */ 
+	/* check whether the master client was minimized */
 	if(sel == clients && sel->minimized){
 		c = sel->next;
 		detach(c);
@@ -309,7 +309,7 @@ toggleminimize(const char *arg){
 		for(; c && c->next && !c->next->minimized; c = c->next);
 		attachafter(m,c);
 	} else if(m->minimized){
-		/* non master window got minimized move it above all other 
+		/* non master window got minimized move it above all other
 		 * minimized ones */
 		focusnextnm(NULL);
 		detach(m);
@@ -402,7 +402,7 @@ setmwfact(const char *arg) {
 	arrange();
 }
 
-void 
+void
 draw(Client *c){
 	draw_content(c);
 	draw_border(c);
@@ -648,19 +648,19 @@ sigchld_handler(int sig){
 	client_killed = get_client_by_pid(pid);
 }
 
-void 
+void
 sigwinch_handler(int sig){
 	signal(SIGWINCH,sigwinch_handler);
 	struct winsize ws;
 	if(ioctl(0, TIOCGWINSZ, &ws) == -1)
 		return;
-	
+
 	width = ws.ws_col;
 	height = ws.ws_row;
 	need_screen_resize = true;
 }
 
-void 
+void
 sigterm_handler(int sig){
 	running = false;
 }
@@ -678,7 +678,7 @@ resize_screen(){
 		wrefresh(curscr);
 		refresh();
 	}
-	updatebarpos();	
+	updatebarpos();
 	drawbar();
 	arrange();
 	need_screen_resize = false;
@@ -702,11 +702,11 @@ setup(){
 	noecho();
    	keypad(stdscr, TRUE);
 	for(i = 0, mask = 0; i < countof(buttons); i++){
-		mask |= buttons[i].mask;	
+		mask |= buttons[i].mask;
 	}
 	mousemask(mask, NULL);
 	raw();
-	madtty_init_colors();	
+	madtty_init_colors();
 	madtty_init_vt100_graphics();
 	getmaxyx(stdscr,height,width);
 	resize_screen();
@@ -722,7 +722,7 @@ cleanup(){
 		close(statusfd);
 }
 
-void 
+void
 quit(const char *arg){
 	cleanup();
 	exit(EXIT_SUCCESS);
@@ -735,9 +735,9 @@ usage(){
 	exit(EXIT_FAILURE);
 }
 
-int 
+int
 main(int argc, char *argv[]) {
-	int arg; 
+	int arg;
 	for(arg = 1; arg < argc; arg++){
 		if(argv[arg][0] != '-')
 			usage();
@@ -787,7 +787,7 @@ main(int argc, char *argv[]) {
 			destroy(client_killed);
 			client_killed = NULL;
 		}
-		
+
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
 
@@ -809,7 +809,7 @@ main(int argc, char *argv[]) {
 			perror("select()");
 			exit(EXIT_FAILURE);
 		}
-		
+
 		if(FD_ISSET(STDIN_FILENO, &rd)){
 			int code = getch();
 			if(code >= 0){
@@ -839,7 +839,7 @@ main(int argc, char *argv[]) {
 			if(r == 1) /* no data available on pty's */
 				continue;
 		}
-	
+
 		if(statusfd != -1 && FD_ISSET(statusfd, &rd)){
 			char *p;
 			switch(r = read(statusfd, stext, sizeof stext - 1)) {
@@ -871,7 +871,7 @@ main(int argc, char *argv[]) {
 			}
 		}
 
-		if(sel) { 
+		if(sel) {
 			draw_content(sel);
 			wnoutrefresh(sel->window);
 		}

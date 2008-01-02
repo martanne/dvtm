@@ -14,7 +14,7 @@ bstack(void) {
 	else
 		mh = mwfact * (wah - m);
 	/* true if there are at least 2 non minimized clients */
-	if(n - 1 > m) 
+	if(n - 1 > m)
 		tw = waw  / (n - m - 1);
 
 	nx = wax;
@@ -37,7 +37,7 @@ bstack(void) {
 				nw = waw;
 				nh = 1;
 			} else if(c->minimized) { /* minimized window */
-				nw = waw;	
+				nw = waw;
 				nh = 1;
 				ny++;
 			} else /* normal non minimized tile window */

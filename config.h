@@ -6,17 +6,17 @@
 #define BARPOS		BarTop /* BarBot, BarOff */
 /* curses attributes for the status bar */
 #define BAR_ATTR        COLOR(COLOR_RED,COLOR_BLACK)
-/* true if the statusbar text should be right aligned, 
+/* true if the statusbar text should be right aligned,
  * set to false if you prefer it left aligned */
 #define BAR_ALIGN_RIGHT true
 /* separator between window title and window number */
 #define SEPARATOR " | "
-/* printf format string for the window title, first %s 
+/* printf format string for the window title, first %s
  * is replaced by the title, second %s is replaced by
  * the SEPARATOR, %d stands for the window number */
 #define TITLE "[%s%s#%d]"
 /* master width factor [0.1 .. 0.9] */
-#define MWFACT  0.5	
+#define MWFACT  0.5
 
 #include "tile.c"
 #include "grid.c"

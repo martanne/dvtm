@@ -18,7 +18,7 @@ grid(void) {
 	nw = waw / (cols ? cols : 1);
 	for(i = 0, c = clients; c; c = c->next,i++) {
 		if(!c->minimized){
-			/* if there are less clients in the last row than normal adjust the 
+			/* if there are less clients in the last row than normal adjust the
 			 * split rate to fill the empty space */
 			if(rows > 1 && i == (rows * cols) - cols && (nm - i) <= (nm % cols))
 				nw = waw / (nm - i);
