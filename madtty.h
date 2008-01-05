@@ -30,11 +30,12 @@
 #include <unistd.h>
 #include <wchar.h>
 
+typedef struct madtty_t madtty_t;
+
 void madtty_init_colors(void);
-int madtty_color_pair(int fg, int bg);
 void madtty_init_vt100_graphics(void);
 
-typedef struct madtty_t madtty_t;
+int madtty_color_pair(int fg, int bg);
 
 madtty_t *madtty_create(int rows, int cols);
 void madtty_resize(madtty_t *, int rows, int cols);

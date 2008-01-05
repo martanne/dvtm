@@ -24,6 +24,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <langinfo.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +48,7 @@
 
 #define IS_CONTROL(ch) !((ch) & 0xffffff60UL)
 
-static int has_default = 0;
+static int has_default, is_utf8;
 
 enum {
     C0_NUL = 0x00,
@@ -687,19 +688,10 @@ static void madtty_process_nonprinting(madtty_t *t, wchar_t wc)
     }
 }
 
-bool is_utf8 = true;
-
 static void is_utf8_locale(void)
 {
-    char *s, *l = getenv("LANG");
-    if (l) {
-        for(s = l; *s; s++)
-            *s = toupper(*s);
-        is_utf8 = (strstr(l, "UTF") != NULL);
-    }
-#ifdef DEBUG
-    fprintf(stderr,"lang: %s utf:%d\n",l,is_utf8);
-#endif
+    const char *cset = nl_langinfo(CODESET) ?: "ANSI_X3.4-1968";
+    is_utf8 = !strcmp(cset, "UTF-8");
 }
 
 // vt100 special graphics and line drawing
@@ -777,10 +769,9 @@ static void madtty_putc(madtty_t *t, wchar_t wc)
 
         if (t->graphmode) {
             if (wc >= 0x41 && wc <= 0x7e) {
-                if(is_utf8 && vt100_utf8[wc - 0x41])
-                    wc = vt100_utf8[wc - 0x41];
-                else if(!is_utf8 && vt100[wc - 0x41])
-                    wc = vt100[wc - 0x41];
+                wchar_t gc = is_utf8 ? vt100_utf8[wc - 0x41] : vt100[wc - 0x41];
+                if (gc)
+                    wc = gc;
             }
             width = 1;
         } else {
@@ -1070,10 +1061,10 @@ void madtty_init_colors(void)
                               fg == COLOR_WHITE ? -1 : fg,
                               bg == COLOR_BLACK ? -1 : bg);
                 } else {
-                init_pair((7 - fg) * 8 + bg, fg, bg);
+                    init_pair((7 - fg) * 8 + bg, fg, bg);
+                }
             }
         }
-    }
     }
 }
 
