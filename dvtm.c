@@ -64,7 +64,8 @@ typedef struct {
 
 typedef struct {
 	mmask_t mask;
-	void (*action)(Client *c);
+	void (*action)(const char *arg);
+	const char *arg;
 } Button;
 
 enum { BarTop, BarBot, BarOff };
@@ -117,9 +118,9 @@ bool isarrange(void (*func)());
 void setmwfact(const char *arg);
 void setlayout(const char *arg);
 void eprint(const char *errstr, ...);
-void mouse_focus(Client *c);
-void mouse_minimize(Client *c);
-void mouse_zoom(Client *c);
+void mouse_focus(const char *arg);
+void mouse_minimize(const char *arg);
+void mouse_zoom(const char *arg);
 Client* get_client_by_pid(pid_t pid);
 
 unsigned int bh = 1, by, waw, wah, wax, way;
@@ -129,6 +130,7 @@ extern double mwfact;
 #include "config.h"
 
 Client *sel = NULL;
+Client *msel = NULL;
 double mwfact = MWFACT;
 Client *client_killed = NULL;
 int statusfd = -1;
@@ -178,6 +180,8 @@ zoom(const char *arg) {
 	detach(c);
 	attach(c);
 	focus(c);
+	if(c->minimized)
+		toggleminimize(NULL);
 	arrange();
 }
 
@@ -584,21 +588,21 @@ keybinding(unsigned int mod,unsigned int code){
 }
 
 void
-mouse_focus(Client *c){
-	focus(c);
-	if(c->minimized)
+mouse_focus(const char *arg){
+	focus(msel);
+	if(msel->minimized)
 		toggleminimize(NULL);
 }
 
 void
-mouse_minimize(Client *c){
-	focus(c);
+mouse_minimize(const char *arg){
+	focus(msel);
 	toggleminimize(NULL);
 }
 
 void
-mouse_zoom(Client *c){
-	focus(c);
+mouse_zoom(const char *arg){
+	focus(msel);
 	zoom(NULL);
 }
 
@@ -618,15 +622,15 @@ void
 handle_mouse(){
 	MEVENT event;
 	unsigned int i;
-	Client *c;
 	if(getmouse(&event) != OK)
 		return;
-	c = get_client_by_coord(event.x, event.y);
-	if(!c)
+	msel = get_client_by_coord(event.x, event.y);
+	if(!msel)
 		return;
 	for(i = 0; i < countof(buttons); i++)
 		if(event.bstate & buttons[i].mask)
-			buttons[i].action(c);
+			buttons[i].action(buttons[i].arg);
+	msel = NULL;
 }
 
 Client*

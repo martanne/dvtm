@@ -62,7 +62,9 @@ Key keys[] = {
 };
 
 Button buttons[] = {
-	{ BUTTON1_CLICKED, mouse_focus },
-	{ BUTTON1_DOUBLE_CLICKED, mouse_zoom },
-	{ BUTTON2_CLICKED, mouse_minimize },
+	{ BUTTON1_CLICKED, mouse_focus, NULL },
+	{ BUTTON1_DOUBLE_CLICKED, mouse_focus, NULL },
+	{ BUTTON1_DOUBLE_CLICKED, setlayout, "[ ]" },
+	{ BUTTON1_TRIPLE_CLICKED, mouse_zoom, NULL },
+	{ BUTTON2_CLICKED, mouse_minimize, NULL },
 };
