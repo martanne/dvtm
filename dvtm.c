@@ -10,17 +10,17 @@
  * See LICENSE for details.
  */
 
-#include <ncurses.h>
-#include <stdio.h>
-#include <signal.h>
-#include <locale.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/fcntl.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <ncurses.h>
+#include <stdio.h>
+#include <signal.h>
+#include <locale.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -86,27 +86,9 @@ enum { BarTop, BarBot, BarOff };
  #define debug(format,args...)
 #endif
 
-void arrange();
-void draw(Client *c);
-void draw_all(bool border);
-void draw_border(Client *c);
-void draw_content(Client *c);
-void drawbar();
-void attach(Client *c);
-void detach(Client *c);
-void zoom(const char *arg);
-void sigwinch_handler(int sig);
-void sigchld_handler(int sig);
-void resize_screen();
-void cleanup();
-void setup();
+/* commands for use by keybindings */
 void quit(const char *arg);
 void create(const char *cmd);
-void destroy(Client *c);
-void resize(Client* c,int x,int y,int w,int h);
-void resize_client(Client* c,int w,int h);
-void move_client(Client *c,int x, int y);
-void focus(Client *c);
 void focusn(const char *arg);
 void focusnext(const char *arg);
 void focusnextnm(const char *arg);
@@ -114,14 +96,18 @@ void focusprev(const char *arg);
 void focusprevnm(const char *arg);
 void toggleminimize(const char *arg);
 void togglebar(const char *arg);
-bool isarrange(void (*func)());
 void setmwfact(const char *arg);
 void setlayout(const char *arg);
-void eprint(const char *errstr, ...);
+void zoom(const char *arg);
+/* special mouse related commands */
 void mouse_focus(const char *arg);
 void mouse_minimize(const char *arg);
 void mouse_zoom(const char *arg);
-Client* get_client_by_pid(pid_t pid);
+
+void draw_all(bool border);
+void draw_border(Client *c);
+void drawbar();
+void resize(Client* c,int x,int y,int w,int h);
 
 unsigned int bh = 1, by, waw, wah, wax, way;
 Client *clients = NULL;
@@ -142,6 +128,14 @@ int width,height;
 bool running = true;
 
 void
+eprint(const char *errstr, ...) {
+	va_list ap;
+	va_start(ap, errstr);
+	vfprintf(stderr, errstr, ap);
+	va_end(ap);
+}
+
+void
 attach(Client *c) {
 	unsigned char order;
 	if(clients)
@@ -151,6 +145,25 @@ attach(Client *c) {
 	clients = c;
 	for(order = 1; c; c = c->next,order++)
 		c->order = order;
+}
+
+void
+attachafter(Client *c, Client *a){ /* attach c after a */
+	unsigned int o;
+	if(c == a)
+		return;
+	if(!a)
+		for(a = clients; a && a->next; a = a->next);
+
+	if(a){
+		if(a->next)
+			a->next->prev = c;
+		c->next = a->next;
+		c->prev = a;
+		a->next = c;
+		for(o = a->order; c; c = c->next)
+			c->order = ++o;
+	}
 }
 
 void
@@ -169,20 +182,14 @@ detach(Client *c) {
 }
 
 void
-zoom(const char *arg) {
-	Client *c;
+arrange(){
+	layouts[ltidx].arrange();
+	draw_all(true);
+}
 
-	if(!sel)
-		return;
-	if((c = sel) == clients)
-		if(!(c = c->next))
-			return;
-	detach(c);
-	attach(c);
-	focus(c);
-	if(c->minimized)
-		toggleminimize(NULL);
-	arrange();
+bool
+isarrange(void (*func)()){
+	return func == layouts[ltidx].arrange;
 }
 
 void
@@ -269,22 +276,20 @@ focusprevnm(const char *arg){
 }
 
 void
-attachafter(Client *c, Client *a){ /* attach c after a */
-	unsigned int o;
-	if(c == a)
-		return;
-	if(!a)
-		for(a = clients; a && a->next; a = a->next);
+zoom(const char *arg) {
+	Client *c;
 
-	if(a){
-		if(a->next)
-			a->next->prev = c;
-		c->next = a->next;
-		c->prev = a;
-		a->next = c;
-		for(o = a->order; c; c = c->next)
-			c->order = ++o;
-	}
+	if(!sel)
+		return;
+	if((c = sel) == clients)
+		if(!(c = c->next))
+			return;
+	detach(c);
+	attach(c);
+	focus(c);
+	if(c->minimized)
+		toggleminimize(NULL);
+	arrange();
 }
 
 void
@@ -355,16 +360,6 @@ togglebar(const char *arg) {
 	drawbar();
 }
 
-void
-arrange(){
-	layouts[ltidx].arrange();
-	draw_all(true);
-}
-
-bool
-isarrange(void (*func)()){
-	return func == layouts[ltidx].arrange;
-}
 
 void
 setlayout(const char *arg) {
@@ -407,13 +402,6 @@ setmwfact(const char *arg) {
 }
 
 void
-draw(Client *c){
-	draw_content(c);
-	draw_border(c);
-	wrefresh(c->window);
-}
-
-void
 draw_border(Client *c){
 	int x,y;
 	if(sel == c)
@@ -438,6 +426,13 @@ void
 draw_content(Client *c){
 	if(!c->minimized || isarrange(fullscreen))
 		madtty_draw(c->term,c->window,1,1);
+}
+
+void
+draw(Client *c){
+	draw_content(c);
+	draw_border(c);
+	wrefresh(c->window);
 }
 
 void
@@ -535,9 +530,16 @@ destroy(Client *c){
 }
 
 void
-resize(Client *c, int x, int y, int w, int h){
-	resize_client(c,w,h);
-	move_client(c,x,y);
+move_client(Client *c,int x, int y){
+	if(c->x == x && c->y == y)
+		return;
+	debug("moving, x: %d y: %d\n",x,y);
+	if(mvwin(c->window,y,x) == ERR)
+		eprint("error moving, x: %d y: %d\n",x,y);
+	else {
+		c->x = x;
+		c->y = y;
+	}
 }
 
 void
@@ -555,16 +557,9 @@ resize_client(Client *c,int w, int h){
 }
 
 void
-move_client(Client *c,int x, int y){
-	if(c->x == x && c->y == y)
-		return;
-	debug("moving, x: %d y: %d\n",x,y);
-	if(mvwin(c->window,y,x) == ERR)
-		eprint("error moving, x: %d y: %d\n",x,y);
-	else {
-		c->x = x;
-		c->y = y;
-	}
+resize(Client *c, int x, int y, int w, int h){
+	resize_client(c,w,h);
+	move_client(c,x,y);
 }
 
 bool
@@ -686,14 +681,6 @@ resize_screen(){
 	drawbar();
 	arrange();
 	need_screen_resize = false;
-}
-
-void
-eprint(const char *errstr, ...) {
-	va_list ap;
-	va_start(ap, errstr);
-	vfprintf(stderr, errstr, ap);
-	va_end(ap);
 }
 
 void
