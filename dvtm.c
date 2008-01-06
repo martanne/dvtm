@@ -687,7 +687,7 @@ void
 setup(){
 	int i;
 	mmask_t mask;
-	setlocale(LC_ALL,"");
+	setlocale(LC_CTYPE,"");
 	initscr();
 	start_color();
 	noecho();
