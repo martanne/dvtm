@@ -739,8 +739,8 @@ usage(){
 	exit(EXIT_FAILURE);
 }
 
-int
-main(int argc, char *argv[]) {
+void
+parse_args(int argc, char **argv){
 	int arg;
 	for(arg = 1; arg < argc; arg++){
 		if(argv[arg][0] != '-')
@@ -778,6 +778,11 @@ main(int argc, char *argv[]) {
 				usage();
 		}
 	}
+}
+
+int
+main(int argc, char *argv[]) {
+	parse_args(argc,argv);
 	setup();
 	while(running){
 		Client *c;
