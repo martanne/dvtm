@@ -10,6 +10,7 @@
  * See LICENSE for details.
  */
 
+#define _GNU_SOURCE
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/fcntl.h>
@@ -89,6 +90,7 @@ enum { BarTop, BarBot, BarOff };
 /* commands for use by keybindings */
 void quit(const char *arg);
 void create(const char *cmd);
+void killclient(const char *arg);
 void focusn(const char *arg);
 void focusnext(const char *arg);
 void focusnextnm(const char *arg);
@@ -488,6 +490,14 @@ drawbar(){
 	if(sel)
 		curs_set(1);
 	refresh();
+}
+
+void
+killclient(const char *arg){
+	if(!sel)
+		return;
+	debug("killing client with pid: %d\n",sel->pid);
+	kill(-sel->pid,SIGKILL);
 }
 
 void

@@ -57,6 +57,7 @@ Layout layouts[] = {
 Key keys[] = {
 	{ MOD, 'q', quit , NULL },
 	{ MOD, 'c', create , SHELL },
+	{ MOD, 'x', killclient , NULL },
 	{ MOD, 'j', focusnext , NULL },
 	{ MOD, 'u', focusnextnm , NULL },
 	{ MOD, 'i', focusprevnm , NULL },
