@@ -196,8 +196,10 @@ isarrange(void (*func)()){
 void
 focus(Client *c){
 	Client *tmp = sel;
+	if(sel == c)
+		return;
 	sel = c;
-	if(tmp && tmp != c){
+	if(tmp){
 		draw_border(tmp);
 		wrefresh(tmp->window);
 	}
@@ -360,7 +362,6 @@ togglebar(const char *arg) {
 	arrange();
 	drawbar();
 }
-
 
 void
 setlayout(const char *arg) {
@@ -706,9 +707,8 @@ setup(){
 	start_color();
 	noecho();
    	keypad(stdscr, TRUE);
-	for(i = 0, mask = 0; i < countof(buttons); i++){
+	for(i = 0, mask = 0; i < countof(buttons); i++)
 		mask |= buttons[i].mask;
-	}
 	mousemask(mask, NULL);
 	raw();
 	madtty_init_colors();
@@ -748,7 +748,7 @@ parse_args(int argc, char **argv){
 			usage();
 		switch(argv[arg][1]){
 			case 'v':
-				printf("dvtm-"VERSION" (c) 2007 Marc Andre Tanner\n");
+				puts("dvtm-"VERSION" (c) 2007 Marc Andre Tanner");
 				exit(EXIT_SUCCESS);
 			case 'm':
 				if(++arg >= argc)
