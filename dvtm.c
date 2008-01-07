@@ -101,6 +101,7 @@ void setlayout(const char *arg);
 void zoom(const char *arg);
 /* special mouse related commands */
 void mouse_focus(const char *arg);
+void mouse_fullscreen(const char *arg);
 void mouse_minimize(const char *arg);
 void mouse_zoom(const char *arg);
 
@@ -590,6 +591,15 @@ mouse_focus(const char *arg){
 }
 
 void
+mouse_fullscreen(const char *arg){
+	mouse_focus(NULL);
+	if(isarrange(fullscreen))
+		setlayout(NULL);
+	else
+		setlayout("[ ]");
+}
+
+void
 mouse_minimize(const char *arg){
 	focus(msel);
 	toggleminimize(NULL);
@@ -604,6 +614,10 @@ mouse_zoom(const char *arg){
 Client*
 get_client_by_coord(int x, int y){
 	Client *c;
+	if(y < way || y >= wah)
+		return NULL;
+	if(isarrange(fullscreen))
+		return sel;
 	for(c = clients; c; c = c->next){
 		if(x >= c->x && x < c->x + c->w && y >= c->y && y < c->y + c->h){
 			debug("mouse event, x: %d y: %d client: %d\n",x,y,c->order);
