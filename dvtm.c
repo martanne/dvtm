@@ -808,6 +808,7 @@ main(int argc, char *argv[]) {
 
 		if(FD_ISSET(STDIN_FILENO, &rd)){
 			int code = getch();
+			Key *key;
 			if(code >= 0){
 				if(code == KEY_MOUSE){
 					handle_mouse();
@@ -817,10 +818,11 @@ main(int argc, char *argv[]) {
 					if(code >= 0){
 						if(code == mod)
 							goto keypress;
-						Key* key = keybinding(mod,code);
-						if(key)
+						if((key = keybinding(mod,code)))
 							key->action(key->arg);
 					}
+				} else if((key = keybinding(0, code))){
+					key->action(key->arg);
 				} else {
 			keypress:
 					if(sel && (!sel->minimized || isarrange(fullscreen))){
