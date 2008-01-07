@@ -38,7 +38,7 @@ struct Client {
 	madtty_t *term;
 	const char *cmd;
 	const char *title;
-	unsigned char order;
+	uint8_t order;
 	pid_t pid;
 	int pty;
 	short int x;
@@ -71,9 +71,9 @@ typedef struct {
 
 enum { BarTop, BarBot, BarOff };
 
-#define COLOR(fg,bg) madtty_color_pair(fg,bg)
+#define COLOR(fg, bg) madtty_color_pair(fg, bg)
 #define countof(arr) (sizeof (arr) / sizeof((arr)[0]))
-#define max(x,y) ((x) > (y) ? (x) : (y))
+#define max(x, y) ((x) > (y) ? (x) : (y))
 
 #ifdef __linux__
 # define SHELL "/bin/sh --login"
@@ -84,7 +84,7 @@ enum { BarTop, BarBot, BarOff };
 #ifdef DEBUG
  #define debug eprint
 #else
- #define debug(format,args...)
+ #define debug(format, args...)
 #endif
 
 /* commands for use by keybindings */
@@ -110,7 +110,7 @@ void mouse_zoom(const char *arg);
 void draw_all(bool border);
 void draw_border(Client *c);
 void drawbar();
-void resize(Client* c,int x,int y,int w,int h);
+void resize(Client* c, int x, int y, int w, int h);
 
 unsigned int bh = 1, by, waw, wah, wax, way;
 Client *clients = NULL;
@@ -127,7 +127,7 @@ char stext[512];
 int barpos = BARPOS;
 unsigned int ltidx = 0;
 bool need_screen_resize = false;
-int width,height;
+int width, height;
 bool running = true;
 
 void
@@ -140,19 +140,19 @@ eprint(const char *errstr, ...) {
 
 void
 attach(Client *c) {
-	unsigned char order;
+	uint8_t order;
 	if(clients)
 		clients->prev = c;
 	c->next = clients;
 	c->prev = NULL;
 	clients = c;
-	for(order = 1; c; c = c->next,order++)
+	for(order = 1; c; c = c->next, order++)
 		c->order = order;
 }
 
 void
 attachafter(Client *c, Client *a){ /* attach c after a */
-	unsigned int o;
+	uint8_t o;
 	if(c == a)
 		return;
 	if(!a)
@@ -299,7 +299,7 @@ zoom(const char *arg) {
 
 void
 toggleminimize(const char *arg){
-	Client *c,*m;
+	Client *c, *m;
 	unsigned int n;
 	if(!sel)
 		return;
@@ -321,14 +321,14 @@ toggleminimize(const char *arg){
 		focus(c);
 		detach(m);
 		for(; c && c->next && !c->next->minimized; c = c->next);
-		attachafter(m,c);
+		attachafter(m, c);
 	} else if(m->minimized){
 		/* non master window got minimized move it above all other
 		 * minimized ones */
 		focusnextnm(NULL);
 		detach(m);
 		for(c = clients; c && c->next && !c->next->minimized; c = c->next);
-		attachafter(m,c);
+		attachafter(m, c);
 	} else { /* window is no longer minimized, move it to the master area */
 		detach(m);
 		attach(m);
@@ -407,29 +407,29 @@ setmwfact(const char *arg) {
 
 void
 draw_border(Client *c){
-	int x,y;
+	int x, y;
 	if(sel == c)
-		wattron(c->window,ATTR_SELECTED);
+		wattron(c->window, ATTR_SELECTED);
 	else
-		wattrset(c->window,ATTR_NORMAL);
+		wattrset(c->window, ATTR_NORMAL);
 	if(c->minimized && !isarrange(fullscreen))
-		mvwhline(c->window,0,0,ACS_HLINE,c->w);
+		mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
 	else
-		box(c->window,0,0);
+		box(c->window, 0, 0);
 	curs_set(0);
-	getyx(c->window,y,x);
-	mvwprintw(c->window,0,2, TITLE,
+	getyx(c->window, y, x);
+	mvwprintw(c->window, 0, 2, TITLE,
 	          c->title ? c->title : "",
 	          c->title ? SEPARATOR : "",
 		  c->order);
-	wmove(c->window,y,x);
+	wmove(c->window, y, x);
 	curs_set(1);
 }
 
 void
 draw_content(Client *c){
 	if(!c->minimized || isarrange(fullscreen))
-		madtty_draw(c->term,c->window,1,1);
+		madtty_draw(c->term, c->window, 1, 1);
 }
 
 void
@@ -470,7 +470,7 @@ draw_all(bool border){
 
 void
 drawbar(){
-	int s,l;
+	int s, l;
 	if(barpos == BarOff || !*stext)
 		return;
 	curs_set(0);
@@ -496,26 +496,26 @@ void
 killclient(const char *arg){
 	if(!sel)
 		return;
-	debug("killing client with pid: %d\n",sel->pid);
-	kill(-sel->pid,SIGKILL);
+	debug("killing client with pid: %d\n", sel->pid);
+	kill(-sel->pid, SIGKILL);
 }
 
 void
 create(const char *cmd){
 	const char *args[] = { "/bin/sh", "-c", cmd, NULL };
 	Client *c = malloc(sizeof(Client));
-	c->window = newwin(wah,waw,way,wax);
-	c->term = madtty_create(height-2,width-2);
+	c->window = newwin(wah, waw, way, wax);
+	c->term = madtty_create(height-2, width-2);
 	c->cmd = cmd;
 	c->title = cmd;
-	c->pid = madtty_forkpty(c->term,"/bin/sh",args,&c->pty);
+	c->pid = madtty_forkpty(c->term, "/bin/sh", args, &c->pty);
 	c->w = width;
 	c->h = height;
 	c->x = wax;
 	c->y = way;
 	c->order = 0;
 	c->minimized = false;
-	debug("client with pid %d forked\n",c->pid);
+	debug("client with pid %d forked\n", c->pid);
 	attach(c);
 	focus(c);
 	arrange();
@@ -542,12 +542,12 @@ destroy(Client *c){
 }
 
 void
-move_client(Client *c,int x, int y){
+move_client(Client *c, int x, int y){
 	if(c->x == x && c->y == y)
 		return;
-	debug("moving, x: %d y: %d\n",x,y);
-	if(mvwin(c->window,y,x) == ERR)
-		eprint("error moving, x: %d y: %d\n",x,y);
+	debug("moving, x: %d y: %d\n", x, y);
+	if(mvwin(c->window, y, x) == ERR)
+		eprint("error moving, x: %d y: %d\n", x, y);
 	else {
 		c->x = x;
 		c->y = y;
@@ -555,23 +555,23 @@ move_client(Client *c,int x, int y){
 }
 
 void
-resize_client(Client *c,int w, int h){
+resize_client(Client *c, int w, int h){
 	if(c->w == w && c->h == h)
 		return;
-	debug("resizing, w: %d h: %d\n",w,h);
-	if(wresize(c->window,h,w) == ERR)
-		eprint("error resizing, w: %d h: %d\n",w,h);
+	debug("resizing, w: %d h: %d\n", w, h);
+	if(wresize(c->window, h, w) == ERR)
+		eprint("error resizing, w: %d h: %d\n", w, h);
 	else {
 		c->w = w;
 		c->h = h;
 	}
-	madtty_resize(c->term,h-2,w-2);
+	madtty_resize(c->term, h-2, w-2);
 }
 
 void
 resize(Client *c, int x, int y, int w, int h){
-	resize_client(c,w,h);
-	move_client(c,x,y);
+	resize_client(c, w, h);
+	move_client(c, x, y);
 }
 
 bool
@@ -585,7 +585,7 @@ is_modifier(unsigned int mod){
 }
 
 Key*
-keybinding(unsigned int mod,unsigned int code){
+keybinding(unsigned int mod, unsigned int code){
 	unsigned int i;
 	for(i = 0; i < countof(keys); i++){
 		if(keys[i].mod == mod && keys[i].code == code)
@@ -631,7 +631,7 @@ get_client_by_coord(int x, int y){
 		return sel;
 	for(c = clients; c; c = c->next){
 		if(x >= c->x && x < c->x + c->w && y >= c->y && y < c->y + c->h){
-			debug("mouse event, x: %d y: %d client: %d\n",x,y,c->order);
+			debug("mouse event, x: %d y: %d client: %d\n", x, y, c->order);
 			return c;
 		}
 	}
@@ -665,17 +665,17 @@ get_client_by_pid(pid_t pid){
 
 void
 sigchld_handler(int sig){
-	signal(SIGCHLD,sigchld_handler);
 	int child_status;
+	signal(SIGCHLD, sigchld_handler);
 	pid_t pid = wait(&child_status);
-	debug("child with pid %d died\n",pid);
+	debug("child with pid %d died\n", pid);
 	client_killed = get_client_by_pid(pid);
 }
 
 void
 sigwinch_handler(int sig){
-	signal(SIGWINCH,sigwinch_handler);
 	struct winsize ws;
+	signal(SIGWINCH, sigwinch_handler);
 	if(ioctl(0, TIOCGWINSZ, &ws) == -1)
 		return;
 
@@ -691,14 +691,14 @@ sigterm_handler(int sig){
 
 void
 resize_screen(){
-	debug("resize_screen(), w: %d h: %d\n",width, height);
+	debug("resize_screen(), w: %d h: %d\n", width, height);
 	if(need_screen_resize){
 	#if defined(__OpenBSD__) || defined(__NetBSD__)
-		resizeterm(height,width);
+		resizeterm(height, width);
 	#else
-		resize_term(height,width);
+		resize_term(height, width);
 	#endif
-		wresize(stdscr,height,width);
+		wresize(stdscr, height, width);
 		wrefresh(curscr);
 		refresh();
 	}
@@ -723,11 +723,11 @@ setup(){
 	raw();
 	madtty_init_colors();
 	madtty_init_vt100_graphics();
-	getmaxyx(stdscr,height,width);
+	getmaxyx(stdscr, height, width);
 	resize_screen();
-	signal(SIGWINCH,sigwinch_handler);
-	signal(SIGCHLD,sigchld_handler);
-	signal(SIGTERM,sigterm_handler);
+	signal(SIGWINCH, sigwinch_handler);
+	signal(SIGCHLD, sigchld_handler);
+	signal(SIGTERM, sigterm_handler);
 }
 
 void
@@ -774,13 +774,13 @@ parse_args(int argc, char **argv){
 				if(++arg >= argc)
 					usage();
 				struct stat info;
-				if((statusfd = open(argv[arg],O_RDONLY|O_NONBLOCK)) == - 1 ||
-				    fstat(statusfd,&info) == -1){
+				if((statusfd = open(argv[arg], O_RDONLY|O_NONBLOCK)) == - 1 ||
+				    fstat(statusfd, &info) == -1){
 					perror("status");
 					exit(EXIT_FAILURE);
 				}
 				if(!S_ISFIFO(info.st_mode)){
-					eprint("%s is not a named pipe.\n",argv[arg]);
+					eprint("%s is not a named pipe.\n", argv[arg]);
 					exit(EXIT_FAILURE);
 				}
 				updatebarpos();
@@ -793,7 +793,7 @@ parse_args(int argc, char **argv){
 
 int
 main(int argc, char *argv[]) {
-	parse_args(argc,argv);
+	parse_args(argc, argv);
 	setup();
 	while(running){
 		Client *c;
@@ -812,13 +812,13 @@ main(int argc, char *argv[]) {
 		FD_SET(STDIN_FILENO, &rd);
 
 		if(statusfd != -1){
-			FD_SET(statusfd,&rd);
-			nfds = max(nfds,statusfd);
+			FD_SET(statusfd, &rd);
+			nfds = max(nfds, statusfd);
 		}
 
 		for(c = clients; c; c = c->next){
-			FD_SET(c->pty,&rd);
-			nfds = max(nfds,c->pty);
+			FD_SET(c->pty, &rd);
+			nfds = max(nfds, c->pty);
 		}
 		r = select(nfds + 1, &rd, NULL, NULL, NULL);
 
@@ -842,7 +842,7 @@ main(int argc, char *argv[]) {
 					if(code >= 0){
 						if(code == mod)
 							goto keypress;
-						if((key = keybinding(mod,code)))
+						if((key = keybinding(mod, code)))
 							key->action(key->arg);
 					}
 				} else if((key = keybinding(0, code))){
@@ -884,7 +884,7 @@ main(int argc, char *argv[]) {
 		}
 
 		for(c = clients; c; c = c->next){
-			if(FD_ISSET(c->pty,&rd)){
+			if(FD_ISSET(c->pty, &rd)){
 				madtty_process(c->term);
 				if(c != sel){
 					draw_content(c);
