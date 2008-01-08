@@ -56,17 +56,21 @@ struct Client {
 #endif
 #define CTRL_ALT(k) ((k) + (129 - 'a'))
 
+#define MAX_ARGS 2
+
 typedef struct {
 	unsigned int mod;
 	unsigned int code;
-	void (*action)(const char *arg);
-	const char *arg;
+	void (*action)(const char *args[]);
+	/* needed to avoid an error about initialization
+	 * of nested flexible array members */
+	const char *args[MAX_ARGS + 1];
 } Key;
 
 typedef struct {
 	mmask_t mask;
-	void (*action)(const char *arg);
-	const char *arg;
+	void (*action)(const char *args[]);
+	const char *args[MAX_ARGS + 1];
 } Button;
 
 enum { BarTop, BarBot, BarOff };
@@ -88,24 +92,24 @@ enum { BarTop, BarBot, BarOff };
 #endif
 
 /* commands for use by keybindings */
-void quit(const char *arg);
-void create(const char *cmd);
-void killclient(const char *arg);
-void focusn(const char *arg);
-void focusnext(const char *arg);
-void focusnextnm(const char *arg);
-void focusprev(const char *arg);
-void focusprevnm(const char *arg);
-void toggleminimize(const char *arg);
-void togglebar(const char *arg);
-void setmwfact(const char *arg);
-void setlayout(const char *arg);
-void zoom(const char *arg);
+void quit(const char *args[]);
+void create(const char *args[]);
+void killclient(const char *args[]);
+void focusn(const char *args[]);
+void focusnext(const char *args[]);
+void focusnextnm(const char *args[]);
+void focusprev(const char *args[]);
+void focusprevnm(const char *args[]);
+void toggleminimize(const char *args[]);
+void togglebar(const char *args[]);
+void setmwfact(const char *args[]);
+void setlayout(const char *args[]);
+void zoom(const char *args[]);
 /* special mouse related commands */
-void mouse_focus(const char *arg);
-void mouse_fullscreen(const char *arg);
-void mouse_minimize(const char *arg);
-void mouse_zoom(const char *arg);
+void mouse_focus(const char *args[]);
+void mouse_fullscreen(const char *args[]);
+void mouse_minimize(const char *args[]);
+void mouse_zoom(const char *args[]);
 
 void draw_all(bool border);
 void draw_border(Client *c);
@@ -210,11 +214,11 @@ focus(Client *c){
 }
 
 void
-focusn(const char *arg){
+focusn(const char *args[]){
 	Client *c;
 
 	for(c = clients; c; c = c->next){
-		if (c->order == atoi(arg)){
+		if (c->order == atoi(args[0])){
 			focus(c);
 			if(c->minimized)
 				toggleminimize(NULL);
@@ -224,7 +228,7 @@ focusn(const char *arg){
 }
 
 void
-focusnext(const char *arg) {
+focusnext(const char *args[]) {
 	Client *c;
 
 	if(!sel)
@@ -238,7 +242,7 @@ focusnext(const char *arg) {
 }
 
 void
-focusnextnm(const char *arg) {
+focusnextnm(const char *args[]) {
 	Client *c;
 
 	if(!sel)
@@ -253,7 +257,7 @@ focusnextnm(const char *arg) {
 }
 
 void
-focusprev(const char *arg){
+focusprev(const char *args[]){
 	Client *c;
 
 	if(!sel)
@@ -266,7 +270,7 @@ focusprev(const char *arg){
 }
 
 void
-focusprevnm(const char *arg){
+focusprevnm(const char *args[]){
 	Client *c;
 
 	if(!sel)
@@ -281,7 +285,7 @@ focusprevnm(const char *arg){
 }
 
 void
-zoom(const char *arg) {
+zoom(const char *args[]) {
 	Client *c;
 
 	if(!sel)
@@ -298,7 +302,7 @@ zoom(const char *arg) {
 }
 
 void
-toggleminimize(const char *arg){
+toggleminimize(const char *args[]){
 	Client *c, *m;
 	unsigned int n;
 	if(!sel)
@@ -355,7 +359,7 @@ updatebarpos(void) {
 }
 
 void
-togglebar(const char *arg) {
+togglebar(const char *args[]) {
 	if(barpos == BarOff)
 		barpos = (BARPOS == BarOff) ? BarTop : BARPOS;
 	else
@@ -366,15 +370,15 @@ togglebar(const char *arg) {
 }
 
 void
-setlayout(const char *arg) {
+setlayout(const char *args[]) {
 	unsigned int i;
 
-	if(!arg) {
+	if(!args || !args[0]) {
 		if(++ltidx == countof(layouts))
 			ltidx = 0;
 	} else {
 		for(i = 0; i < countof(layouts); i++)
-			if(!strcmp(arg, layouts[i].symbol))
+			if(!strcmp(args[0], layouts[i].symbol))
 				break;
 		if(i == countof(layouts))
 			return;
@@ -384,16 +388,16 @@ setlayout(const char *arg) {
 }
 
 void
-setmwfact(const char *arg) {
+setmwfact(const char *args[]) {
 	double delta;
 
 	if(!isarrange(tile) && !isarrange(bstack))
 		return;
 	/* arg handling, manipulate mwfact */
-	if(arg == NULL)
+	if(args[0] == NULL)
 		mwfact = MWFACT;
-	else if(1 == sscanf(arg, "%lf", &delta)) {
-		if(arg[0] == '+' || arg[0] == '-')
+	else if(1 == sscanf(args[0], "%lf", &delta)) {
+		if(args[0][0] == '+' || args[0][0] == '-')
 			mwfact += delta;
 		else
 			mwfact = delta;
@@ -493,7 +497,7 @@ drawbar(){
 }
 
 void
-killclient(const char *arg){
+killclient(const char *args[]){
 	if(!sel)
 		return;
 	debug("killing client with pid: %d\n", sel->pid);
@@ -501,14 +505,14 @@ killclient(const char *arg){
 }
 
 void
-create(const char *cmd){
-	const char *args[] = { "/bin/sh", "-c", cmd, NULL };
+create(const char *args[]){
+	const char *pargs[] = { "/bin/sh", "-c", args[0], NULL };
 	Client *c = malloc(sizeof(Client));
 	c->window = newwin(wah, waw, way, wax);
 	c->term = madtty_create(height-2, width-2);
-	c->cmd = cmd;
-	c->title = cmd;
-	c->pid = madtty_forkpty(c->term, "/bin/sh", args, &c->pty);
+	c->cmd = args[0];
+	c->title = args[1];
+	c->pid = madtty_forkpty(c->term, "/bin/sh", pargs, &c->pty);
 	c->w = width;
 	c->h = height;
 	c->x = wax;
@@ -595,29 +599,30 @@ keybinding(unsigned int mod, unsigned int code){
 }
 
 void
-mouse_focus(const char *arg){
+mouse_focus(const char *args[]){
 	focus(msel);
 	if(msel->minimized)
 		toggleminimize(NULL);
 }
 
 void
-mouse_fullscreen(const char *arg){
+mouse_fullscreen(const char *args[]){
+	const char *argv[] = { "[ ]" };
 	mouse_focus(NULL);
 	if(isarrange(fullscreen))
 		setlayout(NULL);
 	else
-		setlayout("[ ]");
+		setlayout(argv);
 }
 
 void
-mouse_minimize(const char *arg){
+mouse_minimize(const char *args[]){
 	focus(msel);
 	toggleminimize(NULL);
 }
 
 void
-mouse_zoom(const char *arg){
+mouse_zoom(const char *args[]){
 	focus(msel);
 	zoom(NULL);
 }
@@ -649,7 +654,7 @@ handle_mouse(){
 		return;
 	for(i = 0; i < countof(buttons); i++)
 		if(event.bstate & buttons[i].mask)
-			buttons[i].action(buttons[i].arg);
+			buttons[i].action(buttons[i].args);
 	msel = NULL;
 }
 
@@ -738,7 +743,7 @@ cleanup(){
 }
 
 void
-quit(const char *arg){
+quit(const char *args[]){
 	cleanup();
 	exit(EXIT_SUCCESS);
 }
@@ -751,7 +756,7 @@ usage(){
 }
 
 void
-parse_args(int argc, char **argv){
+parse_args(int argc, char *argv[]){
 	int arg;
 	for(arg = 1; arg < argc; arg++){
 		if(argv[arg][0] != '-')
@@ -843,10 +848,10 @@ main(int argc, char *argv[]) {
 						if(code == mod)
 							goto keypress;
 						if((key = keybinding(mod, code)))
-							key->action(key->arg);
+							key->action(key->args);
 					}
 				} else if((key = keybinding(0, code))){
-					key->action(key->arg);
+					key->action(key->args);
 				} else {
 			keypress:
 					if(sel && (!sel->minimized || isarrange(fullscreen))){
