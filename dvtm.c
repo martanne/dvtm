@@ -94,6 +94,7 @@ enum { BarTop, BarBot, BarOff };
 /* commands for use by keybindings */
 void quit(const char *args[]);
 void create(const char *args[]);
+void escapekey(const char *args[]);
 void killclient(const char *args[]);
 void focusn(const char *args[]);
 void focusnext(const char *args[]);
@@ -494,6 +495,19 @@ drawbar(){
 	if(sel)
 		curs_set(1);
 	refresh();
+}
+
+void
+escapekey(const char *args[]){
+	int key;
+	if(sel && (!sel->minimized || isarrange(fullscreen))) {
+		if((key = getch()) >= 0){
+			debug("escaping key `%c'\n", key);
+			madtty_keypress(sel->term, CTRL(key));
+			draw_content(sel);
+			wrefresh(sel->window);
+		}
+	}
 }
 
 void
