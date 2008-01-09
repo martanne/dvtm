@@ -108,6 +108,7 @@ void toggleminimize(const char *args[]);
 void togglebar(const char *args[]);
 void setmwfact(const char *args[]);
 void setlayout(const char *args[]);
+void redraw(const char *args[]);
 void zoom(const char *args[]);
 /* special mouse related commands */
 void mouse_focus(const char *args[]);
@@ -411,6 +412,12 @@ setmwfact(const char *args[]) {
 			mwfact = 0.9;
 	}
 	arrange();
+}
+
+void
+redraw(const char *args[]){
+	wrefresh(curscr);
+	draw_all(true);
 }
 
 void
