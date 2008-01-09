@@ -59,18 +59,21 @@ struct Client {
 #define MAX_ARGS 2
 
 typedef struct {
-	unsigned int mod;
-	unsigned int code;
-	void (*action)(const char *args[]);
+	void (*cmd)(const char *args[]);
 	/* needed to avoid an error about initialization
 	 * of nested flexible array members */
 	const char *args[MAX_ARGS + 1];
+} Action;
+
+typedef struct {
+	unsigned int mod;
+	unsigned int code;
+	Action action;
 } Key;
 
 typedef struct {
 	mmask_t mask;
-	void (*action)(const char *args[]);
-	const char *args[MAX_ARGS + 1];
+	Action action;
 } Button;
 
 enum { BarTop, BarBot, BarOff };
@@ -668,7 +671,7 @@ handle_mouse(){
 		return;
 	for(i = 0; i < countof(buttons); i++)
 		if(event.bstate & buttons[i].mask)
-			buttons[i].action(buttons[i].args);
+			buttons[i].action.cmd(buttons[i].action.args);
 	msel = NULL;
 }
 
@@ -862,10 +865,10 @@ main(int argc, char *argv[]) {
 						if(code == mod)
 							goto keypress;
 						if((key = keybinding(mod, code)))
-							key->action(key->args);
+							key->action.cmd(key->action.args);
 					}
 				} else if((key = keybinding(0, code))){
-					key->action(key->args);
+					key->action.cmd(key->action.args);
 				} else {
 			keypress:
 					if(sel && (!sel->minimized || isarrange(fullscreen))){
@@ -899,7 +902,7 @@ main(int argc, char *argv[]) {
 					if(p > stext)
 						strncpy(stext, p + 1, sizeof stext);
 					drawbar();
-				}
+			}
 		}
 
 		for(c = clients; c; c = c->next){
