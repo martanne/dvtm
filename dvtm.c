@@ -840,9 +840,10 @@ parse_args(int argc, char *argv[]){
 
 int
 main(int argc, char *argv[]) {
-	if(!parse_args(argc, argv))
+	if(!parse_args(argc, argv)){
 		setup();
-	startup(NULL);
+		startup(NULL);
+	}
 	while(running){
 		Client *c;
 		int r, nfds = 0;
