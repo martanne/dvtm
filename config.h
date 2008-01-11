@@ -117,10 +117,10 @@ Key keys[] = {
  */
 
 Button buttons[] = {
-	{ BUTTON1_CLICKED,        { mouse_focus,      { NULL } } },
-	{ BUTTON1_DOUBLE_CLICKED, { mouse_fullscreen, { NULL } } },
-	{ BUTTON1_TRIPLE_CLICKED, { mouse_zoom,       { NULL } } },
-	{ BUTTON2_CLICKED,        { mouse_minimize,   { NULL } } },
+	{ BUTTON1_CLICKED,        { mouse_focus,      { NULL  } } },
+	{ BUTTON1_DOUBLE_CLICKED, { mouse_fullscreen, { "[ ]" } } },
+	{ BUTTON1_TRIPLE_CLICKED, { mouse_zoom,       { NULL  } } },
+	{ BUTTON2_CLICKED,        { mouse_minimize,   { NULL  } } },
 };
 
 /* gets executed when dvtm is started */

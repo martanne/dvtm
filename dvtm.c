@@ -632,12 +632,11 @@ mouse_focus(const char *args[]){
 
 void
 mouse_fullscreen(const char *args[]){
-	const char *argv[] = { "[ ]" };
 	mouse_focus(NULL);
 	if(isarrange(fullscreen))
 		setlayout(NULL);
 	else
-		setlayout(argv);
+		setlayout(args);
 }
 
 void
