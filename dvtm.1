@@ -1,0 +1,116 @@
+.TH DVTM 1 dvtm\-VERSION
+.SH NAME
+dvtm \- dynamic virtual terminal manager
+.SH SYNOPSIS
+.B dvtm
+.RB [ \-v ] \ [ \-m \ mod ] \ [ \-s \ status ] \ [cmd...]
+.SH DESCRIPTION
+dvtm is a dynamic tiling window manager for the console.
+As a console window manager it tries to make it easy to work with multiple
+console based applications.
+.SH OPTIONS
+.TP
+.B \-v
+prints version information to standard output, then exits.
+.TP
+.B \-k mod
+set default modifier at runtime.
+.TP
+.B \-s status
+if status is a named pipe it's content is read and displayed. See the dvtm-status script
+for an usage example.
+.TP
+.B [cmd...]
+Execute cmd after dvtm is started.
+.SH USAGE
+.SS Keyboard commands
+.TP
+.B Mod
+Each keybinding begins with Mod which defaults to ^g but can be changed in config.h or with
+the -m command line option.
+.TP
+.B Mod\-c
+Create a new shell window.
+.TP
+.B Mod\-x
+Close focused window.
+.TP
+.B Mod\-l
+Increases the master area width about 5% (tiled and bottom stack layout only).
+.TP
+.B Mod1\-h
+Decreases the master area width about 5% (tiled layout only).
+.TP
+.B Mod\-j
+Focus next window.
+.TP
+.B Mod\-k
+Focus previous window.
+.TP
+.B Mod\-[1..n]
+Focus the
+.BR nth
+window.
+.TP
+.B Mod\-.
+Toggle minimization of current window.
+.TP
+.B Mod\-u
+Focus next non minimized window.
+.TP
+.B Mod\-i
+Focus prev non minimized window.
+.TP
+.B Mod\-m
+Maximize current window (change to fullscreen layout).
+.TP
+.B Mod\-Space
+Toggle between defined layouts (affects all windows).
+.TP
+.B Mod\-Enter
+Zooms/cycles current window to/from master area.
+.TP
+.B Mod\-t
+Change to vertical stack tiling layout.
+.TP
+.B Mod\-b
+Change to bottom stack tiling layout.
+.TP
+.B Mod\-g
+Change to grid layout.
+.TP
+.B Mod\-s
+Shows/hides the status bar.
+.TP
+.B Mod\-L
+Redraw whole screen.
+.TP
+.B Mod\-G
+Escape the next typed key.
+.TP
+.B Mod\-q
+Quit dvtm.
+.SS Mouse commands
+.TP
+.B Button1 click
+Select window.
+.TP
+.B Button1 double click
+Select window and toggle maximization.
+.TP
+.B Button2 click
+Zooms/cycles current window to/from master area.
+.TP
+.B Button3 click
+Toggle minimization of current window.
+
+.SH EXAMPLE
+.TP
+See the dvtm-status script as an example.
+
+.SH CUSTOMIZATION
+dvtm is customized by creating a custom config.h and (re)compiling the source
+code. This keeps it fast, secure and simple.
+
+.SH AUTHOR
+dvtm is written by Marc Andre Tanner <mat at brain-dump.org>
