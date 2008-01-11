@@ -71,13 +71,13 @@ Key keys[] = {
 	{ MOD, 't', { setlayout,      { "[]=" }   } },
 	{ MOD, 'g', { setlayout,      { "+++" }   } },
 	{ MOD, 'b', { setlayout,      { "TTT" }   } },
-	{ MOD, 'f', { setlayout,      { "[ ]" }   } },
+	{ MOD, 'm', { setlayout,      { "[ ]" }   } },
 	{ MOD, ' ', { setlayout,      { NULL }    } },
 	{ MOD, 'h', { setmwfact,      { "-0.05" } } },
 	{ MOD, 'l', { setmwfact,      { "+0.05" } } },
-	{ MOD, 'n', { toggleminimize, { NULL }    } },
+	{ MOD, '.', { toggleminimize, { NULL }    } },
 	{ MOD, 's', { togglebar,      { NULL }    } },
-	{ MOD, 'z', { zoom ,          { NULL }    } },
+	{ MOD, '\n',{ zoom ,          { NULL }    } },
 	{ MOD, '0', { focusn,         { "0" }     } },
 	{ MOD, '1', { focusn,         { "1" }     } },
 	{ MOD, '2', { focusn,         { "2" }     } },
@@ -125,8 +125,8 @@ Key keys[] = {
 Button buttons[] = {
 	{ BUTTON1_CLICKED,        { mouse_focus,      { NULL  } } },
 	{ BUTTON1_DOUBLE_CLICKED, { mouse_fullscreen, { "[ ]" } } },
-	{ BUTTON1_TRIPLE_CLICKED, { mouse_zoom,       { NULL  } } },
-	{ BUTTON2_CLICKED,        { mouse_minimize,   { NULL  } } },
+	{ BUTTON2_CLICKED,        { mouse_zoom,       { NULL  } } },
+	{ BUTTON3_CLICKED,        { mouse_minimize,   { NULL  } } },
 };
 
 /* gets executed when dvtm is started */
