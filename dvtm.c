@@ -97,6 +97,7 @@ enum { BarTop, BarBot, BarOff };
 /* commands for use by keybindings */
 void quit(const char *args[]);
 void create(const char *args[]);
+void startup(const char *args[]);
 void escapekey(const char *args[]);
 void killclient(const char *args[]);
 void focusn(const char *args[]);
@@ -135,7 +136,7 @@ int statusfd = -1;
 char stext[512];
 int barpos = BARPOS;
 unsigned int ltidx = 0;
-bool need_screen_resize = false;
+bool need_screen_resize = true;
 int width, height;
 bool running = true;
 
@@ -720,8 +721,9 @@ sigterm_handler(int sig){
 
 void
 resize_screen(){
-	debug("resize_screen(), w: %d h: %d\n", width, height);
+	debug("resize_screen()\n");
 	if(need_screen_resize){
+		debug("resize_screen(), w: %d h: %d\n", width, height);
 	#if defined(__OpenBSD__) || defined(__NetBSD__)
 		resizeterm(height, width);
 	#else
@@ -735,6 +737,13 @@ resize_screen(){
 	drawbar();
 	arrange();
 	need_screen_resize = false;
+}
+
+void
+startup(const char *args[]){
+	int i;
+	for(i = 0; i < countof(actions); i++)
+		actions[i].cmd(actions[i].args);
 }
 
 void
@@ -824,6 +833,7 @@ int
 main(int argc, char *argv[]) {
 	parse_args(argc, argv);
 	setup();
+	startup(NULL);
 	while(running){
 		Client *c;
 		int r, nfds = 0;

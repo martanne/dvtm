@@ -122,3 +122,8 @@ Button buttons[] = {
 	{ BUTTON1_TRIPLE_CLICKED, { mouse_zoom,       { NULL } } },
 	{ BUTTON2_CLICKED,        { mouse_minimize,   { NULL } } },
 };
+
+/* gets executed when dvtm is started */
+Action actions[] = {
+	{ create, { SHELL } },
+};
