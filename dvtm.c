@@ -784,16 +784,24 @@ quit(const char *args[]){
 void
 usage(){
 	cleanup();
-	eprint("usage: dvtm [-v] [-m mod] [-s status]\n");
+	eprint("usage: dvtm [-v] [-m mod] [-s status] [cmd...]\n");
 	exit(EXIT_FAILURE);
 }
 
-void
+bool
 parse_args(int argc, char *argv[]){
 	int arg;
+	bool init = false;
 	for(arg = 1; arg < argc; arg++){
-		if(argv[arg][0] != '-')
-			usage();
+		if(argv[arg][0] != '-'){
+			const char *args[] = { argv[arg], NULL };
+			if(!init){
+				setup();
+				init = true;
+			}
+			create(args);
+			continue;
+		}
 		switch(argv[arg][1]){
 			case 'v':
 				puts("dvtm-"VERSION" (c) 2007 Marc Andre Tanner");
@@ -827,12 +835,13 @@ parse_args(int argc, char *argv[]){
 				usage();
 		}
 	}
+	return init;
 }
 
 int
 main(int argc, char *argv[]) {
-	parse_args(argc, argv);
-	setup();
+	if(!parse_args(argc, argv))
+		setup();
 	startup(NULL);
 	while(running){
 		Client *c;
