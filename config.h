@@ -52,6 +52,12 @@ Layout layouts[] = {
 	{ "[ ]", fullscreen },
 };
 
+#ifdef __linux__
+# define SHELL "/bin/sh --login"
+#else
+# define SHELL "/bin/sh"
+#endif
+
 #define MOD CTRL('g')
 
 /* you can at most specifiy MAX_ARGS (2) number of arguments */
