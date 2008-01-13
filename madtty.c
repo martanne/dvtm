@@ -37,7 +37,7 @@
 # include <pty.h>
 #elif defined(__FreeBSD__)
 # include <libutil.h>
-#elif defined(__OpenBSD__)
+#elif defined(__OpenBSD__) || defined(__NetBSD__)
 # include <util.h>
 #endif
 #include "madtty.h"
