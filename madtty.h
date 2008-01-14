@@ -55,6 +55,8 @@ typedef int (*madtty_handler_t)(madtty_t *, char *es);
 void madtty_init_colors(void);
 void madtty_init_vt100_graphics(void);
 void madtty_set_handler(madtty_t *, madtty_handler_t);
+void madtty_set_data(madtty_t *, void *);
+void *madtty_get_data(madtty_t *);
 int madtty_color_pair(int fg, int bg);
 
 madtty_t *madtty_create(int rows, int cols);

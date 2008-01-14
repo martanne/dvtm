@@ -107,6 +107,7 @@ struct madtty_t {
     char ebuf[BUFSIZ];
     int  rlen, elen;
     madtty_handler_t handler;
+    void *data;
 };
 
 typedef struct t_row_t {
@@ -1094,4 +1095,14 @@ int madtty_color_pair(int fg, int bg)
 void madtty_set_handler(madtty_t *t, madtty_handler_t handler)
 {
     t->handler = handler;
+}
+
+void madtty_set_data(madtty_t *t, void *data)
+{
+    t->data = data;
+}
+
+void *madtty_get_data(madtty_t *t)
+{
+    return t->data;
 }
