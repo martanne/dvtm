@@ -30,11 +30,31 @@
 #include <unistd.h>
 #include <wchar.h>
 
+enum {
+    /* means escape sequence was handled */
+    MADTTY_HANDLER_OK,
+    /* means the escape sequence was not  recognized yet, but
+     * there is hope that it still will once more characters
+     * arrive (i.e. it is not yet complete).
+     *
+     * The library will thus continue collecting characters
+     * and calling the handler as each character arrives until
+     * either OK or NOWAY is returned.
+     */
+    MADTTY_HANDLER_NOTYET,
+    /* means the escape sequence was not recognized, and there
+     * is no chance that it will even if more characters  are
+     * added to it.
+     */
+    MADTTY_HANDLER_NOWAY
+};
+
 typedef struct madtty_t madtty_t;
+typedef int (*madtty_handler_t)(madtty_t *, char *es);
 
 void madtty_init_colors(void);
 void madtty_init_vt100_graphics(void);
-
+void madtty_set_handler(madtty_t *, madtty_handler_t);
 int madtty_color_pair(int fg, int bg);
 
 madtty_t *madtty_create(int rows, int cols);

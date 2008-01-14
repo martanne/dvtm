@@ -106,6 +106,7 @@ struct madtty_t {
     char rbuf[BUFSIZ];
     char ebuf[BUFSIZ];
     int  rlen, elen;
+    madtty_handler_t handler;
 };
 
 typedef struct t_row_t {
@@ -597,11 +598,17 @@ static void es_interpret_csi(madtty_t *t)
 static void try_interpret_escape_seq(madtty_t *t)
 {
     char lastchar  = t->ebuf[t->elen-1];
-
+    if(!*t->ebuf)
+       return;
+    if(t->handler){
+       switch((*(t->handler))(t, t->ebuf)){
+          case MADTTY_HANDLER_OK:
+	     goto cancel;
+          case MADTTY_HANDLER_NOTYET:
+	     return;
+       }
+    }
     switch (*t->ebuf) {
-      case '\0':
-        return;
-
       case 'M':
         interpret_csi_SR(t);
         cancel_escape_sequence(t);
@@ -1082,4 +1089,9 @@ int madtty_color_pair(int fg, int bg)
     if (bg < 0)
         bg = COLOR_BLACK;
     return COLOR_PAIR((7 - fg) * 8 + bg);
+}
+
+void madtty_set_handler(madtty_t *t, madtty_handler_t handler)
+{
+    t->handler = handler;
 }
