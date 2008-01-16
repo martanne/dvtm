@@ -37,7 +37,7 @@ struct Client {
 	WINDOW *window;
 	madtty_t *term;
 	const char *cmd;
-	const char *title;
+	char title[256];
 	uint8_t order;
 	pid_t pid;
 	int pty;
@@ -429,8 +429,8 @@ draw_border(Client *c){
 	curs_set(0);
 	getyx(c->window, y, x);
 	mvwprintw(c->window, 0, 2, TITLE,
-	          c->title ? c->title : "",
-	          c->title ? SEPARATOR : "",
+	          *c->title ? c->title : "",
+	          *c->title ? SEPARATOR : "",
 		  c->order);
 	wmove(c->window, y, x);
 	curs_set(1);
@@ -523,15 +523,34 @@ killclient(const char *args[]){
 	kill(-sel->pid, SIGKILL);
 }
 
+int
+title_escape_seq_handler(madtty_t *term, char *es){
+	Client *c;
+	unsigned int l;
+	if(es[0] != ']' || (es[1] && (es[1] < '0' || es[1] > '9')) || (es[2] && es[2] != ';'))
+		return MADTTY_HANDLER_NOWAY;
+	if((l = strlen(es)) < 3 || es[l - 1] != '\07')
+		return MADTTY_HANDLER_NOTYET;
+	es[l - 1] = '\0';
+	c = (Client *)madtty_get_data(term);
+	strncpy(c->title, es + 3, sizeof(c->title));
+	draw_border(c);
+	debug("window title: %s\n", c->title);
+	return MADTTY_HANDLER_OK;
+}
+
 void
 create(const char *args[]){
 	const char *pargs[] = { "/bin/sh", "-c", args[0], NULL };
-	Client *c = malloc(sizeof(Client));
+	Client *c = calloc(sizeof(Client), 1);
 	c->window = newwin(wah, waw, way, wax);
 	c->term = madtty_create(height-2, width-2);
 	c->cmd = args[0];
-	c->title = args[1];
+	if(args[1])
+		strncpy(c->title, args[1], sizeof(c->title));
 	c->pid = madtty_forkpty(c->term, "/bin/sh", pargs, &c->pty);
+	madtty_set_data(c->term, c);
+	madtty_set_handler(c->term, title_escape_seq_handler);
 	c->w = width;
 	c->h = height;
 	c->x = wax;
