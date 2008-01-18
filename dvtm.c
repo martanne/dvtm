@@ -417,7 +417,8 @@ redraw(const char *args[]){
 
 void
 draw_border(Client *c){
-	int x, y;
+	char *s, t = '\0';
+	int x, y, o;
 	if(sel == c)
 		wattron(c->window, ATTR_SELECTED);
 	else
@@ -428,10 +429,17 @@ draw_border(Client *c){
 		box(c->window, 0, 0);
 	curs_set(0);
 	getyx(c->window, y, x);
+	o = c->w - (4 + strlen(TITLE) - 5  + strlen(SEPARATOR));
+	if(o >= 0 && o < sizeof(c->title)){
+		t = *(s = &c->title[o]);
+		*s = '\0';
+	}
 	mvwprintw(c->window, 0, 2, TITLE,
 	          *c->title ? c->title : "",
 	          *c->title ? SEPARATOR : "",
 		  c->order);
+	if(t)
+		*s = t;
 	wmove(c->window, y, x);
 	curs_set(1);
 }
