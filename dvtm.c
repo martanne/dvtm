@@ -125,11 +125,11 @@ extern double mwfact;
 Client *sel = NULL;
 Client *msel = NULL;
 double mwfact = MWFACT;
+Layout *layout = layouts;
 Client *client_killed = NULL;
 int statusfd = -1;
 char stext[512];
 int barpos = BARPOS;
-unsigned int ltidx = 0;
 bool need_screen_resize = true;
 int width, height;
 bool running = true;
@@ -190,13 +190,13 @@ detach(Client *c) {
 
 void
 arrange(){
-	layouts[ltidx].arrange();
+	layout->arrange();
 	draw_all(true);
 }
 
 bool
 isarrange(void (*func)()){
-	return func == layouts[ltidx].arrange;
+	return func == layout->arrange;
 }
 
 void
@@ -374,15 +374,15 @@ setlayout(const char *args[]) {
 	unsigned int i;
 
 	if(!args || !args[0]) {
-		if(++ltidx == countof(layouts))
-			ltidx = 0;
+		if(++layout == &layouts[countof(layouts)])
+			layout = &layouts[0];
 	} else {
 		for(i = 0; i < countof(layouts); i++)
 			if(!strcmp(args[0], layouts[i].symbol))
 				break;
 		if(i == countof(layouts))
 			return;
-		ltidx = i;
+		layout = &layouts[i];
 	}
 	arrange();
 }
