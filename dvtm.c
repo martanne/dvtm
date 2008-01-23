@@ -777,7 +777,8 @@ setup(){
    	keypad(stdscr, TRUE);
 	for(i = 0, mask = 0; i < countof(buttons); i++)
 		mask |= buttons[i].mask;
-	mousemask(mask, NULL);
+	if(mask)
+		mousemask(mask, NULL);
 	raw();
 	madtty_init_colors();
 	madtty_init_vt100_graphics();
