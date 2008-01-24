@@ -431,7 +431,9 @@ draw_border(Client *c){
 	curs_set(0);
 	getyx(c->window, y, x);
 	o = c->w - (4 + strlen(TITLE) - 5  + strlen(SEPARATOR));
-	if(o >= 0 && o < sizeof(c->title)){
+	if(o < 0)
+		o = 0;
+	if(o < sizeof(c->title)){
 		t = *(s = &c->title[o]);
 		*s = '\0';
 	}
