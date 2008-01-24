@@ -52,17 +52,11 @@ Layout layouts[] = {
 	{ "[ ]", fullscreen },
 };
 
-#ifdef __linux__
-# define SHELL "/bin/sh --login"
-#else
-# define SHELL "/bin/sh"
-#endif
-
 #define MOD CTRL('g')
 
 /* you can at most specifiy MAX_ARGS (2) number of arguments */
 Key keys[] = {
-	{ MOD, 'c', { create,         { SHELL }   } },
+	{ MOD, 'c', { create,         { NULL }    } },
 	{ MOD, 'x', { killclient,     { NULL }    } },
 	{ MOD, 'j', { focusnext,      { NULL }    } },
 	{ MOD, 'u', { focusnextnm,    { NULL }    } },
@@ -131,5 +125,5 @@ Button buttons[] = {
 
 /* gets executed when dvtm is started */
 Action actions[] = {
-	{ create, { SHELL } },
+	{ create, { NULL } },
 };

@@ -130,6 +130,7 @@ Client *client_killed = NULL;
 int statusfd = -1;
 char stext[512];
 int barpos = BARPOS;
+const char *shell;
 bool need_screen_resize = true;
 int width, height;
 bool running = true;
@@ -549,12 +550,13 @@ title_escape_seq_handler(madtty_t *term, char *es){
 
 void
 create(const char *args[]){
-	const char *pargs[] = { "/bin/sh", "-c", args[0], NULL };
+	const char *cmd = (args && args[0]) ? args[0] : shell;
+	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
 	Client *c = calloc(sizeof(Client), 1);
 	c->window = newwin(wah, waw, way, wax);
 	c->term = madtty_create(height-2, width-2);
-	c->cmd = args[0];
-	if(args[1])
+	c->cmd = cmd;
+	if(args && args[1])
 		strncpy(c->title, args[1], sizeof(c->title));
 	c->pid = madtty_forkpty(c->term, "/bin/sh", pargs, &c->pty);
 	madtty_set_data(c->term, c);
@@ -587,6 +589,12 @@ destroy(Client *c){
 	wrefresh(c->window);
 	madtty_destroy(c->term);
 	delwin(c->window);
+	if(!clients && countof(actions)){
+		if(!strcmp(c->cmd, shell))
+			quit(NULL);
+		else
+			create(NULL);
+	}
 	free(c);
 	arrange();
 }
@@ -770,6 +778,8 @@ void
 setup(){
 	int i;
 	mmask_t mask;
+	if(!(shell = getenv("SHELL")))
+		shell = "/bin/sh";
 	setlocale(LC_CTYPE,"");
 	initscr();
 	start_color();
