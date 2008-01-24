@@ -82,10 +82,10 @@ enum { BarTop, BarBot, BarOff };
 #define countof(arr) (sizeof (arr) / sizeof((arr)[0]))
 #define max(x, y) ((x) > (y) ? (x) : (y))
 
-#ifdef DEBUG
- #define debug eprint
-#else
+#ifdef NDEBUG
  #define debug(format, args...)
+#else
+ #define debug eprint
 #endif
 
 /* commands for use by keybindings */
