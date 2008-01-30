@@ -111,6 +111,7 @@ void mouse_fullscreen(const char *args[]);
 void mouse_minimize(const char *args[]);
 void mouse_zoom(const char *args[]);
 
+void clear_workspace();
 void draw_all(bool border);
 void draw_border(Client *c);
 void drawbar();
@@ -191,7 +192,9 @@ detach(Client *c) {
 
 void
 arrange(){
+	clear_workspace();
 	layout->arrange();
+	wnoutrefresh(stdscr);
 	draw_all(true);
 }
 
@@ -424,12 +427,9 @@ draw_border(Client *c){
 		wattron(c->window, ATTR_SELECTED);
 	else
 		wattrset(c->window, ATTR_NORMAL);
-	if(c->minimized && !isarrange(fullscreen))
-		mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
-	else
-		box(c->window, 0, 0);
-	curs_set(0);
 	getyx(c->window, y, x);
+	curs_set(0);
+	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
 	o = c->w - (4 + strlen(TITLE) - 5  + strlen(SEPARATOR));
 	if(o < 0)
 		o = 0;
@@ -450,7 +450,7 @@ draw_border(Client *c){
 void
 draw_content(Client *c){
 	if(!c->minimized || isarrange(fullscreen))
-		madtty_draw(c->term, c->window, 1, 1);
+		madtty_draw(c->term, c->window, 1, 0);
 }
 
 void
@@ -458,6 +458,14 @@ draw(Client *c){
 	draw_content(c);
 	draw_border(c);
 	wrefresh(c->window);
+}
+
+void
+clear_workspace(){
+	unsigned int y;
+	for(y = 0; y < wah; y++)
+		mvhline(way + y, 0, ' ', waw);
+	wnoutrefresh(stdscr);
 }
 
 void
@@ -487,6 +495,7 @@ draw_all(bool border){
 	doupdate();
 	if(sel && isarrange(fullscreen))
 		redrawwin(sel->window);
+	refresh();
 }
 
 void
@@ -556,7 +565,7 @@ create(const char *args[]){
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
 	Client *c = calloc(sizeof(Client), 1);
 	c->window = newwin(wah, waw, way, wax);
-	c->term = madtty_create(height-2, width-2);
+	c->term = madtty_create(height - 1, width);
 	c->cmd = cmd;
 	if(args && args[1])
 		strncpy(c->title, args[1], sizeof(c->title));
@@ -625,7 +634,7 @@ resize_client(Client *c, int w, int h){
 		c->w = w;
 		c->h = h;
 	}
-	madtty_resize(c->term, h-2, w-2);
+	madtty_resize(c->term, h - 1, w);
 }
 
 void

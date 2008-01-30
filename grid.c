@@ -32,6 +32,17 @@ grid(void) {
 				aw = waw - nw * (nm % cols);
 			else
 				aw = ((i + 1) % cols == 0) ? waw - nw * cols : 0;
+			if(i % cols){
+				mvvline(ny, nx, ACS_VLINE, nh + ah);
+				/* if we are on the first row, or on the last one and there are fewer clients
+				 * than normal whose border does not match the line above, print a top tree char
+				 * otherwise a plus sign. */
+				if(i <= cols || (i >= rows * cols - cols && nm % cols && (cols - (nm % cols)) % 2))
+					mvaddch(ny, nx, ACS_TTEE);
+				else
+					mvaddch(ny, nx, ACS_PLUS);
+				nx++, aw--;
+			}
 		} else {
 			if(i == nm){ /* first minimized client */
 				ny = way + wah - m;

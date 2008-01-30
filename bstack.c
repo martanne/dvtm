@@ -15,7 +15,7 @@ bstack(void) {
 		mh = mwfact * (wah - m);
 	/* true if there are at least 2 non minimized clients */
 	if(n - 1 > m)
-		tw = waw  / (n - m - 1);
+		tw = waw / (n - m - 1);
 
 	nx = wax;
 	ny = way;
@@ -42,6 +42,11 @@ bstack(void) {
 				ny++;
 			} else /* normal non minimized tile window */
 				nw = tw;
+			if(i > 1 && !c->minimized){
+				mvvline(ny, nx, ACS_VLINE, nh);
+				mvaddch(ny, nx, ACS_TTEE);
+				nx++, nw--;
+			}
 		}
 
 		resize(c,nx,ny,nw,nh);
