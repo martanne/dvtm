@@ -447,7 +447,8 @@ draw_border(Client *c){
 	if(t)
 		*s = t;
 	wmove(c->window, y, x);
-	curs_set(1);
+	if(!c->minimized)
+		curs_set(madtty_cursor(c->term));
 }
 
 void
@@ -494,8 +495,6 @@ draw_all(bool border){
 			draw_border(sel);
 		wnoutrefresh(sel->window);
 	}
-	if(!sel || !sel->minimized)
-		curs_set(1);
 	refresh();
 }
 
@@ -519,7 +518,7 @@ drawbar(){
 	addch(']');
 	attrset(ATTR_NORMAL);
 	if(sel)
-		curs_set(1);
+		curs_set(madtty_cursor(sel->term));
 	refresh();
 }
 
