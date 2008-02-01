@@ -340,6 +340,7 @@ toggleminimize(const char *args[]){
 		for(c = clients; c && c->next && !c->next->minimized; c = c->next);
 		attachafter(m, c);
 	} else { /* window is no longer minimized, move it to the master area */
+		madtty_dirty(m->term);
 		detach(m);
 		attach(m);
 	}
@@ -475,6 +476,7 @@ draw_all(bool border){
 	Client *c;
 	curs_set(0);
 	for(c = clients; c; c = c->next){
+		redrawwin(c->window);
 		if(c == sel)
 			continue;
 		draw_content(c);
