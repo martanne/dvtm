@@ -64,6 +64,7 @@ void madtty_resize(madtty_t *, int rows, int cols);
 void madtty_destroy(madtty_t *);
 pid_t madtty_forkpty(madtty_t *, const char *, const char *argv[], int *pty);
 int madtty_getpty(madtty_t *);
+unsigned madtty_cursor(madtty_t *t);
 
 int madtty_process(madtty_t *);
 void madtty_keypress(madtty_t *, int keycode);

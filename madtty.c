@@ -1112,3 +1112,8 @@ void *madtty_get_data(madtty_t *t)
 {
     return t->data;
 }
+
+unsigned madtty_cursor(madtty_t *t)
+{
+    return !t->curshid;
+}
