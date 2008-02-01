@@ -213,6 +213,8 @@ focus(Client *c){
 		draw_border(tmp);
 		wrefresh(tmp->window);
 	}
+	if(isarrange(fullscreen))
+		redrawwin(c->window);
 	draw_border(c);
 	wrefresh(c->window);
 }
@@ -492,9 +494,6 @@ draw_all(bool border){
 	}
 	if(!sel || !sel->minimized)
 		curs_set(1);
-	doupdate();
-	if(sel && isarrange(fullscreen))
-		redrawwin(sel->window);
 	refresh();
 }
 
@@ -985,12 +984,12 @@ main(int argc, char *argv[]) {
 		}
 
 		if(sel) {
+			if(isarrange(fullscreen))
+				redrawwin(sel->window);
 			draw_content(sel);
 			wnoutrefresh(sel->window);
 		}
 		doupdate();
-		if(sel && isarrange(fullscreen))
-			redrawwin(sel->window);
 	}
 
 	cleanup();
