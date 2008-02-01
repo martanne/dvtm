@@ -426,7 +426,7 @@ draw_border(Client *c){
 	char *s, t = '\0';
 	int x, y, o;
 	if(sel == c)
-		wattron(c->window, ATTR_SELECTED);
+		wattrset(c->window, ATTR_SELECTED);
 	else
 		wattrset(c->window, ATTR_NORMAL);
 	getyx(c->window, y, x);
