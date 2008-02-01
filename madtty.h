@@ -67,6 +67,7 @@ int madtty_getpty(madtty_t *);
 
 int madtty_process(madtty_t *);
 void madtty_keypress(madtty_t *, int keycode);
+void madtty_dirty(madtty_t *t);
 void madtty_draw(madtty_t *, WINDOW *win, int startrow, int startcol);
 
 #endif /* MADTTY_MADTTY_H */

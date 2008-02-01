@@ -959,6 +959,12 @@ void madtty_destroy(madtty_t *t)
     free(t);
 }
 
+void madtty_dirty(madtty_t *t)
+{
+    for (int i = 0; i < t->rows; i++)
+        t->lines[i].dirty = true;
+}
+
 void madtty_draw(madtty_t *t, WINDOW *win, int srow, int scol)
 {
     curs_set(0);
