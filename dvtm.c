@@ -504,21 +504,23 @@ draw_all(bool border){
 
 void
 drawbar(){
-	int s, l;
+	int s, l, maxlen = width - 2;
+	char t = stext[maxlen];
 	if(barpos == BarOff || !*stext)
 		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
 	mvaddch(by, 0, '[');
-	stext[width - 2] = '\0';
+	stext[maxlen] = '\0';
 	l = strlen(stext);
 	if(BAR_ALIGN_RIGHT)
-		for(s = 0; s + l < width - 2; s++)
+		for(s = 0; s + l < maxlen; s++)
 			addch(' ');
 	else
-		for(; l < width - 2; l++)
+		for(; l < maxlen; l++)
 			stext[l] = ' ';
 	addstr(stext);
+	stext[maxlen] = t;
 	addch(']');
 	attrset(ATTR_NORMAL);
 	if(sel)
