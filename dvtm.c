@@ -453,8 +453,11 @@ draw_border(Client *c){
 
 void
 draw_content(Client *c){
-	if(!c->minimized || isarrange(fullscreen))
+	if(!c->minimized || isarrange(fullscreen)){
 		madtty_draw(c->term, c->window, 1, 0);
+		if(c != sel)
+			curs_set(0);
+	}
 }
 
 void
@@ -489,13 +492,13 @@ draw_all(bool border){
 	 * this has the effect that the cursor position is
 	 * accurate
 	 */
+	refresh();
 	if(sel){
 		draw_content(sel);
 		if(border)
 			draw_border(sel);
-		wnoutrefresh(sel->window);
+		wrefresh(sel->window);
 	}
-	refresh();
 }
 
 void
