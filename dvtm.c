@@ -80,6 +80,7 @@ enum { BarTop, BarBot, BarOff };
 
 #define COLOR(fg, bg) madtty_color_pair(fg, bg)
 #define countof(arr) (sizeof (arr) / sizeof((arr)[0]))
+#define sstrlen(str) (sizeof (str) - 1)
 #define max(x, y) ((x) > (y) ? (x) : (y))
 
 #ifdef NDEBUG
@@ -433,7 +434,7 @@ draw_border(Client *c){
 	getyx(c->window, y, x);
 	curs_set(0);
 	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
-	o = c->w - (4 + strlen(TITLE) - 5  + strlen(SEPARATOR));
+	o = c->w - (4 + sstrlen(TITLE) - 5  + sstrlen(SEPARATOR));
 	if(o < 0)
 		o = 0;
 	if(o < sizeof(c->title)){
