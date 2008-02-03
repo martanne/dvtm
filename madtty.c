@@ -749,13 +749,15 @@ void madtty_init_vt100_graphics(void)
     vt100['f' - 0x41] = ACS_DEGREE;
     vt100['g' - 0x41] = ACS_PLMINUS;
     vt100['~' - 0x41] = ACS_BULLET;
+#if 0 /* out of bounds */
     vt100[',' - 0x41] = ACS_LARROW;
     vt100['+' - 0x41] = ACS_RARROW;
     vt100['.' - 0x41] = ACS_DARROW;
     vt100['-' - 0x41] = ACS_UARROW;
+    vt100['0' - 0x41] = ACS_BLOCK;
+#endif
     vt100['h' - 0x41] = ACS_BOARD;
     vt100['i' - 0x41] = ACS_LANTERN;
-    vt100['0' - 0x41] = ACS_BLOCK;
     /* these defaults were invented for ncurses */
     vt100['p' - 0x41] = ACS_S3;
     vt100['r' - 0x41] = ACS_S7;
