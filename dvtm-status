@@ -11,6 +11,7 @@ while true; do
 done > $FIFO &
 
 STATUS_PID=$!
+export ESCDELAY=25
 dvtm -s $FIFO "$@" 2> /dev/null
 kill $STATUS_PID
 rm $FIFO
