@@ -985,14 +985,13 @@ main(int argc, char *argv[]) {
 				madtty_process(c->term);
 				if(c != sel){
 					draw_content(c);
-					wnoutrefresh(c->window);
+					if(!isarrange(fullscreen))
+						wnoutrefresh(c->window);
 				}
 			}
 		}
 
 		if(sel) {
-			if(isarrange(fullscreen))
-				redrawwin(sel->window);
 			draw_content(sel);
 			wnoutrefresh(sel->window);
 		}
