@@ -982,7 +982,10 @@ main(int argc, char *argv[]) {
 
 		for(c = clients; c; c = c->next){
 			if(FD_ISSET(c->pty, &rd)){
-				madtty_process(c->term);
+				if (madtty_process(c->term) < 0 && errno == EIO) {
+					/* client probably terminated */
+					client_killed = c;
+				}
 				if(c != sel){
 					draw_content(c);
 					if(!isarrange(fullscreen))
