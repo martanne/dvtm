@@ -71,10 +71,12 @@ typedef struct {
 	Action action;
 } Key;
 
+#if defined(HANDLE_MOUSE)
 typedef struct {
 	mmask_t mask;
 	Action action;
 } Button;
+#endif /* HANDLE_MOUSE */
 
 enum { BarTop, BarBot, BarOff };
 
@@ -106,11 +108,13 @@ void setmwfact(const char *args[]);
 void setlayout(const char *args[]);
 void redraw(const char *args[]);
 void zoom(const char *args[]);
-/* special mouse related commands */
+
+#if defined(HANDLE_MOUSE)
 void mouse_focus(const char *args[]);
 void mouse_fullscreen(const char *args[]);
 void mouse_minimize(const char *args[]);
 void mouse_zoom(const char *args[]);
+#endif /* HANDLE_MOUSE */
 
 void clear_workspace();
 void draw_all(bool border);
@@ -669,6 +673,8 @@ keybinding(unsigned int mod, unsigned int code){
 	return NULL;
 }
 
+#if defined(HANDLE_MOUSE)
+
 void
 mouse_focus(const char *args[]){
 	focus(msel);
@@ -727,6 +733,18 @@ handle_mouse(){
 			buttons[i].action.cmd(buttons[i].action.args);
 	msel = NULL;
 }
+
+void
+mouse_setup(){
+	int i;
+	mmask_t mask;
+	for(i = 0, mask = 0; i < countof(buttons); i++)
+		mask |= buttons[i].mask;
+	if(mask)
+		mousemask(mask, NULL);
+}
+
+#endif /* HANDLE_MOUSE */
 
 Client*
 get_client_by_pid(pid_t pid){
@@ -793,8 +811,6 @@ startup(const char *args[]){
 
 void
 setup(){
-	int i;
-	mmask_t mask;
 	if(!(shell = getenv("SHELL")))
 		shell = "/bin/sh";
 	setlocale(LC_CTYPE,"");
@@ -802,10 +818,9 @@ setup(){
 	start_color();
 	noecho();
    	keypad(stdscr, TRUE);
-	for(i = 0, mask = 0; i < countof(buttons); i++)
-		mask |= buttons[i].mask;
-	if(mask)
-		mousemask(mask, NULL);
+#if defined(HANDLE_MOUSE)
+	mouse_setup();
+#endif
 	raw();
 	madtty_init_colors();
 	madtty_init_vt100_graphics();
@@ -931,9 +946,12 @@ main(int argc, char *argv[]) {
 			int code = getch();
 			Key *key;
 			if(code >= 0){
+#if defined(HANDLE_MOUSE)
 				if(code == KEY_MOUSE){
 					handle_mouse();
-				} else if(is_modifier(code)){
+				} else
+#endif /* HANDLE_MOUSE */
+				if(is_modifier(code)){
 					int mod = code;
 					code = getch();
 					if(code >= 0){
