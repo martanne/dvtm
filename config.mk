@@ -16,6 +16,6 @@ LDFLAGS = -L/usr/lib -L/usr/local/lib ${LIBS}
 # Mouse handling
 CFLAGS += -DHANDLE_MOUSE
 
-DEBUG_CFLAGS = -std=c99 -O0 -g -ggdb ${INCS} -Wall -DVERSION=\"${VERSION}\"
+DEBUG_CFLAGS = ${CFLAGS} -UNDEBUG -O0 -g -ggdb -Wall
 
 CC = cc
