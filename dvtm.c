@@ -966,6 +966,12 @@ main(int argc, char *argv[]) {
 			keypress:
 					if(sel && (!sel->minimized || isarrange(fullscreen))){
 						madtty_keypress(sel->term, code);
+						if(code == '\e') {
+							nodelay(stdscr, TRUE);
+							while((code = getch()) != ERR)
+								madtty_keypress(sel->term, code);
+							nodelay(stdscr, FALSE);
+						}
 						if(r == 1){
 							draw_content(sel);
 							wrefresh(sel->window);
