@@ -89,6 +89,7 @@ struct madtty_t {
     unsigned escaped    : 1;
     unsigned graphmode  : 1;
     unsigned curshid    : 1;
+    unsigned curskeymode: 1;
 
     /* geometry */
     int rows, cols;
@@ -107,6 +108,8 @@ struct madtty_t {
     char rbuf[BUFSIZ];
     char ebuf[BUFSIZ];
     int  rlen, elen;
+
+    /* custom escape sequence handler */
     madtty_handler_t handler;
     void *data;
 };
@@ -119,10 +122,13 @@ typedef struct t_row_t {
 
 static char const * const keytable[KEY_MAX+1] = {
     ['\n']          = "\r",
-    [KEY_UP]        = "\e[A",
-    [KEY_DOWN]      = "\e[B",
-    [KEY_RIGHT]     = "\e[C",
-    [KEY_LEFT]      = "\e[D",
+    /* for the arrow keys the CSI / SS3 sequences are not stored here
+     * because they depend on the current cursor terminal mode
+     */
+    [KEY_UP]        = "A",
+    [KEY_DOWN]      = "B",
+    [KEY_RIGHT]     = "C",
+    [KEY_LEFT]      = "D",
     [KEY_BACKSPACE] = "\177",
     [KEY_HOME]      = "\e[1~",
     [KEY_IC]        = "\e[2~",
@@ -540,11 +546,15 @@ static void es_interpret_csi(madtty_t *t)
           case 'l':
             if (csiparam[0] == 25)
                 t->curshid = true;
+            if (csiparam[0] == 1) /* DECCKM: reset ANSI cursor (normal) key mode */
+                t->curskeymode = 0;
             break;
 
           case 'h':
             if (csiparam[0] == 25)
                 t->curshid = false;
+            if (csiparam[0] == 1) /* DECCKM: set ANSI cursor (application) key mode */
+                t->curskeymode = 1;
             break;
         }
     }
@@ -1048,9 +1058,20 @@ void madtty_keypress(madtty_t *t, int keycode)
 {
     char c = (char)keycode;
 
-    if (keycode >= 0 && keycode < KEY_MAX && keytable[keycode])
-        term_write(t, keytable[keycode], strlen(keytable[keycode]));
-    else
+    if (keycode >= 0 && keycode < KEY_MAX && keytable[keycode]) {
+        switch(keycode) {
+            case KEY_UP:
+            case KEY_DOWN:
+            case KEY_RIGHT:
+            case KEY_LEFT: {
+                char keyseq[3] = { '\e', (t->curskeymode ? 'O' : '['), keytable[keycode][0] };
+                term_write(t, keyseq, 3);
+                break;
+            }
+            default:
+                term_write(t, keytable[keycode], strlen(keytable[keycode]));
+        }
+    } else
         term_write(t, &c, 1);
 }
 
