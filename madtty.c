@@ -1075,6 +1075,22 @@ void madtty_keypress(madtty_t *t, int keycode)
         term_write(t, &c, 1);
 }
 
+void madtty_keypress_sequence(madtty_t *t, const char *seq)
+{
+    int key, len = strlen(seq);
+    /* check for function keys from putty, this makes the
+     * keypad work but it's probably not the right way to
+     * do it. the sequence we look for is \eO + a character
+     * representing the number.
+     */
+    if(len == 3 && seq[0] == '\e' && seq[1] == 'O') {
+        key = seq[2] - 64;
+        if(key >= '0' && key <= '9')
+            madtty_keypress(t, key);
+    } else
+        term_write(t, seq, len);
+}
+
 void madtty_init_colors(void)
 {
     if (COLOR_PAIRS > 64) {
