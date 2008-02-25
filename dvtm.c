@@ -965,13 +965,18 @@ main(int argc, char *argv[]) {
 				} else {
 			keypress:
 					if(sel && (!sel->minimized || isarrange(fullscreen))){
-						madtty_keypress(sel->term, code);
 						if(code == '\e') {
+							/* pass characters following escape to the underlying app */
+							char buf[8] = { '\e' };
+							int len = 1;
 							nodelay(stdscr, TRUE);
-							while((code = getch()) != ERR)
-								madtty_keypress(sel->term, code);
+							while(len < sizeof(buf) - 1 && (code = getch()) != ERR)
+								buf[len++] = code;
+							buf[len] = '\0';
 							nodelay(stdscr, FALSE);
-						}
+							madtty_keypress_sequence(sel->term, buf);
+						} else
+							madtty_keypress(sel->term, code);
 						if(r == 1){
 							draw_content(sel);
 							wrefresh(sel->window);
