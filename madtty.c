@@ -1032,20 +1032,8 @@ int madtty_getpty(madtty_t *t)
     return t->pty;
 }
 
-void madtty_keypress(madtty_t *t, int keycode)
+static void term_write(madtty_t *t, const char *buf, int len)
 {
-    char c = (char)keycode;
-    const char *buf;
-    int len;
-
-    if (keycode >= 0 && keycode < KEY_MAX && keytable[keycode]) {
-        buf = keytable[keycode];
-        len = strlen(keytable[keycode]);
-    } else {
-        buf = &c;
-        len = 1;
-    }
-
     while (len > 0) {
         int res = write(t->pty, buf, len);
         if (res < 0 && errno != EAGAIN && errno != EINTR)
@@ -1054,6 +1042,16 @@ void madtty_keypress(madtty_t *t, int keycode)
         buf += res;
         len -= res;
     }
+}
+
+void madtty_keypress(madtty_t *t, int keycode)
+{
+    char c = (char)keycode;
+
+    if (keycode >= 0 && keycode < KEY_MAX && keytable[keycode])
+        term_write(t, keytable[keycode], strlen(keytable[keycode]));
+    else
+        term_write(t, &c, 1);
 }
 
 void madtty_init_colors(void)
