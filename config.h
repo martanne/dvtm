@@ -72,7 +72,6 @@ Key keys[] = {
 	{ MOD, '.', { toggleminimize, { NULL }    } },
 	{ MOD, 's', { togglebar,      { NULL }    } },
 	{ MOD, '\n',{ zoom ,          { NULL }    } },
-	{ MOD, '0', { focusn,         { "0" }     } },
 	{ MOD, '1', { focusn,         { "1" }     } },
 	{ MOD, '2', { focusn,         { "2" }     } },
 	{ MOD, '3', { focusn,         { "3" }     } },
