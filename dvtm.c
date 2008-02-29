@@ -403,7 +403,7 @@ void
 setmwfact(const char *args[]) {
 	double delta;
 
-	if(!isarrange(tile) && !isarrange(bstack))
+	if(isarrange(fullscreen) || isarrange(grid))
 		return;
 	/* arg handling, manipulate mwfact */
 	if(args[0] == NULL)
