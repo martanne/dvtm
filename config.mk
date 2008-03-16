@@ -10,8 +10,8 @@ INCS = -I. -I/usr/include -I/usr/local/include
 LIBS = -lc -lutil -lncurses
 LIBS_UTF8 = -lc -lutil -lncursesw
 
-CFLAGS = -std=c99 -Os ${INCS} -DVERSION=\"${VERSION}\" -DNDEBUG
-LDFLAGS = -L/usr/lib -L/usr/local/lib ${LIBS}
+CFLAGS += -std=c99 -Os ${INCS} -DVERSION=\"${VERSION}\" -DNDEBUG
+LDFLAGS += -L/usr/lib -L/usr/local/lib ${LIBS}
 
 # Mouse handling
 CFLAGS += -DHANDLE_MOUSE
