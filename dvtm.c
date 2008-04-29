@@ -758,15 +758,21 @@ get_client_by_pid(pid_t pid){
 
 void
 sigchld_handler(int sig){
+	int errsv = errno;
+
 	int child_status;
 	signal(SIGCHLD, sigchld_handler);
 	pid_t pid = wait(&child_status);
 	debug("child with pid %d died\n", pid);
 	client_killed = get_client_by_pid(pid);
+
+	errno = errsv;
 }
 
 void
 sigwinch_handler(int sig){
+	int errsv = errno;
+
 	struct winsize ws;
 	signal(SIGWINCH, sigwinch_handler);
 	if(ioctl(0, TIOCGWINSZ, &ws) == -1)
@@ -775,6 +781,8 @@ sigwinch_handler(int sig){
 	width = ws.ws_col;
 	height = ws.ws_row;
 	need_screen_resize = true;
+
+	errno = errsv;
 }
 
 void
