@@ -46,6 +46,7 @@ struct Client {
 	short int w;
 	short int h;
 	bool minimized;
+	bool died;
 	Client *next;
 	Client *prev;
 };
@@ -132,7 +133,6 @@ Client *sel = NULL;
 Client *msel = NULL;
 double mwfact = MWFACT;
 Layout *layout = layouts;
-Client *client_killed = NULL;
 int statusfd = -1;
 char stext[512];
 int barpos = BARPOS;
@@ -759,12 +759,25 @@ get_client_by_pid(pid_t pid){
 void
 sigchld_handler(int sig){
 	int errsv = errno;
+	int status;
+	pid_t pid;
+	Client *c;
 
-	int child_status;
 	signal(SIGCHLD, sigchld_handler);
-	pid_t pid = wait(&child_status);
-	debug("child with pid %d died\n", pid);
-	client_killed = get_client_by_pid(pid);
+
+	while ((pid = waitpid(-1, &status, WNOHANG)) != 0) {
+		if (pid == -1) {
+			if (errno == ECHILD) {
+				/* no more child processes */
+				break;
+			}
+			eprint("waitpid: %s\n", strerror(errno));
+			break;
+		}
+		debug("child with pid %d died\n", pid);
+		if ((c = get_client_by_pid(pid)))
+			c->died = true;
+	}
 
 	errno = errsv;
 }
@@ -916,17 +929,12 @@ main(int argc, char *argv[]) {
 		startup(NULL);
 	}
 	while(running){
-		Client *c;
+		Client *c, *t;
 		int r, nfds = 0;
 		fd_set rd;
 
 		if(need_screen_resize)
 			resize_screen();
-
-		if(client_killed){
-			destroy(client_killed);
-			client_killed = NULL;
-		}
 
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
@@ -936,9 +944,16 @@ main(int argc, char *argv[]) {
 			nfds = max(nfds, statusfd);
 		}
 
-		for(c = clients; c; c = c->next){
+		for (c = clients; c; ){
+			if (c->died) {
+				t = c->next;
+				destroy(c);
+				c = t;
+				continue;
+			}
 			FD_SET(c->pty, &rd);
 			nfds = max(nfds, c->pty);
+			c = c->next;
 		}
 		r = select(nfds + 1, &rd, NULL, NULL, NULL);
 
@@ -1017,11 +1032,14 @@ main(int argc, char *argv[]) {
 			}
 		}
 
-		for(c = clients; c; c = c->next){
+		for (c = clients; c; ){
 			if(FD_ISSET(c->pty, &rd)){
 				if (madtty_process(c->term) < 0 && errno == EIO) {
 					/* client probably terminated */
-					client_killed = c;
+					t = c->next;
+					destroy(c);
+					c = t;
+					continue;
 				}
 				if(c != sel){
 					draw_content(c);
@@ -1029,6 +1047,7 @@ main(int argc, char *argv[]) {
 						wnoutrefresh(c->window);
 				}
 			}
+			c = c->next;
 		}
 
 		if(sel) {
