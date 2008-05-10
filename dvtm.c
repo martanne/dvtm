@@ -82,8 +82,8 @@ typedef struct {
 enum { BarTop, BarBot, BarOff };
 
 #define COLOR(fg, bg) madtty_color_pair(fg, bg)
-#define countof(arr) (sizeof (arr) / sizeof((arr)[0]))
-#define sstrlen(str) (sizeof (str) - 1)
+#define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
+#define sstrlen(str) (sizeof(str) - 1)
 #define max(x, y) ((x) > (y) ? (x) : (y))
 
 #ifdef NDEBUG
@@ -121,7 +121,7 @@ void clear_workspace();
 void draw_all(bool border);
 void draw_border(Client *c);
 void drawbar();
-void resize(Client* c, int x, int y, int w, int h);
+void resize(Client *c, int x, int y, int w, int h);
 
 unsigned int bh = 1, by, waw, wah, wax, way;
 Client *clients = NULL;
@@ -152,30 +152,30 @@ eprint(const char *errstr, ...) {
 void
 attach(Client *c) {
 	uint8_t order;
-	if(clients)
+	if (clients)
 		clients->prev = c;
 	c->next = clients;
 	c->prev = NULL;
 	clients = c;
-	for(order = 1; c; c = c->next, order++)
+	for (order = 1; c; c = c->next, order++)
 		c->order = order;
 }
 
 void
-attachafter(Client *c, Client *a){ /* attach c after a */
+attachafter(Client *c, Client *a) { /* attach c after a */
 	uint8_t o;
-	if(c == a)
+	if (c == a)
 		return;
-	if(!a)
-		for(a = clients; a && a->next; a = a->next);
+	if (!a)
+		for (a = clients; a && a->next; a = a->next);
 
-	if(a){
-		if(a->next)
+	if (a) {
+		if (a->next)
 			a->next->prev = c;
 		c->next = a->next;
 		c->prev = a;
 		a->next = c;
-		for(o = a->order; c; c = c->next)
+		for (o = a->order; c; c = c->next)
 			c->order = ++o;
 	}
 }
@@ -183,20 +183,20 @@ attachafter(Client *c, Client *a){ /* attach c after a */
 void
 detach(Client *c) {
 	Client *d;
-	if(c->prev)
+	if (c->prev)
 		c->prev->next = c->next;
-	if(c->next){
+	if (c->next) {
 		c->next->prev = c->prev;
 		for (d = c->next; d; d = d->next)
 			--d->order;
 	}
-	if(c == clients)
+	if (c == clients)
 		clients = c->next;
 	c->next = c->prev = NULL;
 }
 
 void
-arrange(){
+arrange() {
 	clear_workspace();
 	layout->arrange();
 	wnoutrefresh(stdscr);
@@ -204,34 +204,34 @@ arrange(){
 }
 
 bool
-isarrange(void (*func)()){
+isarrange(void (*func)()) {
 	return func == layout->arrange;
 }
 
 void
-focus(Client *c){
+focus(Client *c) {
 	Client *tmp = sel;
-	if(sel == c)
+	if (sel == c)
 		return;
 	sel = c;
-	if(tmp){
+	if (tmp) {
 		draw_border(tmp);
 		wrefresh(tmp->window);
 	}
-	if(isarrange(fullscreen))
+	if (isarrange(fullscreen))
 		redrawwin(c->window);
 	draw_border(c);
 	wrefresh(c->window);
 }
 
 void
-focusn(const char *args[]){
+focusn(const char *args[]) {
 	Client *c;
 
-	for(c = clients; c; c = c->next){
-		if (c->order == atoi(args[0])){
+	for (c = clients; c; c = c->next) {
+		if (c->order == atoi(args[0])) {
 			focus(c);
-			if(c->minimized)
+			if (c->minimized)
 				toggleminimize(NULL);
 			return;
 		}
@@ -242,13 +242,13 @@ void
 focusnext(const char *args[]) {
 	Client *c;
 
-	if(!sel)
+	if (!sel)
 		return;
 
 	c = sel->next;
-	if(!c)
+	if (!c)
 		c = clients;
-	if(c)
+	if (c)
 		focus(c);
 }
 
@@ -256,42 +256,42 @@ void
 focusnextnm(const char *args[]) {
 	Client *c;
 
-	if(!sel)
+	if (!sel)
 		return;
 	c = sel;
 	do {
 		c = c->next;
-		if(!c)
+		if (!c)
 			c = clients;
-	} while(c->minimized && c != sel);
+	} while (c->minimized && c != sel);
 	focus(c);
 }
 
 void
-focusprev(const char *args[]){
+focusprev(const char *args[]) {
 	Client *c;
 
-	if(!sel)
+	if (!sel)
 		return;
 	c = sel->prev;
-	if(!c)
-		for(c = clients; c && c->next; c = c->next);
-	if(c)
+	if (!c)
+		for (c = clients; c && c->next; c = c->next);
+	if (c)
 		focus(c);
 }
 
 void
-focusprevnm(const char *args[]){
+focusprevnm(const char *args[]) {
 	Client *c;
 
-	if(!sel)
+	if (!sel)
 		return;
 	c = sel;
 	do {
 		c = c->prev;
-		if(!c)
-			for(c = clients; c && c->next; c = c->next);
-	} while(c->minimized && c != sel);
+		if (!c)
+			for (c = clients; c && c->next; c = c->next);
+	} while (c->minimized && c != sel);
 	focus(c);
 }
 
@@ -299,50 +299,50 @@ void
 zoom(const char *args[]) {
 	Client *c;
 
-	if(!sel)
+	if (!sel)
 		return;
-	if((c = sel) == clients)
-		if(!(c = c->next))
+	if ((c = sel) == clients)
+		if (!(c = c->next))
 			return;
 	detach(c);
 	attach(c);
 	focus(c);
-	if(c->minimized)
+	if (c->minimized)
 		toggleminimize(NULL);
 	arrange();
 }
 
 void
-toggleminimize(const char *args[]){
+toggleminimize(const char *args[]) {
 	Client *c, *m;
 	unsigned int n;
-	if(!sel)
+	if (!sel)
 		return;
 	/* the last window can't be minimized */
-	if(!sel->minimized){
-		for(n = 0, c = clients; c; c = c->next)
-			if(!c->minimized)
+	if (!sel->minimized) {
+		for (n = 0, c = clients; c; c = c->next)
+			if (!c->minimized)
 				n++;
-		if(n == 1)
+		if (n == 1)
 			return;
 	}
 	sel->minimized = !sel->minimized;
 	m = sel;
 	/* check whether the master client was minimized */
-	if(sel == clients && sel->minimized){
+	if (sel == clients && sel->minimized) {
 		c = sel->next;
 		detach(c);
 		attach(c);
 		focus(c);
 		detach(m);
-		for(; c && c->next && !c->next->minimized; c = c->next);
+		for (; c && c->next && !c->next->minimized; c = c->next);
 		attachafter(m, c);
-	} else if(m->minimized){
+	} else if (m->minimized) {
 		/* non master window got minimized move it above all other
 		 * minimized ones */
 		focusnextnm(NULL);
 		detach(m);
-		for(c = clients; c && c->next && !c->next->minimized; c = c->next);
+		for (c = clients; c && c->next && !c->next->minimized; c = c->next);
 		attachafter(m, c);
 	} else { /* window is no longer minimized, move it to the master area */
 		madtty_dirty(m->term);
@@ -359,12 +359,12 @@ updatebarpos(void) {
 	way = 0;
 	waw = width;
 	wah = height;
-	if(statusfd == -1)
+	if (statusfd == -1)
 		return;
-	if(barpos == BarTop){
+	if (barpos == BarTop) {
 		wah -= bh;
 		way += bh;
-	} else if(barpos == BarBot){
+	} else if (barpos == BarBot) {
 		wah -= bh;
 		by = wah;
 	}
@@ -372,7 +372,7 @@ updatebarpos(void) {
 
 void
 togglebar(const char *args[]) {
-	if(barpos == BarOff)
+	if (barpos == BarOff)
 		barpos = (BARPOS == BarOff) ? BarTop : BARPOS;
 	else
 		barpos = BarOff;
@@ -385,14 +385,14 @@ void
 setlayout(const char *args[]) {
 	unsigned int i;
 
-	if(!args || !args[0]) {
-		if(++layout == &layouts[countof(layouts)])
+	if (!args || !args[0]) {
+		if (++layout == &layouts[countof(layouts)])
 			layout = &layouts[0];
 	} else {
-		for(i = 0; i < countof(layouts); i++)
-			if(!strcmp(args[0], layouts[i].symbol))
+		for (i = 0; i < countof(layouts); i++)
+			if (!strcmp(args[0], layouts[i].symbol))
 				break;
-		if(i == countof(layouts))
+		if (i == countof(layouts))
 			return;
 		layout = &layouts[i];
 	}
@@ -403,35 +403,35 @@ void
 setmwfact(const char *args[]) {
 	double delta;
 
-	if(isarrange(fullscreen) || isarrange(grid))
+	if (isarrange(fullscreen) || isarrange(grid))
 		return;
 	/* arg handling, manipulate mwfact */
-	if(args[0] == NULL)
+	if (args[0] == NULL)
 		mwfact = MWFACT;
-	else if(1 == sscanf(args[0], "%lf", &delta)) {
-		if(args[0][0] == '+' || args[0][0] == '-')
+	else if (1 == sscanf(args[0], "%lf", &delta)) {
+		if (args[0][0] == '+' || args[0][0] == '-')
 			mwfact += delta;
 		else
 			mwfact = delta;
-		if(mwfact < 0.1)
+		if (mwfact < 0.1)
 			mwfact = 0.1;
-		else if(mwfact > 0.9)
+		else if (mwfact > 0.9)
 			mwfact = 0.9;
 	}
 	arrange();
 }
 
 void
-redraw(const char *args[]){
+redraw(const char *args[]) {
 	wrefresh(curscr);
 	draw_all(true);
 }
 
 void
-draw_border(Client *c){
+draw_border(Client *c) {
 	char *s, t = '\0';
 	int x, y, o;
-	if(sel == c)
+	if (sel == c)
 		wattrset(c->window, ATTR_SELECTED);
 	else
 		wattrset(c->window, ATTR_NORMAL);
@@ -439,57 +439,57 @@ draw_border(Client *c){
 	curs_set(0);
 	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
 	o = c->w - (4 + sstrlen(TITLE) - 5  + sstrlen(SEPARATOR));
-	if(o < 0)
+	if (o < 0)
 		o = 0;
-	if(o < sizeof(c->title)){
+	if (o < sizeof(c->title)) {
 		t = *(s = &c->title[o]);
 		*s = '\0';
 	}
 	mvwprintw(c->window, 0, 2, TITLE,
 	          *c->title ? c->title : "",
 	          *c->title ? SEPARATOR : "",
-		  c->order);
-	if(t)
+	          c->order);
+	if (t)
 		*s = t;
 	wmove(c->window, y, x);
-	if(!c->minimized)
+	if (!c->minimized)
 		curs_set(madtty_cursor(c->term));
 }
 
 void
-draw_content(Client *c){
-	if(!c->minimized || isarrange(fullscreen)){
+draw_content(Client *c) {
+	if (!c->minimized || isarrange(fullscreen)) {
 		madtty_draw(c->term, c->window, 1, 0);
-		if(c != sel)
+		if (c != sel)
 			curs_set(0);
 	}
 }
 
 void
-draw(Client *c){
+draw(Client *c) {
 	draw_content(c);
 	draw_border(c);
 	wrefresh(c->window);
 }
 
 void
-clear_workspace(){
+clear_workspace() {
 	unsigned int y;
-	for(y = 0; y < wah; y++)
+	for (y = 0; y < wah; y++)
 		mvhline(way + y, 0, ' ', waw);
 	wnoutrefresh(stdscr);
 }
 
 void
-draw_all(bool border){
+draw_all(bool border) {
 	Client *c;
 	curs_set(0);
-	for(c = clients; c; c = c->next){
+	for (c = clients; c; c = c->next) {
 		redrawwin(c->window);
-		if(c == sel)
+		if (c == sel)
 			continue;
 		draw_content(c);
-		if(border)
+		if (border)
 			draw_border(c);
 		wnoutrefresh(c->window);
 	}
@@ -498,45 +498,45 @@ draw_all(bool border){
 	 * accurate
 	 */
 	refresh();
-	if(sel){
+	if (sel) {
 		draw_content(sel);
-		if(border)
+		if (border)
 			draw_border(sel);
 		wrefresh(sel->window);
 	}
 }
 
 void
-drawbar(){
+drawbar() {
 	int s, l, maxlen = width - 2;
 	char t = stext[maxlen];
-	if(barpos == BarOff || !*stext)
+	if (barpos == BarOff || !*stext)
 		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
 	mvaddch(by, 0, '[');
 	stext[maxlen] = '\0';
 	l = strlen(stext);
-	if(BAR_ALIGN_RIGHT)
-		for(s = 0; s + l < maxlen; s++)
+	if (BAR_ALIGN_RIGHT)
+		for (s = 0; s + l < maxlen; s++)
 			addch(' ');
 	else
-		for(; l < maxlen; l++)
+		for (; l < maxlen; l++)
 			stext[l] = ' ';
 	addstr(stext);
 	stext[maxlen] = t;
 	addch(']');
 	attrset(ATTR_NORMAL);
-	if(sel)
+	if (sel)
 		curs_set(madtty_cursor(sel->term));
 	refresh();
 }
 
 void
-escapekey(const char *args[]){
+escapekey(const char *args[]) {
 	int key;
-	if(sel && (!sel->minimized || isarrange(fullscreen))) {
-		if((key = getch()) >= 0){
+	if (sel && (!sel->minimized || isarrange(fullscreen))) {
+		if ((key = getch()) >= 0) {
 			debug("escaping key `%c'\n", key);
 			madtty_keypress(sel->term, CTRL(key));
 			draw_content(sel);
@@ -546,20 +546,20 @@ escapekey(const char *args[]){
 }
 
 void
-killclient(const char *args[]){
-	if(!sel)
+killclient(const char *args[]) {
+	if (!sel)
 		return;
 	debug("killing client with pid: %d\n", sel->pid);
 	kill(-sel->pid, SIGKILL);
 }
 
 int
-title_escape_seq_handler(madtty_t *term, char *es){
+title_escape_seq_handler(madtty_t *term, char *es) {
 	Client *c;
 	unsigned int l;
-	if(es[0] != ']' || (es[1] && (es[1] < '0' || es[1] > '9')) || (es[2] && es[2] != ';'))
+	if (es[0] != ']' || (es[1] && (es[1] < '0' || es[1] > '9')) || (es[2] && es[2] != ';'))
 		return MADTTY_HANDLER_NOWAY;
-	if((l = strlen(es)) < 3 || es[l - 1] != '\07')
+	if ((l = strlen(es)) < 3 || es[l - 1] != '\07')
 		return MADTTY_HANDLER_NOTYET;
 	es[l - 1] = '\0';
 	c = (Client *)madtty_get_data(term);
@@ -570,14 +570,14 @@ title_escape_seq_handler(madtty_t *term, char *es){
 }
 
 void
-create(const char *args[]){
+create(const char *args[]) {
 	const char *cmd = (args && args[0]) ? args[0] : shell;
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
 	Client *c = calloc(sizeof(Client), 1);
 	c->window = newwin(wah, waw, way, wax);
 	c->term = madtty_create(height - 1, width);
 	c->cmd = cmd;
-	if(args && args[1])
+	if (args && args[1])
 		strncpy(c->title, args[1], sizeof(c->title));
 	c->pid = madtty_forkpty(c->term, "/bin/sh", pargs, &c->pty);
 	madtty_set_data(c->term, c);
@@ -595,12 +595,12 @@ create(const char *args[]){
 }
 
 void
-destroy(Client *c){
-	if(sel == c)
+destroy(Client *c) {
+	if (sel == c)
 		focusnextnm(NULL);
 	detach(c);
-	if(sel == c){
-		if(clients){
+	if (sel == c) {
+		if (clients) {
 			focus(clients);
 			toggleminimize(NULL);
 		} else
@@ -610,8 +610,8 @@ destroy(Client *c){
 	wrefresh(c->window);
 	madtty_destroy(c->term);
 	delwin(c->window);
-	if(!clients && countof(actions)){
-		if(!strcmp(c->cmd, shell))
+	if (!clients && countof(actions)) {
+		if (!strcmp(c->cmd, shell))
 			quit(NULL);
 		else
 			create(NULL);
@@ -621,11 +621,11 @@ destroy(Client *c){
 }
 
 void
-move_client(Client *c, int x, int y){
-	if(c->x == x && c->y == y)
+move_client(Client *c, int x, int y) {
+	if (c->x == x && c->y == y)
 		return;
 	debug("moving, x: %d y: %d\n", x, y);
-	if(mvwin(c->window, y, x) == ERR)
+	if (mvwin(c->window, y, x) == ERR)
 		eprint("error moving, x: %d y: %d\n", x, y);
 	else {
 		c->x = x;
@@ -634,11 +634,11 @@ move_client(Client *c, int x, int y){
 }
 
 void
-resize_client(Client *c, int w, int h){
-	if(c->w == w && c->h == h)
+resize_client(Client *c, int w, int h) {
+	if (c->w == w && c->h == h)
 		return;
 	debug("resizing, w: %d h: %d\n", w, h);
-	if(wresize(c->window, h, w) == ERR)
+	if (wresize(c->window, h, w) == ERR)
 		eprint("error resizing, w: %d h: %d\n", w, h);
 	else {
 		c->w = w;
@@ -648,26 +648,26 @@ resize_client(Client *c, int w, int h){
 }
 
 void
-resize(Client *c, int x, int y, int w, int h){
+resize(Client *c, int x, int y, int w, int h) {
 	resize_client(c, w, h);
 	move_client(c, x, y);
 }
 
 bool
-is_modifier(unsigned int mod){
+is_modifier(unsigned int mod) {
 	unsigned int i;
-	for(i = 0; i < countof(keys); i++){
-		if(keys[i].mod == mod)
+	for (i = 0; i < countof(keys); i++) {
+		if (keys[i].mod == mod)
 			return true;
 	}
 	return false;
 }
 
 Key*
-keybinding(unsigned int mod, unsigned int code){
+keybinding(unsigned int mod, unsigned int code) {
 	unsigned int i;
-	for(i = 0; i < countof(keys); i++){
-		if(keys[i].mod == mod && keys[i].code == code)
+	for (i = 0; i < countof(keys); i++) {
+		if (keys[i].mod == mod && keys[i].code == code)
 			return &keys[i];
 	}
 	return NULL;
@@ -676,42 +676,42 @@ keybinding(unsigned int mod, unsigned int code){
 #if defined(HANDLE_MOUSE)
 
 void
-mouse_focus(const char *args[]){
+mouse_focus(const char *args[]) {
 	focus(msel);
-	if(msel->minimized)
+	if (msel->minimized)
 		toggleminimize(NULL);
 }
 
 void
-mouse_fullscreen(const char *args[]){
+mouse_fullscreen(const char *args[]) {
 	mouse_focus(NULL);
-	if(isarrange(fullscreen))
+	if (isarrange(fullscreen))
 		setlayout(NULL);
 	else
 		setlayout(args);
 }
 
 void
-mouse_minimize(const char *args[]){
+mouse_minimize(const char *args[]) {
 	focus(msel);
 	toggleminimize(NULL);
 }
 
 void
-mouse_zoom(const char *args[]){
+mouse_zoom(const char *args[]) {
 	focus(msel);
 	zoom(NULL);
 }
 
 Client*
-get_client_by_coord(int x, int y){
+get_client_by_coord(int x, int y) {
 	Client *c;
-	if(y < way || y >= wah)
+	if (y < way || y >= wah)
 		return NULL;
-	if(isarrange(fullscreen))
+	if (isarrange(fullscreen))
 		return sel;
-	for(c = clients; c; c = c->next){
-		if(x >= c->x && x < c->x + c->w && y >= c->y && y < c->y + c->h){
+	for (c = clients; c; c = c->next) {
+		if (x >= c->x && x < c->x + c->w && y >= c->y && y < c->y + c->h) {
 			debug("mouse event, x: %d y: %d client: %d\n", x, y, c->order);
 			return c;
 		}
@@ -720,44 +720,44 @@ get_client_by_coord(int x, int y){
 }
 
 void
-handle_mouse(){
+handle_mouse() {
 	MEVENT event;
 	unsigned int i;
-	if(getmouse(&event) != OK)
+	if (getmouse(&event) != OK)
 		return;
 	msel = get_client_by_coord(event.x, event.y);
-	if(!msel)
+	if (!msel)
 		return;
-	for(i = 0; i < countof(buttons); i++)
-		if(event.bstate & buttons[i].mask)
+	for (i = 0; i < countof(buttons); i++)
+		if (event.bstate & buttons[i].mask)
 			buttons[i].action.cmd(buttons[i].action.args);
 	msel = NULL;
 }
 
 void
-mouse_setup(){
+mouse_setup() {
 	int i;
 	mmask_t mask;
-	for(i = 0, mask = 0; i < countof(buttons); i++)
+	for (i = 0, mask = 0; i < countof(buttons); i++)
 		mask |= buttons[i].mask;
-	if(mask)
+	if (mask)
 		mousemask(mask, NULL);
 }
 
 #endif /* HANDLE_MOUSE */
 
 Client*
-get_client_by_pid(pid_t pid){
+get_client_by_pid(pid_t pid) {
 	Client *c;
-	for(c = clients; c; c = c->next){
-		if(c->pid == pid)
+	for (c = clients; c; c = c->next) {
+		if (c->pid == pid)
 			return c;
 	}
 	return NULL;
 }
 
 void
-sigchld_handler(int sig){
+sigchld_handler(int sig) {
 	int errsv = errno;
 	int status;
 	pid_t pid;
@@ -783,12 +783,12 @@ sigchld_handler(int sig){
 }
 
 void
-sigwinch_handler(int sig){
+sigwinch_handler(int sig) {
 	int errsv = errno;
 
 	struct winsize ws;
 	signal(SIGWINCH, sigwinch_handler);
-	if(ioctl(0, TIOCGWINSZ, &ws) == -1)
+	if (ioctl(0, TIOCGWINSZ, &ws) == -1)
 		return;
 
 	width = ws.ws_col;
@@ -799,14 +799,14 @@ sigwinch_handler(int sig){
 }
 
 void
-sigterm_handler(int sig){
+sigterm_handler(int sig) {
 	running = false;
 }
 
 void
-resize_screen(){
+resize_screen() {
 	debug("resize_screen()\n");
-	if(need_screen_resize){
+	if (need_screen_resize) {
 		debug("resize_screen(), w: %d h: %d\n", width, height);
 	#if defined(__OpenBSD__) || defined(__NetBSD__)
 		resizeterm(height, width);
@@ -824,21 +824,21 @@ resize_screen(){
 }
 
 void
-startup(const char *args[]){
+startup(const char *args[]) {
 	int i;
-	for(i = 0; i < countof(actions); i++)
+	for (i = 0; i < countof(actions); i++)
 		actions[i].cmd(actions[i].args);
 }
 
 void
-setup(){
-	if(!(shell = getenv("SHELL")))
+setup() {
+	if (!(shell = getenv("SHELL")))
 		shell = "/bin/sh";
-	setlocale(LC_CTYPE,"");
+	setlocale(LC_CTYPE, "");
 	initscr();
 	start_color();
 	noecho();
-   	keypad(stdscr, TRUE);
+	keypad(stdscr, TRUE);
 #if defined(HANDLE_MOUSE)
 	mouse_setup();
 #endif
@@ -853,63 +853,63 @@ setup(){
 }
 
 void
-cleanup(){
+cleanup() {
 	endwin();
-	if(statusfd > 0)
+	if (statusfd > 0)
 		close(statusfd);
 }
 
 void
-quit(const char *args[]){
+quit(const char *args[]) {
 	cleanup();
 	exit(EXIT_SUCCESS);
 }
 
 void
-usage(){
+usage() {
 	cleanup();
 	eprint("usage: dvtm [-v] [-m mod] [-s status] [cmd...]\n");
 	exit(EXIT_FAILURE);
 }
 
 bool
-parse_args(int argc, char *argv[]){
+parse_args(int argc, char *argv[]) {
 	int arg;
 	bool init = false;
-	for(arg = 1; arg < argc; arg++){
-		if(argv[arg][0] != '-'){
+	for (arg = 1; arg < argc; arg++) {
+		if (argv[arg][0] != '-') {
 			const char *args[] = { argv[arg], NULL };
-			if(!init){
+			if (!init) {
 				setup();
 				init = true;
 			}
 			create(args);
 			continue;
 		}
-		switch(argv[arg][1]){
+		switch (argv[arg][1]) {
 			case 'v':
 				puts("dvtm-"VERSION" (c) 2007-2008 Marc Andre Tanner");
 				exit(EXIT_SUCCESS);
 			case 'm':
-				if(++arg >= argc)
+				if (++arg >= argc)
 					usage();
 				unsigned int i;
 				char *mod = argv[arg];
-				if(mod[0] == '^' && mod[1])
+				if (mod[0] == '^' && mod[1])
 					*mod = CTRL(mod[1]);
-				for(i = 0; i < countof(keys); i++)
+				for (i = 0; i < countof(keys); i++)
 					keys[i].mod = *mod;
 				break;
 			case 's':
-				if(++arg >= argc)
+				if (++arg >= argc)
 					usage();
 				struct stat info;
-				if((statusfd = open(argv[arg], O_RDONLY|O_NONBLOCK)) == - 1 ||
-				    fstat(statusfd, &info) == -1){
+				if ((statusfd = open(argv[arg], O_RDONLY|O_NONBLOCK)) == -1 ||
+				    fstat(statusfd, &info) == -1) {
 					perror("status");
 					exit(EXIT_FAILURE);
 				}
-				if(!S_ISFIFO(info.st_mode)){
+				if (!S_ISFIFO(info.st_mode)) {
 					eprint("%s is not a named pipe.\n", argv[arg]);
 					exit(EXIT_FAILURE);
 				}
@@ -924,27 +924,27 @@ parse_args(int argc, char *argv[]){
 
 int
 main(int argc, char *argv[]) {
-	if(!parse_args(argc, argv)){
+	if (!parse_args(argc, argv)) {
 		setup();
 		startup(NULL);
 	}
-	while(running){
+	while (running) {
 		Client *c, *t;
 		int r, nfds = 0;
 		fd_set rd;
 
-		if(need_screen_resize)
+		if (need_screen_resize)
 			resize_screen();
 
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
 
-		if(statusfd != -1){
+		if (statusfd != -1) {
 			FD_SET(statusfd, &rd);
 			nfds = max(nfds, statusfd);
 		}
 
-		for (c = clients; c; ){
+		for (c = clients; c; ) {
 			if (c->died) {
 				t = c->next;
 				destroy(c);
@@ -957,63 +957,63 @@ main(int argc, char *argv[]) {
 		}
 		r = select(nfds + 1, &rd, NULL, NULL, NULL);
 
-		if(r == -1 && errno == EINTR)
+		if (r == -1 && errno == EINTR)
 			continue;
 
-		if(r < 0){
+		if (r < 0) {
 			perror("select()");
 			exit(EXIT_FAILURE);
 		}
 
-		if(FD_ISSET(STDIN_FILENO, &rd)){
+		if (FD_ISSET(STDIN_FILENO, &rd)) {
 			int code = getch();
 			Key *key;
-			if(code >= 0){
+			if (code >= 0) {
 #if defined(HANDLE_MOUSE)
-				if(code == KEY_MOUSE){
+				if (code == KEY_MOUSE) {
 					handle_mouse();
 				} else
 #endif /* HANDLE_MOUSE */
-				if(is_modifier(code)){
+				if (is_modifier(code)) {
 					int mod = code;
 					code = getch();
-					if(code >= 0){
-						if(code == mod)
+					if (code >= 0) {
+						if (code == mod)
 							goto keypress;
-						if((key = keybinding(mod, code)))
+						if ((key = keybinding(mod, code)))
 							key->action.cmd(key->action.args);
 					}
-				} else if((key = keybinding(0, code))){
+				} else if ((key = keybinding(0, code))) {
 					key->action.cmd(key->action.args);
 				} else {
 			keypress:
-					if(sel && (!sel->minimized || isarrange(fullscreen))){
-						if(code == '\e') {
+					if (sel && (!sel->minimized || isarrange(fullscreen))) {
+						if (code == '\e') {
 							/* pass characters following escape to the underlying app */
 							char buf[8] = { '\e' };
 							int len = 1;
 							nodelay(stdscr, TRUE);
-							while(len < sizeof(buf) - 1 && (code = getch()) != ERR)
+							while (len < sizeof(buf) - 1 && (code = getch()) != ERR)
 								buf[len++] = code;
 							buf[len] = '\0';
 							nodelay(stdscr, FALSE);
 							madtty_keypress_sequence(sel->term, buf);
 						} else
 							madtty_keypress(sel->term, code);
-						if(r == 1){
+						if (r == 1) {
 							draw_content(sel);
 							wrefresh(sel->window);
 						}
 					}
 				}
 			}
-			if(r == 1) /* no data available on pty's */
+			if (r == 1) /* no data available on pty's */
 				continue;
 		}
 
-		if(statusfd != -1 && FD_ISSET(statusfd, &rd)){
+		if (statusfd != -1 && FD_ISSET(statusfd, &rd)) {
 			char *p;
-			switch(r = read(statusfd, stext, sizeof stext - 1)) {
+			switch (r = read(statusfd, stext, sizeof stext - 1)) {
 				case -1:
 					strncpy(stext, strerror(errno), sizeof stext - 1);
 					stext[sizeof stext - 1] = '\0';
@@ -1024,16 +1024,16 @@ main(int argc, char *argv[]) {
 					break;
 				default:
 					stext[r] = '\0'; p = stext + strlen(stext) - 1;
-					for(; p >= stext && *p == '\n'; *p-- = '\0');
-					for(; p >= stext && *p != '\n'; --p);
-					if(p > stext)
+					for (; p >= stext && *p == '\n'; *p-- = '\0');
+					for (; p >= stext && *p != '\n'; --p);
+					if (p > stext)
 						strncpy(stext, p + 1, sizeof stext);
 					drawbar();
 			}
 		}
 
-		for (c = clients; c; ){
-			if(FD_ISSET(c->pty, &rd)){
+		for (c = clients; c; ) {
+			if (FD_ISSET(c->pty, &rd)) {
 				if (madtty_process(c->term) < 0 && errno == EIO) {
 					/* client probably terminated */
 					t = c->next;
@@ -1041,16 +1041,16 @@ main(int argc, char *argv[]) {
 					c = t;
 					continue;
 				}
-				if(c != sel){
+				if (c != sel) {
 					draw_content(c);
-					if(!isarrange(fullscreen))
+					if (!isarrange(fullscreen))
 						wnoutrefresh(c->window);
 				}
 			}
 			c = c->next;
 		}
 
-		if(sel) {
+		if (sel) {
 			draw_content(sel);
 			wnoutrefresh(sel->window);
 		}
