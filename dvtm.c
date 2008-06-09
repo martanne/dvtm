@@ -467,13 +467,6 @@ draw_content(Client *c) {
 }
 
 void
-draw(Client *c) {
-	draw_content(c);
-	draw_border(c);
-	wrefresh(c->window);
-}
-
-void
 clear_workspace() {
 	unsigned int y;
 	for (y = 0; y < wah; y++)
