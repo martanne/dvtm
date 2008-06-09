@@ -84,6 +84,7 @@ Key keys[] = {
 	{ MOD, 'q', { quit,           { NULL }    } },
 	{ MOD, 'G', { escapekey,      { NULL }    } },
 	{ MOD, 'L', { redraw,         { NULL }    } },
+	{ MOD, 'X', { lock,           { NULL }    } },
 };
 
 /* possible values for the mouse buttons are listed below:

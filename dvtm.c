@@ -109,6 +109,7 @@ void setmwfact(const char *args[]);
 void setlayout(const char *args[]);
 void redraw(const char *args[]);
 void zoom(const char *args[]);
+void lock(const char *key[]);
 
 #if defined(HANDLE_MOUSE)
 void mouse_focus(const char *args[]);
@@ -543,6 +544,47 @@ escapekey(const char *args[]) {
 			wrefresh(sel->window);
 		}
 	}
+}
+
+/*
+ * Lock the screen until the correct password is entered.
+ * The password can either be specified in config.h which is
+ * not recommended because `strings dvtm` will contain it. If
+ * no password is specified in the configuration file it is read
+ * from the keyboard before the screen is locked.
+ *
+ * NOTE: this function doesn't handle the input from clients. All
+ *       foreground operations are temporarily suspended since the
+ *       function doesn't return.
+ */
+void
+lock(const char *args[]) {
+	size_t len = 0, i = 0;
+	char buf[16], *pass = buf, c;
+
+	erase();
+	curs_set(0);
+
+	if (args && args[0]) {
+		len = strlen(args[0]);
+		pass = (char *)args[0];
+	} else {
+		mvprintw(LINES / 2, COLS / 2 - 7, "Enter password");
+		while (len < sizeof buf && (c = getch()) != '\n')
+			if (c != ERR)
+				buf[len++] = c;
+	}
+
+	mvprintw(LINES / 2, COLS / 2 - 7, "Screen locked!");
+
+	while (i != len) {
+		for(i = 0; i < len; i++) {
+			if (getch() != pass[i])
+				break;
+		}
+	}
+
+	arrange();
 }
 
 void
