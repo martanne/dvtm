@@ -912,8 +912,25 @@ quit(const char *args[]) {
 void
 usage() {
 	cleanup();
-	eprint("usage: dvtm [-v] [-m mod] [-s status] [cmd...]\n");
+	eprint("usage: dvtm [-v] [-m mod] [-s status-fifo] [-c cmd-fifo] [cmd...]\n");
 	exit(EXIT_FAILURE);
+}
+
+int
+open_or_create_fifo(const char *name) {
+	struct stat info;
+	int fd;
+open:
+	if ((fd = open(name, O_RDWR|O_NONBLOCK)) == -1) {
+		if (errno == ENOENT && !mkfifo(name, S_IRUSR|S_IWUSR))
+			goto open;
+		error("%s\n", strerror(errno));
+	}
+	if (fstat(fd, &info) == -1)
+		error("%s\n", strerror(errno));
+	if (!S_ISFIFO(info.st_mode))
+		error("%s is not a named pipe\n", name);
+	return fd;
 }
 
 bool
@@ -947,16 +964,7 @@ parse_args(int argc, char *argv[]) {
 			case 's':
 				if (++arg >= argc)
 					usage();
-				struct stat info;
-				if ((statusfd = open(argv[arg], O_RDONLY|O_NONBLOCK)) == -1 ||
-				    fstat(statusfd, &info) == -1) {
-					perror("status");
-					exit(EXIT_FAILURE);
-				}
-				if (!S_ISFIFO(info.st_mode)) {
-					eprint("%s is not a named pipe.\n", argv[arg]);
-					exit(EXIT_FAILURE);
-				}
+				statusfd = open_or_create_fifo(argv[arg]);
 				updatebarpos();
 				break;
 			default:
