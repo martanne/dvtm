@@ -79,6 +79,13 @@ typedef struct {
 } Button;
 #endif /* HANDLE_MOUSE */
 
+#ifdef CONFIG_CMDFIFO
+typedef struct {
+	const char *name;
+	Action action;
+} Cmd;
+#endif
+
 enum { BarTop, BarBot, BarOff };
 
 #define COLOR(fg, bg) madtty_color_pair(fg, bg)
@@ -141,6 +148,10 @@ const char *shell;
 bool need_screen_resize = true;
 int width, height;
 bool running = true;
+
+#ifdef CONFIG_CMDFIFO
+# include "cmdfifo.c"
+#endif
 
 void
 eprint(const char *errstr, ...) {
@@ -869,8 +880,7 @@ resize_screen() {
 
 void
 startup(const char *args[]) {
-	int i;
-	for (i = 0; i < countof(actions); i++)
+	for (int i = 0; i < countof(actions); i++)
 		actions[i].cmd(actions[i].args);
 }
 
@@ -901,6 +911,12 @@ cleanup() {
 	endwin();
 	if (statusfd > 0)
 		close(statusfd);
+#ifdef CONFIG_CMDFIFO
+	if (cmdfd > 0)
+		close(cmdfd);
+	if (cmdpath)
+		unlink(cmdpath);
+#endif
 }
 
 void
@@ -912,7 +928,11 @@ quit(const char *args[]) {
 void
 usage() {
 	cleanup();
-	eprint("usage: dvtm [-v] [-m mod] [-s status-fifo] [-c cmd-fifo] [cmd...]\n");
+	eprint("usage: dvtm [-v] [-m mod] [-s status-fifo] "
+#ifdef CONFIG_CMDFIFO
+		"[-c cmd-fifo] "
+#endif
+		"[cmd...]\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -967,6 +987,14 @@ parse_args(int argc, char *argv[]) {
 				statusfd = open_or_create_fifo(argv[arg]);
 				updatebarpos();
 				break;
+#ifdef CONFIG_CMDFIFO
+			case 'c':
+				if (++arg >= argc)
+					usage();
+				cmdfd = open_or_create_fifo(argv[arg]);
+				cmdpath = argv[arg];
+				break;
+#endif
 			default:
 				usage();
 		}
@@ -980,6 +1008,7 @@ main(int argc, char *argv[]) {
 		setup();
 		startup(NULL);
 	}
+
 	while (running) {
 		Client *c, *t;
 		int r, nfds = 0;
@@ -991,6 +1020,12 @@ main(int argc, char *argv[]) {
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
 
+#ifdef CONFIG_CMDFIFO
+		if (cmdfd != -1) {
+			FD_SET(cmdfd, &rd);
+			nfds = cmdfd;
+		}
+#endif
 		if (statusfd != -1) {
 			FD_SET(statusfd, &rd);
 			nfds = max(nfds, statusfd);
@@ -1063,6 +1098,10 @@ main(int argc, char *argv[]) {
 				continue;
 		}
 
+#ifdef CONFIG_CMDFIFO
+		if (cmdfd != -1 && FD_ISSET(cmdfd, &rd))
+			handle_cmdfifo();
+#endif
 		if (statusfd != -1 && FD_ISSET(statusfd, &rd)) {
 			char *p;
 			switch (r = read(statusfd, stext, sizeof stext - 1)) {

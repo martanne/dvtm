@@ -125,6 +125,12 @@ Button buttons[] = {
 };
 #endif /* HANDLE_MOUSE */
 
+#ifdef CONFIG_CMDFIFO
+Cmd commands[] = {
+	{ "create", { create,	{ NULL } } },
+};
+#endif /* CONFIG_CMDFIFO */
+
 /* gets executed when dvtm is started */
 Action actions[] = {
 	{ create, { NULL } },
