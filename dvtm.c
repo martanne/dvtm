@@ -151,6 +151,15 @@ eprint(const char *errstr, ...) {
 }
 
 void
+error(const char *errstr, ...) {
+	va_list ap;
+	va_start(ap, errstr);
+	vfprintf(stderr, errstr, ap);
+	va_end(ap);
+	exit(EXIT_FAILURE);
+}
+
+void
 attach(Client *c) {
 	uint8_t order;
 	if (clients)
