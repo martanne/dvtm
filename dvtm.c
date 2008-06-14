@@ -72,12 +72,12 @@ typedef struct {
 	Action action;
 } Key;
 
-#if defined(HANDLE_MOUSE)
+#ifdef CONFIG_MOUSE
 typedef struct {
 	mmask_t mask;
 	Action action;
 } Button;
-#endif /* HANDLE_MOUSE */
+#endif
 
 #ifdef CONFIG_CMDFIFO
 typedef struct {
@@ -118,18 +118,21 @@ void redraw(const char *args[]);
 void zoom(const char *args[]);
 void lock(const char *key[]);
 
-#if defined(HANDLE_MOUSE)
+#ifdef CONFIG_MOUSE
 void mouse_focus(const char *args[]);
 void mouse_fullscreen(const char *args[]);
 void mouse_minimize(const char *args[]);
 void mouse_zoom(const char *args[]);
-#endif /* HANDLE_MOUSE */
+#endif
 
 void clear_workspace();
 void draw_all(bool border);
 void draw_border(Client *c);
 void drawbar();
 void resize(Client *c, int x, int y, int w, int h);
+void eprint(const char *errstr, ...);
+bool isarrange(void (*func)());
+void focus(Client *c);
 
 unsigned int bh = 1, by, waw, wah, wax, way;
 Client *clients = NULL;
@@ -148,6 +151,10 @@ const char *shell;
 bool need_screen_resize = true;
 int width, height;
 bool running = true;
+
+#ifdef CONFIG_MOUSE
+# include "mouse.c"
+#endif
 
 #ifdef CONFIG_CMDFIFO
 # include "cmdfifo.c"
@@ -728,79 +735,6 @@ keybinding(unsigned int mod, unsigned int code) {
 	return NULL;
 }
 
-#if defined(HANDLE_MOUSE)
-
-void
-mouse_focus(const char *args[]) {
-	focus(msel);
-	if (msel->minimized)
-		toggleminimize(NULL);
-}
-
-void
-mouse_fullscreen(const char *args[]) {
-	mouse_focus(NULL);
-	if (isarrange(fullscreen))
-		setlayout(NULL);
-	else
-		setlayout(args);
-}
-
-void
-mouse_minimize(const char *args[]) {
-	focus(msel);
-	toggleminimize(NULL);
-}
-
-void
-mouse_zoom(const char *args[]) {
-	focus(msel);
-	zoom(NULL);
-}
-
-Client*
-get_client_by_coord(int x, int y) {
-	Client *c;
-	if (y < way || y >= wah)
-		return NULL;
-	if (isarrange(fullscreen))
-		return sel;
-	for (c = clients; c; c = c->next) {
-		if (x >= c->x && x < c->x + c->w && y >= c->y && y < c->y + c->h) {
-			debug("mouse event, x: %d y: %d client: %d\n", x, y, c->order);
-			return c;
-		}
-	}
-	return NULL;
-}
-
-void
-handle_mouse() {
-	MEVENT event;
-	unsigned int i;
-	if (getmouse(&event) != OK)
-		return;
-	msel = get_client_by_coord(event.x, event.y);
-	if (!msel)
-		return;
-	for (i = 0; i < countof(buttons); i++)
-		if (event.bstate & buttons[i].mask)
-			buttons[i].action.cmd(buttons[i].action.args);
-	msel = NULL;
-}
-
-void
-mouse_setup() {
-	int i;
-	mmask_t mask;
-	for (i = 0, mask = 0; i < countof(buttons); i++)
-		mask |= buttons[i].mask;
-	if (mask)
-		mousemask(mask, NULL);
-}
-
-#endif /* HANDLE_MOUSE */
-
 Client*
 get_client_by_pid(pid_t pid) {
 	Client *c;
@@ -893,7 +827,7 @@ setup() {
 	start_color();
 	noecho();
 	keypad(stdscr, TRUE);
-#if defined(HANDLE_MOUSE)
+#ifdef CONFIG_MOUSE
 	mouse_setup();
 #endif
 	raw();
@@ -1056,11 +990,11 @@ main(int argc, char *argv[]) {
 			int code = getch();
 			Key *key;
 			if (code >= 0) {
-#if defined(HANDLE_MOUSE)
+#ifdef CONFIG_MOUSE
 				if (code == KEY_MOUSE) {
 					handle_mouse();
 				} else
-#endif /* HANDLE_MOUSE */
+#endif /* CONFIG_MOUSE */
 				if (is_modifier(code)) {
 					int mod = code;
 					code = getch();

@@ -116,14 +116,14 @@ Key keys[] = {
  * REPORT_MOUSE_POSITION    report mouse movement
  */
 
-#if defined(HANDLE_MOUSE)
+#ifdef CONFIG_MOUSE
 Button buttons[] = {
 	{ BUTTON1_CLICKED,        { mouse_focus,      { NULL  } } },
 	{ BUTTON1_DOUBLE_CLICKED, { mouse_fullscreen, { "[ ]" } } },
 	{ BUTTON2_CLICKED,        { mouse_zoom,       { NULL  } } },
 	{ BUTTON3_CLICKED,        { mouse_minimize,   { NULL  } } },
 };
-#endif /* HANDLE_MOUSE */
+#endif /* CONFIG_MOUSE */
 
 #ifdef CONFIG_CMDFIFO
 Cmd commands[] = {
