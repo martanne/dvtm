@@ -86,7 +86,9 @@ typedef struct {
 } Cmd;
 #endif
 
+#ifdef CONFIG_STATUSBAR
 enum { BarTop, BarBot, BarOff };
+#endif
 
 #define COLOR(fg, bg) madtty_color_pair(fg, bg)
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -111,12 +113,15 @@ void focusnextnm(const char *args[]);
 void focusprev(const char *args[]);
 void focusprevnm(const char *args[]);
 void toggleminimize(const char *args[]);
-void togglebar(const char *args[]);
 void setmwfact(const char *args[]);
 void setlayout(const char *args[]);
 void redraw(const char *args[]);
 void zoom(const char *args[]);
 void lock(const char *key[]);
+
+#ifdef CONFIG_STATUSBAR
+void togglebar(const char *args[]);
+#endif
 
 #ifdef CONFIG_MOUSE
 void mouse_focus(const char *args[]);
@@ -128,25 +133,21 @@ void mouse_zoom(const char *args[]);
 void clear_workspace();
 void draw_all(bool border);
 void draw_border(Client *c);
-void drawbar();
 void resize(Client *c, int x, int y, int w, int h);
 void eprint(const char *errstr, ...);
 bool isarrange(void (*func)());
+void arrange();
 void focus(Client *c);
 
-unsigned int bh = 1, by, waw, wah, wax, way;
+unsigned int waw, wah, wax, way;
 Client *clients = NULL;
 extern double mwfact;
 
 #include "config.h"
 
 Client *sel = NULL;
-Client *msel = NULL;
 double mwfact = MWFACT;
 Layout *layout = layouts;
-int statusfd = -1;
-char stext[512];
-int barpos = BARPOS;
 const char *shell;
 bool need_screen_resize = true;
 int width, height;
@@ -158,6 +159,10 @@ bool running = true;
 
 #ifdef CONFIG_CMDFIFO
 # include "cmdfifo.c"
+#endif
+
+#ifdef CONFIG_STATUSBAR
+# include "statusbar.c"
 #endif
 
 void
@@ -381,35 +386,6 @@ toggleminimize(const char *args[]) {
 }
 
 void
-updatebarpos(void) {
-	by = 0;
-	wax = 0;
-	way = 0;
-	waw = width;
-	wah = height;
-	if (statusfd == -1)
-		return;
-	if (barpos == BarTop) {
-		wah -= bh;
-		way += bh;
-	} else if (barpos == BarBot) {
-		wah -= bh;
-		by = wah;
-	}
-}
-
-void
-togglebar(const char *args[]) {
-	if (barpos == BarOff)
-		barpos = (BARPOS == BarOff) ? BarTop : BARPOS;
-	else
-		barpos = BarOff;
-	updatebarpos();
-	arrange();
-	drawbar();
-}
-
-void
 setlayout(const char *args[]) {
 	unsigned int i;
 
@@ -525,32 +501,6 @@ draw_all(bool border) {
 			draw_border(sel);
 		wrefresh(sel->window);
 	}
-}
-
-void
-drawbar() {
-	int s, l, maxlen = width - 2;
-	char t = stext[maxlen];
-	if (barpos == BarOff || !*stext)
-		return;
-	curs_set(0);
-	attrset(BAR_ATTR);
-	mvaddch(by, 0, '[');
-	stext[maxlen] = '\0';
-	l = strlen(stext);
-	if (BAR_ALIGN_RIGHT)
-		for (s = 0; s + l < maxlen; s++)
-			addch(' ');
-	else
-		for (; l < maxlen; l++)
-			stext[l] = ' ';
-	addstr(stext);
-	stext[maxlen] = t;
-	addch(']');
-	attrset(ATTR_NORMAL);
-	if (sel)
-		curs_set(madtty_cursor(sel->term));
-	refresh();
 }
 
 void
@@ -806,8 +756,10 @@ resize_screen() {
 		wrefresh(curscr);
 		refresh();
 	}
+#ifdef CONFIG_STATUSBAR
 	updatebarpos();
 	drawbar();
+#endif
 	arrange();
 	need_screen_resize = false;
 }
@@ -843,8 +795,10 @@ setup() {
 void
 cleanup() {
 	endwin();
+#ifdef CONFIG_STATUSBAR
 	if (statusfd > 0)
 		close(statusfd);
+#endif
 #ifdef CONFIG_CMDFIFO
 	if (cmdfd > 0)
 		close(cmdfd);
@@ -862,7 +816,10 @@ quit(const char *args[]) {
 void
 usage() {
 	cleanup();
-	eprint("usage: dvtm [-v] [-m mod] [-s status-fifo] "
+	eprint("usage: dvtm [-v] [-m mod] "
+#ifdef CONFIG_STATUSBAR
+		"[-s status-fifo] "
+#endif
 #ifdef CONFIG_CMDFIFO
 		"[-c cmd-fifo] "
 #endif
@@ -915,12 +872,14 @@ parse_args(int argc, char *argv[]) {
 				for (i = 0; i < countof(keys); i++)
 					keys[i].mod = *mod;
 				break;
+#ifdef CONFIG_STATUSBAR
 			case 's':
 				if (++arg >= argc)
 					usage();
 				statusfd = open_or_create_fifo(argv[arg]);
 				updatebarpos();
 				break;
+#endif
 #ifdef CONFIG_CMDFIFO
 			case 'c':
 				if (++arg >= argc)
@@ -960,11 +919,12 @@ main(int argc, char *argv[]) {
 			nfds = cmdfd;
 		}
 #endif
+#ifdef CONFIG_STATUSBAR
 		if (statusfd != -1) {
 			FD_SET(statusfd, &rd);
 			nfds = max(nfds, statusfd);
 		}
-
+#endif
 		for (c = clients; c; ) {
 			if (c->died) {
 				t = c->next;
@@ -1036,26 +996,10 @@ main(int argc, char *argv[]) {
 		if (cmdfd != -1 && FD_ISSET(cmdfd, &rd))
 			handle_cmdfifo();
 #endif
-		if (statusfd != -1 && FD_ISSET(statusfd, &rd)) {
-			char *p;
-			switch (r = read(statusfd, stext, sizeof stext - 1)) {
-				case -1:
-					strncpy(stext, strerror(errno), sizeof stext - 1);
-					stext[sizeof stext - 1] = '\0';
-					statusfd = -1;
-					break;
-				case 0:
-					statusfd = -1;
-					break;
-				default:
-					stext[r] = '\0'; p = stext + strlen(stext) - 1;
-					for (; p >= stext && *p == '\n'; *p-- = '\0');
-					for (; p >= stext && *p != '\n'; --p);
-					if (p > stext)
-						strncpy(stext, p + 1, sizeof stext);
-					drawbar();
-			}
-		}
+#ifdef CONFIG_STATUSBAR
+		if (statusfd != -1 && FD_ISSET(statusfd, &rd))
+			handle_statusbar();
+#endif
 
 		for (c = clients; c; ) {
 			if (FD_ISSET(c->pty, &rd)) {

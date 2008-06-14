@@ -16,6 +16,7 @@ LDFLAGS += -L/usr/lib -L/usr/local/lib ${LIBS}
 # Mouse handling
 CFLAGS += -DCONFIG_MOUSE
 CFLAGS += -DCONFIG_CMDFIFO
+CFLAGS += -DCONFIG_STATUSBAR
 
 DEBUG_CFLAGS = ${CFLAGS} -UNDEBUG -O0 -g -ggdb -Wall
 

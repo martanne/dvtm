@@ -70,7 +70,9 @@ Key keys[] = {
 	{ MOD, 'h', { setmwfact,      { "-0.05" } } },
 	{ MOD, 'l', { setmwfact,      { "+0.05" } } },
 	{ MOD, '.', { toggleminimize, { NULL }    } },
+#ifdef CONFIG_STATUSBAR
 	{ MOD, 's', { togglebar,      { NULL }    } },
+#endif
 	{ MOD, '\n',{ zoom ,          { NULL }    } },
 	{ MOD, '1', { focusn,         { "1" }     } },
 	{ MOD, '2', { focusn,         { "2" }     } },

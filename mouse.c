@@ -1,3 +1,5 @@
+Client *msel = NULL;
+
 void
 mouse_focus(const char *args[]) {
 	focus(msel);
