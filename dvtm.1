@@ -3,7 +3,7 @@
 dvtm \- dynamic virtual terminal manager
 .SH SYNOPSIS
 .B dvtm
-.RB [ \-v ] \ [ \-m \ mod ] \ [ \-s \ status ] \ [cmd...]
+.RB [ \-v ] \ [ \-m \ mod ] \ [ \-s \ status-fifo ] \ [ \-c \ cmd-fifo ] \ [cmd...]
 .SH DESCRIPTION
 dvtm is a dynamic tiling window manager for the console.
 As a console window manager it tries to make it easy to work with multiple
@@ -16,9 +16,12 @@ prints version information to standard output, then exits.
 .B \-m mod
 set default modifier at runtime.
 .TP
-.B \-s status
-if status is a named pipe it's content is read and displayed. See the dvtm-status script
+.B \-s status-fifo
+if status-fifo is a named pipe it's content is read and displayed. See the dvtm-status script
 for an usage example.
+.TP
+.B \-c cmd-fifo
+if cmd-fifo is not a named pipe it is created and can then receive commands as defined in config.h.
 .TP
 .B [cmd...]
 Execute cmd after dvtm is started.
