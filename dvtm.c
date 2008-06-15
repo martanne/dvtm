@@ -885,7 +885,9 @@ parse_args(int argc, char *argv[]) {
 				if (++arg >= argc)
 					usage();
 				cmdfd = open_or_create_fifo(argv[arg]);
-				cmdpath = argv[arg];
+				if (!(cmdpath = get_realpath(argv[arg])))
+					error("%s\n", strerror(errno));
+				setenv("DVTM_CMD_FIFO", cmdpath, 1);
 				break;
 #endif
 			default:
