@@ -29,7 +29,8 @@ handle_cmdfifo() {
 			if ((cmd = get_cmd_by_name(s)) != NULL) {
 				bool quote = false;
 				int argc = 0;
-				const char *args[MAX_ARGS], *arg = p;
+				/* XXX: initializer assumes MAX_ARGS == 2 use a initialization loop? */
+				const char *args[MAX_ARGS] = { NULL, NULL}, *arg = p;
 				if (cmd->action.args[0]) {
 					cmd->action.cmd(cmd->action.args);
 					break;
