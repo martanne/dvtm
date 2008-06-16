@@ -1013,10 +1013,11 @@ void madtty_draw(madtty_t *t, WINDOW *win, int srow, int scol)
 
 /******************************************************/
 
-pid_t madtty_forkpty(madtty_t *t, const char *p, const char *argv[], int *pty)
+pid_t madtty_forkpty(madtty_t *t, const char *p, const char *argv[], const char *env[], int *pty)
 {
     struct winsize ws;
     pid_t pid;
+    const char **envp = env;
 
     ws.ws_row    = t->rows;
     ws.ws_col    = t->cols;
@@ -1028,6 +1029,10 @@ pid_t madtty_forkpty(madtty_t *t, const char *p, const char *argv[], int *pty)
 
     if (pid == 0) {
         setsid();
+        while (envp && envp[0]) {
+            setenv(envp[0], envp[1], 1);
+            envp += 2;
+        }
         setenv("TERM", "rxvt", 1);
         execv(p, (char *const*)argv);
         fprintf(stderr, "\nexecv() failed.\nCommand: '%s'\n", argv[0]);
