@@ -1,4 +1,5 @@
 int cmdfd = -1;
+unsigned short int client_id = 0;
 const char *cmdpath = NULL;
 
 /* glibc has a non-standard realpath(3) implementation which allocates

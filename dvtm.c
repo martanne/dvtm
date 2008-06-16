@@ -41,6 +41,9 @@ struct Client {
 	uint8_t order;
 	pid_t pid;
 	int pty;
+#ifdef CONFIG_CMDFIFO
+	unsigned short int id;
+#endif
 	short int x;
 	short int y;
 	short int w;
@@ -583,15 +586,23 @@ title_escape_seq_handler(madtty_t *term, char *es) {
 
 void
 create(const char *args[]) {
+	Client *c = calloc(sizeof(Client), 1);
 	const char *cmd = (args && args[0]) ? args[0] : shell;
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
-	Client *c = calloc(sizeof(Client), 1);
+#ifdef CONFIG_CMDFIFO
+	c->id = ++client_id;
+	char buf[8];
+	snprintf(buf, sizeof buf, "%d", c->id);
+	const char *env[] = { "DVTM_WINDOW_ID", buf, NULL };
+#else
+	const char *env[] = NULL;
+#endif
 	c->window = newwin(wah, waw, way, wax);
 	c->term = madtty_create(height - 1, width);
 	c->cmd = cmd;
 	if (args && args[1])
 		strncpy(c->title, args[1], sizeof(c->title));
-	c->pid = madtty_forkpty(c->term, "/bin/sh", pargs, &c->pty);
+	c->pid = madtty_forkpty(c->term, "/bin/sh", pargs, env, &c->pty);
 	madtty_set_data(c->term, c);
 	madtty_set_handler(c->term, title_escape_seq_handler);
 	c->w = width;
