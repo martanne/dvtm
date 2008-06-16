@@ -587,6 +587,8 @@ title_escape_seq_handler(madtty_t *term, char *es) {
 void
 create(const char *args[]) {
 	Client *c = calloc(sizeof(Client), 1);
+	if (!c)
+		return;
 	const char *cmd = (args && args[0]) ? args[0] : shell;
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
 #ifdef CONFIG_CMDFIFO
