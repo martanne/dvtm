@@ -35,7 +35,7 @@ get_cmd_by_name(const char *name) {
 void
 handle_cmdfifo() {
 	int r;
-	char *p, *s, cmdbuf[512];
+	char *p, *s, cmdbuf[512], c;
 	Cmd *cmd;
 	switch (r = read(cmdfd, cmdbuf, sizeof cmdbuf - 1)) {
 		case -1:
@@ -44,62 +44,86 @@ handle_cmdfifo() {
 			break;
 		default:
 			cmdbuf[r] = '\0';
-			/* find the command name */
-			for (p = cmdbuf; *p == ' '; p++);
-			for (s = p; *p != ' ' && *p != '\n'; p++);
-			*p++ = '\0';
-			if ((cmd = get_cmd_by_name(s)) != NULL) {
-				bool quote = false;
-				int argc = 0;
-				/* XXX: initializer assumes MAX_ARGS == 2 use a initialization loop? */
-				const char *args[MAX_ARGS] = { NULL, NULL}, *arg = p;
-				if (cmd->action.args[0]) {
-					cmd->action.cmd(cmd->action.args);
-					break;
-				}
-				for (; *p; p++) {
-					switch (*p) {
-					case '\\':
-						/* remove the escape character '\\' move every
-						 * following character to the left by one position
-						 */
-						switch (*(++p)) {
-							case '\\':
-							case '\'':
-							case '\"': {
-								char *t = p;
-								for (;;) {
-									*(t - 1) = *t;
-									if (*t++ == '\0')
-										break;
+			p = cmdbuf;
+			while (*p) {
+				/* find the command name */
+				for (; *p == ' ' || *p == '\n'; p++);
+				for (s = p; *p && *p != ' ' && *p != '\n'; p++);
+				if ((c = *p))
+					*p++ = '\0';
+				if (*s && (cmd = get_cmd_by_name(s)) != NULL) {
+					bool quote = false;
+					int argc = 0;
+					/* XXX: initializer assumes MAX_ARGS == 2 use a initialization loop? */
+					const char *args[MAX_ARGS] = { NULL, NULL}, *arg;
+					/* if arguments were specified in config.h ignore the one given via
+					 * the named pipe and thus skip everything until we find a new line
+					 */
+					if (cmd->action.args[0] || c == '\n') {
+						debug("execute %s", s);
+						cmd->action.cmd(cmd->action.args);
+						while (*p && *p != '\n')
+							p++;
+						continue;
+					}
+					/* no arguments were given in config.h so we parse the command line */
+					while (*p == ' ')
+						p++;
+					arg = p;
+					for (; (c = *p); p++) {
+						switch (*p) {
+						case '\\':
+							/* remove the escape character '\\' move every
+							 * following character to the left by one position
+							 */
+							switch (*(++p)) {
+								case '\\':
+								case '\'':
+								case '\"': {
+									char *t = p;
+									for (;;) {
+										*(t - 1) = *t;
+										if (*t++ == '\0')
+											break;
+									}
+									p -= 2;
 								}
 							}
-						}
-						break;
-					case '\'':
-					case '\"':
-						quote = !quote;
-						break;
-					case ' ':
-						if (!quote) {
-					case '\n':
-							/* remove trailing quote */
-							if (*(p - 1) == '\'' || *(p - 1) == '\"')
-								*(p - 1) = '\0';
-							*p++ = '\0';
-							/* remove leading quote */
-							if (*arg == '\'' || *arg == '\"')
-								arg++;
+							break;
+						case '\'':
+						case '\"':
+							quote = !quote;
+							break;
+						case ' ':
+							if (!quote) {
+						case '\n':
+								/* remove trailing quote if there is one */
+								if (*(p - 1) == '\'' || *(p - 1) == '\"')
+									*(p - 1) = '\0';
+								*p++ = '\0';
+								/* remove leading quote if there is one */
+								if (*arg == '\'' || *arg == '\"')
+									arg++;
+								if (argc < MAX_ARGS)
+									args[argc++] = arg;
 
-							args[argc++] = arg;
-							while (*p == ' ')
-								p++;
-							arg = p;
+								while (*p == ' ')
+									++p;
+								arg = p;
+							}
+							break;
 						}
-						break;
+
+						if (c == '\n' || *p == '\n') {
+							debug("execute %s", s);
+							for(int i = 0; i < argc; i++)
+								debug(" %s", args[i]);
+							debug("\n");
+							cmd->action.cmd(args);
+							break;
+						}
 					}
 				}
-				cmd->action.cmd(args);
 			}
 	}
 }
