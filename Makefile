@@ -27,6 +27,9 @@ unicode: clean
 debug: clean
 	@make CFLAGS='${DEBUG_CFLAGS}'
 
+unicode-debug: clean
+	@make LIBS='${LIBS_UTF8}' CFLAGS='${DEBUG_CFLAGS} -DUSE_UTF8'
+
 clean:
 	@echo cleaning
 	@rm -f dvtm ${OBJ} dvtm-${VERSION}.tar.gz
@@ -62,4 +65,4 @@ uninstall:
 	@echo removing manual page from ${DESTDIR}${MANPREFIX}/man1
 	@rm -f ${DESTDIR}${MANPREFIX}/man1/dvtm.1
 
-.PHONY: all options clean dist install uninstall debug unicode
+.PHONY: all options clean dist install uninstall debug unicode-debug unicode
