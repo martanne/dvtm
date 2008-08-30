@@ -155,7 +155,7 @@ double mwfact = MWFACT;
 Layout *layout = layouts;
 const char *shell;
 bool need_screen_resize = true;
-int width, height;
+int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
 bool running = true;
 
 #ifdef CONFIG_MOUSE
@@ -621,7 +621,7 @@ create(const char *args[]) {
 	const char *env[] = NULL;
 #endif
 	c->window = newwin(wah, waw, way, wax);
-	c->term = madtty_create(height - 1, width, 500);
+	c->term = madtty_create(height - 1, width, scroll_buf_size);
 	c->cmd = cmd;
 	if (args && args[1])
 		strncpy(c->title, args[1], sizeof(c->title));
@@ -850,7 +850,7 @@ quit(const char *args[]) {
 void
 usage() {
 	cleanup();
-	eprint("usage: dvtm [-v] [-m mod] "
+	eprint("usage: dvtm [-v] [-m mod] [-h n] "
 #ifdef CONFIG_STATUSBAR
 		"[-s status-fifo] "
 #endif
@@ -892,33 +892,32 @@ parse_args(int argc, char *argv[]) {
 			create(args);
 			continue;
 		}
+		if (argv[arg][1] != 'v' && (arg + 1) >= argc)
+			usage();
 		switch (argv[arg][1]) {
 			case 'v':
 				puts("dvtm-"VERSION" (c) 2007-2008 Marc Andre Tanner");
 				exit(EXIT_SUCCESS);
-			case 'm':
-				if (++arg >= argc)
-					usage();
-				unsigned int i;
-				char *mod = argv[arg];
+			case 'm': {
+				char *mod = argv[++arg];
 				if (mod[0] == '^' && mod[1])
 					*mod = CTRL(mod[1]);
-				for (i = 0; i < countof(keys); i++)
+				for (int i = 0; i < countof(keys); i++)
 					keys[i].mod = *mod;
+				break;
+			}
+			case 'h':
+				scroll_buf_size = atoi(argv[++arg]);
 				break;
 #ifdef CONFIG_STATUSBAR
 			case 's':
-				if (++arg >= argc)
-					usage();
-				statusfd = open_or_create_fifo(argv[arg]);
+				statusfd = open_or_create_fifo(argv[++arg]);
 				updatebarpos();
 				break;
 #endif
 #ifdef CONFIG_CMDFIFO
 			case 'c':
-				if (++arg >= argc)
-					usage();
-				cmdfd = open_or_create_fifo(argv[arg]);
+				cmdfd = open_or_create_fifo(argv[++arg]);
 				if (!(cmdpath = get_realpath(argv[arg])))
 					error("%s\n", strerror(errno));
 				setenv("DVTM_CMD_FIFO", cmdpath, 1);

@@ -39,6 +39,8 @@
 #define TITLE "[%s%s#%d]"
 /* master width factor [0.1 .. 0.9] */
 #define MWFACT  0.5
+/* scroll back buffer size in lines */
+#define SCROLL_BUF_SIZE 500
 
 #include "tile.c"
 #include "grid.c"
