@@ -231,7 +231,7 @@ static void fill_scroll_buf(madtty_t *t, int s)
     if (t->scroll_buf_len >= t->scroll_buf_sz)
 	t->scroll_buf_len = t->scroll_buf_sz;
 
-    if (s > 0) {
+    if (s > 0 && t->scroll_buf_sz) {
 	for (int i = 0; i < s; i++) {
 	    struct t_row_t tmp = t->scroll_top[i];
 	    t->scroll_top[i] = t->scroll_buf[t->scroll_buf_ptr];
@@ -243,7 +243,7 @@ static void fill_scroll_buf(madtty_t *t, int s)
 	}
     }
     t_row_roll(t->scroll_top, t->scroll_bot, s);
-    if (s < 0) {
+    if (s < 0 && t->scroll_buf_sz) {
 	for (int i = (-s)-1; i >= 0; i--) {
 	    t->scroll_buf_ptr--;
 	    if (t->scroll_buf_ptr == -1)
