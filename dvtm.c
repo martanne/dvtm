@@ -118,6 +118,7 @@ void focusprevnm(const char *args[]);
 void toggleminimize(const char *args[]);
 void setmwfact(const char *args[]);
 void setlayout(const char *args[]);
+void scrollback(const char *args[]);
 void redraw(const char *args[]);
 void zoom(const char *args[]);
 void lock(const char *key[]);
@@ -426,6 +427,19 @@ setmwfact(const char *args[]) {
 			mwfact = 0.9;
 	}
 	arrange();
+}
+
+void
+scrollback(const char *args[]) {
+	if (!sel) return;
+
+	if (!args[0] || atoi(args[0]) < 0)
+		madtty_scroll(sel->term, -sel->h/2);
+	else
+		madtty_scroll(sel->term,  sel->h/2);
+
+	wrefresh(curscr);
+	draw_all(true);
 }
 
 void

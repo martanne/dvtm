@@ -95,6 +95,13 @@ struct madtty_t {
     int rows, cols;
     unsigned curattrs;
 
+    /* scrollback buffer */
+    struct t_row_t *scroll_buf;
+    int    scroll_buf_sz;
+    int    scroll_buf_ptr;
+    int    scroll_buf_len;
+    int    scroll_amount;
+
     struct t_row_t *lines;
     struct t_row_t *scroll_top;
     struct t_row_t *scroll_bot;
@@ -205,14 +212,61 @@ static void clamp_cursor_to_bounds(madtty_t *t)
     }
 }
 
+static void fill_scroll_buf(madtty_t *t, int s)
+{
+    /* work in screenfuls */
+    int ssz = t->scroll_bot - t->scroll_top;
+    if (s > ssz) {
+	fill_scroll_buf(t, ssz);
+	fill_scroll_buf(t, s-ssz);
+	return;
+    }
+    if (s < -ssz) {
+	fill_scroll_buf(t, -ssz);
+	fill_scroll_buf(t, s + ssz);
+	return;
+    }
+
+    t->scroll_buf_len += s;
+    if (t->scroll_buf_len >= t->scroll_buf_sz)
+	t->scroll_buf_len = t->scroll_buf_sz;
+
+    if (s > 0) {
+	for (int i = 0; i < s; i++) {
+	    struct t_row_t tmp = t->scroll_top[i];
+	    t->scroll_top[i] = t->scroll_buf[t->scroll_buf_ptr];
+	    t->scroll_buf[t->scroll_buf_ptr] = tmp;
+
+	    t->scroll_buf_ptr++;
+	    if (t->scroll_buf_ptr == t->scroll_buf_sz)
+		t->scroll_buf_ptr = 0;
+	}
+    }
+    t_row_roll(t->scroll_top, t->scroll_bot, s);
+    if (s < 0) {
+	for (int i = (-s)-1; i >= 0; i--) {
+	    t->scroll_buf_ptr--;
+	    if (t->scroll_buf_ptr == -1)
+		t->scroll_buf_ptr = t->scroll_buf_sz - 1;
+
+	    struct t_row_t tmp = t->scroll_top[i];
+	    t->scroll_top[i] = t->scroll_buf[t->scroll_buf_ptr];
+	    t->scroll_buf[t->scroll_buf_ptr] = tmp;
+	    t->scroll_top[i].dirty = true;
+	}
+    }
+}
+
 static void cursor_line_down(madtty_t *t)
 {
     t->curs_row++;
     if (t->curs_row < t->scroll_bot)
         return;
 
+    madtty_noscroll(t);
+
     t->curs_row = t->scroll_bot - 1;
-    t_row_roll(t->scroll_top, t->scroll_bot, 1);
+    fill_scroll_buf(t, 1);
     t_row_set(t->curs_row, 0, t->cols, 0);
 }
 
@@ -909,6 +963,15 @@ madtty_t *madtty_create(int rows, int cols)
     t->scroll_top = t->lines;
     t->scroll_bot = t->lines + t->rows;
 
+    /* scrollback buffer */
+    t->scroll_buf_sz = 1000;
+    t->scroll_buf = calloc(sizeof(t_row_t), t->scroll_buf_sz);
+    for (i = 0; i < t->scroll_buf_sz; i++) {
+        t->scroll_buf[i].text = calloc(sizeof(wchar_t),  t->cols);
+        t->scroll_buf[i].attr = calloc(sizeof(uint16_t), t->cols);
+    }
+    t->scroll_buf_ptr = t->scroll_buf_len = 0;
+    t->scroll_amount = 0;
     return t;
 }
 
@@ -920,7 +983,13 @@ void madtty_resize(madtty_t *t, int rows, int cols)
     if (rows <= 0 || cols <= 0)
         return;
 
+    madtty_noscroll(t);
+
     if (t->rows != rows) {
+        if (t->curs_row > lines+rows) {
+            /* scroll up instead of simply chopping off bottom */
+            fill_scroll_buf(t, t->rows - rows);
+        }
         while (t->rows > rows) {
             free(lines[t->rows - 1].text);
             free(lines[t->rows - 1].attr);
@@ -938,6 +1007,13 @@ void madtty_resize(madtty_t *t, int rows, int cols)
                 t_row_set(lines + row, t->cols, cols - t->cols, 0);
             else
                 lines[row].dirty = true;
+        }
+	t_row_t *sbuf = t->scroll_buf;
+        for (int row = 0; row < t->scroll_buf_sz; row++) {
+            sbuf[row].text = realloc(sbuf[row].text, sizeof(wchar_t) * cols);
+            sbuf[row].attr = realloc(sbuf[row].attr, sizeof(uint16_t) * cols);
+            if (t->cols < cols)
+                t_row_set(sbuf + row, t->cols, cols - t->cols, 0);
         }
         t->cols = cols;
     }
@@ -969,6 +1045,11 @@ void madtty_destroy(madtty_t *t)
         free(t->lines[i].attr);
     }
     free(t->lines);
+    for (i = 0; i < t->scroll_buf_sz; i++) {
+        free(t->scroll_buf[i].text);
+        free(t->scroll_buf[i].attr);
+    }
+    free(t->scroll_buf);
     free(t);
 }
 
@@ -1008,7 +1089,28 @@ void madtty_draw(madtty_t *t, WINDOW *win, int srow, int scol)
     }
 
     wmove(win, srow + t->curs_row - t->lines, scol + t->curs_col);
-    curs_set(!t->curshid);
+    curs_set(madtty_cursor(t));
+}
+
+void madtty_scroll(madtty_t *t, int rows)
+{
+    if (rows < 0) {
+	/* scroll back */
+	if (rows < -t->scroll_buf_len)
+	    rows = -t->scroll_buf_len;
+    } else {
+	/* scroll forward */
+	if (rows > t->scroll_amount)
+	    rows = t->scroll_amount;
+    }
+    fill_scroll_buf(t, rows);
+    t->scroll_amount -= rows;
+}
+
+void madtty_noscroll(madtty_t *t)
+{
+    if (t->scroll_amount)
+	madtty_scroll(t, t->scroll_amount);
 }
 
 /******************************************************/
@@ -1064,6 +1166,8 @@ static void term_write(madtty_t *t, const char *buf, int len)
 void madtty_keypress(madtty_t *t, int keycode)
 {
     char c = (char)keycode;
+
+    madtty_noscroll(t);
 
     if (keycode >= 0 && keycode < KEY_MAX && keytable[keycode]) {
         switch(keycode) {
@@ -1158,5 +1262,5 @@ void *madtty_get_data(madtty_t *t)
 
 unsigned madtty_cursor(madtty_t *t)
 {
-    return !t->curshid;
+    return t->scroll_amount ? 0 : !t->curshid;
 }
