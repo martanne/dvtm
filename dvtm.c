@@ -135,6 +135,7 @@ void mouse_zoom(const char *args[]);
 #endif
 
 void clear_workspace();
+void draw(Client *c);
 void draw_all(bool border);
 void draw_border(Client *c);
 void resize(Client *c, int x, int y, int w, int h);
@@ -438,8 +439,7 @@ scrollback(const char *args[]) {
 	else
 		madtty_scroll(sel->term,  sel->h/2);
 
-	wrefresh(curscr);
-	draw_all(true);
+	draw(sel);
 }
 
 void
