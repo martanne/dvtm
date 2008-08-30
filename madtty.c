@@ -926,7 +926,7 @@ int madtty_process(madtty_t *t)
     return 0;
 }
 
-madtty_t *madtty_create(int rows, int cols)
+madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz)
 {
     madtty_t *t;
     int i;
@@ -964,7 +964,9 @@ madtty_t *madtty_create(int rows, int cols)
     t->scroll_bot = t->lines + t->rows;
 
     /* scrollback buffer */
-    t->scroll_buf_sz = 1000;
+    if (scroll_buf_sz < 0)
+        scroll_buf_sz = 0;
+    t->scroll_buf_sz = scroll_buf_sz;
     t->scroll_buf = calloc(sizeof(t_row_t), t->scroll_buf_sz);
     for (i = 0; i < t->scroll_buf_sz; i++) {
         t->scroll_buf[i].text = calloc(sizeof(wchar_t),  t->cols);

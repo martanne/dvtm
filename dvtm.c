@@ -621,7 +621,7 @@ create(const char *args[]) {
 	const char *env[] = NULL;
 #endif
 	c->window = newwin(wah, waw, way, wax);
-	c->term = madtty_create(height - 1, width);
+	c->term = madtty_create(height - 1, width, 500);
 	c->cmd = cmd;
 	if (args && args[1])
 		strncpy(c->title, args[1], sizeof(c->title));

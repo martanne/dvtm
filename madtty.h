@@ -59,7 +59,7 @@ void madtty_set_data(madtty_t *, void *);
 void *madtty_get_data(madtty_t *);
 int madtty_color_pair(int fg, int bg);
 
-madtty_t *madtty_create(int rows, int cols);
+madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz);
 void madtty_resize(madtty_t *, int rows, int cols);
 void madtty_destroy(madtty_t *);
 pid_t madtty_forkpty(madtty_t *, const char *, const char *argv[], const char *envp[], int *pty);
