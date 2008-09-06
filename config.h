@@ -89,6 +89,8 @@ Key keys[] = {
 	{ MOD, 'G', { escapekey,      { NULL }    } },
 	{ MOD, 'L', { redraw,         { NULL }    } },
 	{ MOD, 'X', { lock,           { NULL }    } },
+	{ MOD, KEY_PPAGE, { scrollback,     { "-1" }    } },
+	{ MOD, KEY_NPAGE, { scrollback,     { "1"  }    } },
 };
 
 /* possible values for the mouse buttons are listed below:
