@@ -696,6 +696,8 @@ static void try_interpret_escape_seq(madtty_t *t)
           case MADTTY_HANDLER_OK:
 	     goto cancel;
           case MADTTY_HANDLER_NOTYET:
+             if (t->elen + 1 >= (int)sizeof(t->ebuf))
+                 goto cancel;
 	     return;
        }
     }
