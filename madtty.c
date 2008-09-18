@@ -470,7 +470,7 @@ static void interpret_csi_ICH(madtty_t *t, int param[], int pcount)
     for (i = t->cols - 1; i >= t->curs_col + n; i--) {
         row->text[i] = row->text[i - n];
         row->attr[i] = row->attr[i - n];
-        row->bg  [i] = row->fg  [i - n];
+        row->bg  [i] = row->bg  [i - n];
         row->fg  [i] = row->fg  [i - n];
     }
 
@@ -491,7 +491,7 @@ static void interpret_csi_DCH(madtty_t *t, int param[], int pcount)
     for (i = t->curs_col; i < t->cols - n; i++) {
         row->text[i] = row->text[i + n];
         row->attr[i] = row->attr[i + n];
-        row->bg  [i] = row->fg  [i + n];
+        row->bg  [i] = row->bg  [i + n];
         row->fg  [i] = row->fg  [i + n];
     }
 
@@ -1262,7 +1262,7 @@ void madtty_keypress_sequence(madtty_t *t, const char *seq)
 void madtty_color_set(WINDOW *win, short fg, short bg)
 {
     if (use_palette) {
-        if (fg==-1 && bg==-1) {
+        if (fg == -1 && bg == -1) {
             wcolor_set(win, 0, 0);
         } else {
             unsigned c = color_hash(fg, bg);
@@ -1293,27 +1293,25 @@ void madtty_color_set(WINDOW *win, short fg, short bg)
 
 void madtty_init_colors(void)
 {
+    int use_default = use_default_colors() == OK;
     use_palette = 0;
 
-    if (1 && COLORS >= 256 && COLOR_PAIRS >= 256) {
+    if (COLORS >= 256 && COLOR_PAIRS >= 256) {
         use_palette = 1;
-        use_default_colors();
         has_default = 1;
 
         color2palette = calloc((COLORS+1)*(COLORS+1), sizeof(short));
         int bg = 0, fg = 0;
-        for (int i=palette_start; i<palette_end; i++) {
+        for (int i = palette_start; i < palette_end; i++) {
             init_pair(i, bg, fg);
             color2palette[color_hash(bg,fg)] = i;
-            fg++;
-            if (fg == COLORS) {
+            if (++fg == COLORS) {
                 fg = 0;
                 bg++;
             }
         }
         palette_cur = palette_start;
     } else if (COLOR_PAIRS > 64) {
-        use_default_colors();
         has_default = 1;
 
         for (int bg = -1; bg < 8; bg++) {
@@ -1322,7 +1320,6 @@ void madtty_init_colors(void)
             }
         }
     } else {
-        int use_default = use_default_colors() == OK;
         for (int bg = 0; bg < 8; bg++) {
             for (int fg = 0; fg < 8; fg++) {
                 if (use_default) {
