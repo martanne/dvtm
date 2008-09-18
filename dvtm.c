@@ -452,11 +452,11 @@ draw_border(Client *c) {
 	char *s, t = '\0';
 	int x, y, o;
 	if (sel == c) {
-		wattrset(c->window, ATTR_SELECTED);
- 		madtty_color_set(c->window, FG_SELECTED, BG_SELECTED);
+		wattrset(c->window, SELECTED_ATTR);
+		madtty_color_set(c->window, SELECTED_FG, SELECTED_BG);
 	} else {
-		wattrset(c->window, ATTR_NORMAL);
- 		madtty_color_set(c->window, FG_NORMAL, BG_NORMAL);
+		wattrset(c->window, NORMAL_ATTR);
+		madtty_color_set(c->window, NORMAL_FG, NORMAL_BG);
 	}
 	getyx(c->window, y, x);
 	curs_set(0);

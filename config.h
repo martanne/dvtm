@@ -12,19 +12,19 @@
  * A_INVIS         Invisible or blank mode
  *
  */
-#define ATTR_SELECTED   A_NORMAL
-#define FG_SELECTED     COLORS==256 ? 68 : COLOR_BLUE
-#define BG_SELECTED     -1
+#define SELECTED_ATTR   A_NORMAL
+#define SELECTED_FG     COLORS==256 ? 68 : COLOR_BLUE
+#define SELECTED_BG     -1
 /* curses attributes for normal (not selected) windows */
-#define ATTR_NORMAL     A_NORMAL
-#define FG_NORMAL       -1
-#define BG_NORMAL       -1
+#define NORMAL_ATTR     A_NORMAL
+#define NORMAL_FG       -1
+#define NORMAL_BG       -1
 /* status bar (command line option -s) position */
 #define BARPOS		BarTop /* BarBot, BarOff */
 /* curses attributes for the status bar */
 #define BAR_ATTR        A_NORMAL
-#define FG_BAR          COLOR_RED
-#define BG_BAR          -1
+#define BAR_FG          COLOR_RED
+#define BAR_BG          -1
 /* true if the statusbar text should be right aligned,
  * set to false if you prefer it left aligned */
 #define BAR_ALIGN_RIGHT true

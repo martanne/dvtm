@@ -29,7 +29,7 @@ drawbar() {
 		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
- 	madtty_color_set(stdscr, FG_BAR, BG_BAR);
+	madtty_color_set(stdscr, BAR_FG, BAR_BG);
 	mvaddch(by, 0, '[');
 	stext[maxlen] = '\0';
 	l = strlen(stext);
@@ -42,7 +42,7 @@ drawbar() {
 	addstr(stext);
 	stext[maxlen] = t;
 	addch(']');
-	attrset(ATTR_NORMAL);
+	attrset(NORMAL_ATTR);
 	if (sel)
 		curs_set(madtty_cursor(sel->term));
 	refresh();
