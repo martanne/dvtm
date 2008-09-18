@@ -71,6 +71,7 @@ void madtty_keypress(madtty_t *, int keycode);
 void madtty_keypress_sequence(madtty_t *, const char *seq);
 void madtty_dirty(madtty_t *t);
 void madtty_draw(madtty_t *, WINDOW *win, int startrow, int startcol);
+void madtty_color_set(WINDOW *win, short fg, short bg);
 
 void madtty_scroll(madtty_t *, int rows);
 void madtty_noscroll(madtty_t *);

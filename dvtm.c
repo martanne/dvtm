@@ -93,7 +93,6 @@ typedef struct {
 enum { BarTop, BarBot, BarOff };
 #endif
 
-#define COLOR(fg, bg) madtty_color_pair(fg, bg)
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define sstrlen(str) (sizeof(str) - 1)
 #define max(x, y) ((x) > (y) ? (x) : (y))
@@ -452,10 +451,13 @@ void
 draw_border(Client *c) {
 	char *s, t = '\0';
 	int x, y, o;
-	if (sel == c)
+	if (sel == c) {
 		wattrset(c->window, ATTR_SELECTED);
-	else
+ 		madtty_color_set(c->window, FG_SELECTED, BG_SELECTED);
+	} else {
 		wattrset(c->window, ATTR_NORMAL);
+ 		madtty_color_set(c->window, FG_NORMAL, BG_NORMAL);
+	}
 	getyx(c->window, y, x);
 	curs_set(0);
 	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);

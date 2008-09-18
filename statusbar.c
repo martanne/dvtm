@@ -29,6 +29,7 @@ drawbar() {
 		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
+ 	madtty_color_set(stdscr, FG_BAR, BG_BAR);
 	mvaddch(by, 0, '[');
 	stext[maxlen] = '\0';
 	l = strlen(stext);

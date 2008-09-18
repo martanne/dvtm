@@ -10,24 +10,21 @@
  * A_BOLD          Extra bright or bold
  * A_PROTECT       Protected mode
  * A_INVIS         Invisible or blank mode
- * COLOR(fg,bg)    Color where fg and bg are one of:
  *
- *   COLOR_BLACK
- *   COLOR_RED
- *   COLOR_GREEN
- *   COLOR_YELLOW
- *   COLOR_BLUE
- *   COLOR_MAGENTA
- *   COLOR_CYAN
- *   COLOR_WHITE
  */
-#define ATTR_SELECTED   COLOR(COLOR_RED,COLOR_BLACK)
+#define ATTR_SELECTED   A_NORMAL
+#define FG_SELECTED     COLORS==256 ? 68 : COLOR_BLUE
+#define BG_SELECTED     -1
 /* curses attributes for normal (not selected) windows */
 #define ATTR_NORMAL     A_NORMAL
+#define FG_NORMAL       -1
+#define BG_NORMAL       -1
 /* status bar (command line option -s) position */
 #define BARPOS		BarTop /* BarBot, BarOff */
 /* curses attributes for the status bar */
-#define BAR_ATTR        COLOR(COLOR_RED,COLOR_BLACK)
+#define BAR_ATTR        A_NORMAL
+#define FG_BAR          COLOR_RED
+#define BG_BAR          -1
 /* true if the statusbar text should be right aligned,
  * set to false if you prefer it left aligned */
 #define BAR_ALIGN_RIGHT true
