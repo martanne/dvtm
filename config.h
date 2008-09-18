@@ -12,8 +12,10 @@
  * A_INVIS         Invisible or blank mode
  *
  */
+#define DVTM_BLUE       COLORS==256 ? 68 : COLOR_BLUE
+
 #define SELECTED_ATTR   A_NORMAL
-#define SELECTED_FG     COLORS==256 ? 68 : COLOR_BLUE
+#define SELECTED_FG     DVTM_BLUE
 #define SELECTED_BG     -1
 /* curses attributes for normal (not selected) windows */
 #define NORMAL_ATTR     A_NORMAL
@@ -23,7 +25,7 @@
 #define BARPOS		BarTop /* BarBot, BarOff */
 /* curses attributes for the status bar */
 #define BAR_ATTR        A_NORMAL
-#define BAR_FG          COLOR_RED
+#define BAR_FG          DVTM_BLUE
 #define BAR_BG          -1
 /* true if the statusbar text should be right aligned,
  * set to false if you prefer it left aligned */
