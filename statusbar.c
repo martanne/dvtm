@@ -1,9 +1,9 @@
-int statusfd = -1;
-char stext[512];
-int barpos = BARPOS;
-unsigned int bh = 1, by;
+static int statusfd = -1;
+static char stext[512];
+static int barpos = BARPOS;
+static unsigned int bh = 1, by;
 
-void
+static void
 updatebarpos(void) {
 	by = 0;
 	wax = 0;
@@ -21,7 +21,7 @@ updatebarpos(void) {
 	}
 }
 
-void
+static void
 drawbar() {
 	int s, l, maxlen = width - 2;
 	char t = stext[maxlen];
@@ -48,7 +48,7 @@ drawbar() {
 	refresh();
 }
 
-void
+static void
 togglebar(const char *args[]) {
 	if (barpos == BarOff)
 		barpos = (BARPOS == BarOff) ? BarTop : BARPOS;
@@ -59,7 +59,7 @@ togglebar(const char *args[]) {
 	drawbar();
 }
 
-void
+static void
 handle_statusbar() {
 	char *p;
 	int r;

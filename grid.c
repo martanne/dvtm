@@ -1,4 +1,4 @@
-void
+static void
 grid(void) {
 	unsigned int i, m, nm, n, nx, ny, nw, nh, aw, ah, cols, rows;
 	Client *c;

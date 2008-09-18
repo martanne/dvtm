@@ -1,13 +1,13 @@
-Client *msel = NULL;
+static Client *msel = NULL;
 
-void
+static void
 mouse_focus(const char *args[]) {
 	focus(msel);
 	if (msel->minimized)
 		toggleminimize(NULL);
 }
 
-void
+static void
 mouse_fullscreen(const char *args[]) {
 	mouse_focus(NULL);
 	if (isarrange(fullscreen))
@@ -16,19 +16,19 @@ mouse_fullscreen(const char *args[]) {
 		setlayout(args);
 }
 
-void
+static void
 mouse_minimize(const char *args[]) {
 	focus(msel);
 	toggleminimize(NULL);
 }
 
-void
+static void
 mouse_zoom(const char *args[]) {
 	focus(msel);
 	zoom(NULL);
 }
 
-Client*
+static Client*
 get_client_by_coord(int x, int y) {
 	Client *c;
 	if (y < way || y >= wah)
@@ -44,7 +44,7 @@ get_client_by_coord(int x, int y) {
 	return NULL;
 }
 
-void
+static void
 handle_mouse() {
 	MEVENT event;
 	unsigned int i;
@@ -59,7 +59,7 @@ handle_mouse() {
 	msel = NULL;
 }
 
-void
+static void
 mouse_setup() {
 	int i;
 	mmask_t mask;

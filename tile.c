@@ -1,4 +1,4 @@
-void
+static void
 tile(void) {
 	unsigned int i, m, n, nx, ny, nw, nh, nm, mw, th;
 	Client *c;

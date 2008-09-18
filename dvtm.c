@@ -104,58 +104,58 @@ enum { BarTop, BarBot, BarOff };
 #endif
 
 /* commands for use by keybindings */
-void quit(const char *args[]);
-void create(const char *args[]);
-void startup(const char *args[]);
-void escapekey(const char *args[]);
-void killclient(const char *args[]);
-void focusn(const char *args[]);
-void focusnext(const char *args[]);
-void focusnextnm(const char *args[]);
-void focusprev(const char *args[]);
-void focusprevnm(const char *args[]);
-void toggleminimize(const char *args[]);
-void setmwfact(const char *args[]);
-void setlayout(const char *args[]);
-void scrollback(const char *args[]);
-void redraw(const char *args[]);
-void zoom(const char *args[]);
-void lock(const char *key[]);
+static void quit(const char *args[]);
+static void create(const char *args[]);
+static void startup(const char *args[]);
+static void escapekey(const char *args[]);
+static void killclient(const char *args[]);
+static void focusn(const char *args[]);
+static void focusnext(const char *args[]);
+static void focusnextnm(const char *args[]);
+static void focusprev(const char *args[]);
+static void focusprevnm(const char *args[]);
+static void toggleminimize(const char *args[]);
+static void setmwfact(const char *args[]);
+static void setlayout(const char *args[]);
+static void scrollback(const char *args[]);
+static void redraw(const char *args[]);
+static void zoom(const char *args[]);
+static void lock(const char *key[]);
 
 #ifdef CONFIG_STATUSBAR
-void togglebar(const char *args[]);
+static void togglebar(const char *args[]);
 #endif
 
 #ifdef CONFIG_MOUSE
-void mouse_focus(const char *args[]);
-void mouse_fullscreen(const char *args[]);
-void mouse_minimize(const char *args[]);
-void mouse_zoom(const char *args[]);
+static void mouse_focus(const char *args[]);
+static void mouse_fullscreen(const char *args[]);
+static void mouse_minimize(const char *args[]);
+static void mouse_zoom(const char *args[]);
 #endif
 
-void clear_workspace();
-void draw(Client *c);
-void draw_all(bool border);
-void draw_border(Client *c);
-void resize(Client *c, int x, int y, int w, int h);
-void eprint(const char *errstr, ...);
-bool isarrange(void (*func)());
-void arrange();
-void focus(Client *c);
+static void clear_workspace();
+static void draw(Client *c);
+static void draw_all(bool border);
+static void draw_border(Client *c);
+static void resize(Client *c, int x, int y, int w, int h);
+static void eprint(const char *errstr, ...);
+static bool isarrange(void (*func)());
+static void arrange();
+static void focus(Client *c);
 
-unsigned int waw, wah, wax, way;
-Client *clients = NULL;
+static unsigned int waw, wah, wax, way;
+static Client *clients = NULL;
 extern double mwfact;
 
 #include "config.h"
 
-Client *sel = NULL;
+static Client *sel = NULL;
 double mwfact = MWFACT;
-Layout *layout = layouts;
-const char *shell;
-bool need_screen_resize = true;
-int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
-bool running = true;
+static Layout *layout = layouts;
+static const char *shell;
+static bool need_screen_resize = true;
+static int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
+static bool running = true;
 
 #ifdef CONFIG_MOUSE
 # include "mouse.c"
@@ -169,7 +169,7 @@ bool running = true;
 # include "statusbar.c"
 #endif
 
-void
+static void
 eprint(const char *errstr, ...) {
 	va_list ap;
 	va_start(ap, errstr);
@@ -177,7 +177,7 @@ eprint(const char *errstr, ...) {
 	va_end(ap);
 }
 
-void
+static void
 error(const char *errstr, ...) {
 	va_list ap;
 	va_start(ap, errstr);
@@ -186,7 +186,7 @@ error(const char *errstr, ...) {
 	exit(EXIT_FAILURE);
 }
 
-void
+static void
 attach(Client *c) {
 	uint8_t order;
 	if (clients)
@@ -198,7 +198,7 @@ attach(Client *c) {
 		c->order = order;
 }
 
-void
+static void
 attachafter(Client *c, Client *a) { /* attach c after a */
 	uint8_t o;
 	if (c == a)
@@ -217,7 +217,7 @@ attachafter(Client *c, Client *a) { /* attach c after a */
 	}
 }
 
-void
+static void
 detach(Client *c) {
 	Client *d;
 	if (c->prev)
@@ -232,7 +232,7 @@ detach(Client *c) {
 	c->next = c->prev = NULL;
 }
 
-void
+static void
 arrange() {
 	clear_workspace();
 	layout->arrange();
@@ -240,12 +240,12 @@ arrange() {
 	draw_all(true);
 }
 
-bool
+static bool
 isarrange(void (*func)()) {
 	return func == layout->arrange;
 }
 
-void
+static void
 focus(Client *c) {
 	Client *tmp = sel;
 	if (sel == c)
@@ -261,7 +261,7 @@ focus(Client *c) {
 	wrefresh(c->window);
 }
 
-void
+static void
 focusn(const char *args[]) {
 	Client *c;
 
@@ -275,7 +275,7 @@ focusn(const char *args[]) {
 	}
 }
 
-void
+static void
 focusnext(const char *args[]) {
 	Client *c;
 
@@ -289,7 +289,7 @@ focusnext(const char *args[]) {
 		focus(c);
 }
 
-void
+static void
 focusnextnm(const char *args[]) {
 	Client *c;
 
@@ -304,7 +304,7 @@ focusnextnm(const char *args[]) {
 	focus(c);
 }
 
-void
+static void
 focusprev(const char *args[]) {
 	Client *c;
 
@@ -317,7 +317,7 @@ focusprev(const char *args[]) {
 		focus(c);
 }
 
-void
+static void
 focusprevnm(const char *args[]) {
 	Client *c;
 
@@ -332,7 +332,7 @@ focusprevnm(const char *args[]) {
 	focus(c);
 }
 
-void
+static void
 zoom(const char *args[]) {
 	Client *c;
 
@@ -349,7 +349,7 @@ zoom(const char *args[]) {
 	arrange();
 }
 
-void
+static void
 toggleminimize(const char *args[]) {
 	Client *c, *m;
 	unsigned int n;
@@ -389,7 +389,7 @@ toggleminimize(const char *args[]) {
 	arrange();
 }
 
-void
+static void
 setlayout(const char *args[]) {
 	unsigned int i;
 
@@ -407,7 +407,7 @@ setlayout(const char *args[]) {
 	arrange();
 }
 
-void
+static void
 setmwfact(const char *args[]) {
 	double delta;
 
@@ -429,7 +429,7 @@ setmwfact(const char *args[]) {
 	arrange();
 }
 
-void
+static void
 scrollback(const char *args[]) {
 	if (!sel) return;
 
@@ -441,13 +441,13 @@ scrollback(const char *args[]) {
 	draw(sel);
 }
 
-void
+static void
 redraw(const char *args[]) {
 	wrefresh(curscr);
 	draw_all(true);
 }
 
-void
+static void
 draw_border(Client *c) {
 	char *s, t = '\0';
 	int x, y, o;
@@ -479,7 +479,7 @@ draw_border(Client *c) {
 		curs_set(madtty_cursor(c->term));
 }
 
-void
+static void
 draw_content(Client *c) {
 	if (!c->minimized || isarrange(fullscreen)) {
 		madtty_draw(c->term, c->window, 1, 0);
@@ -488,14 +488,14 @@ draw_content(Client *c) {
 	}
 }
 
-void
+static void
 draw(Client *c) {
 	draw_content(c);
 	draw_border(c);
 	wrefresh(c->window);
 }
 
-void
+static void
 clear_workspace() {
 	unsigned int y;
 	for (y = 0; y < wah; y++)
@@ -503,7 +503,7 @@ clear_workspace() {
 	wnoutrefresh(stdscr);
 }
 
-void
+static void
 draw_all(bool border) {
 	Client *c;
 	curs_set(0);
@@ -529,7 +529,7 @@ draw_all(bool border) {
 	}
 }
 
-void
+static void
 escapekey(const char *args[]) {
 	int key;
 	if (sel && (!sel->minimized || isarrange(fullscreen))) {
@@ -553,7 +553,7 @@ escapekey(const char *args[]) {
  *       foreground operations are temporarily suspended since the
  *       function doesn't return.
  */
-void
+static void
 lock(const char *args[]) {
 	size_t len = 0, i = 0;
 	char buf[16], *pass = buf, c;
@@ -583,7 +583,7 @@ lock(const char *args[]) {
 	arrange();
 }
 
-void
+static void
 killclient(const char *args[]) {
 	if (!sel)
 		return;
@@ -591,7 +591,7 @@ killclient(const char *args[]) {
 	kill(-sel->pid, SIGKILL);
 }
 
-int
+static int
 title_escape_seq_handler(madtty_t *term, char *es) {
 	Client *c;
 	unsigned int l;
@@ -607,7 +607,7 @@ title_escape_seq_handler(madtty_t *term, char *es) {
 	return MADTTY_HANDLER_OK;
 }
 
-void
+static void
 create(const char *args[]) {
 	Client *c = calloc(sizeof(Client), 1);
 	if (!c)
@@ -642,7 +642,7 @@ create(const char *args[]) {
 	arrange();
 }
 
-void
+static void
 destroy(Client *c) {
 	if (sel == c)
 		focusnextnm(NULL);
@@ -668,7 +668,7 @@ destroy(Client *c) {
 	arrange();
 }
 
-void
+static void
 move_client(Client *c, int x, int y) {
 	if (c->x == x && c->y == y)
 		return;
@@ -681,7 +681,7 @@ move_client(Client *c, int x, int y) {
 	}
 }
 
-void
+static void
 resize_client(Client *c, int w, int h) {
 	if (c->w == w && c->h == h)
 		return;
@@ -695,13 +695,13 @@ resize_client(Client *c, int w, int h) {
 	madtty_resize(c->term, h - 1, w);
 }
 
-void
+static void
 resize(Client *c, int x, int y, int w, int h) {
 	resize_client(c, w, h);
 	move_client(c, x, y);
 }
 
-bool
+static bool
 is_modifier(unsigned int mod) {
 	unsigned int i;
 	for (i = 0; i < countof(keys); i++) {
@@ -711,7 +711,7 @@ is_modifier(unsigned int mod) {
 	return false;
 }
 
-Key*
+static Key*
 keybinding(unsigned int mod, unsigned int code) {
 	unsigned int i;
 	for (i = 0; i < countof(keys); i++) {
@@ -721,7 +721,7 @@ keybinding(unsigned int mod, unsigned int code) {
 	return NULL;
 }
 
-Client*
+static Client*
 get_client_by_pid(pid_t pid) {
 	Client *c;
 	for (c = clients; c; c = c->next) {
@@ -731,7 +731,7 @@ get_client_by_pid(pid_t pid) {
 	return NULL;
 }
 
-void
+static void
 sigchld_handler(int sig) {
 	int errsv = errno;
 	int status;
@@ -757,7 +757,7 @@ sigchld_handler(int sig) {
 	errno = errsv;
 }
 
-void
+static void
 sigwinch_handler(int sig) {
 	int errsv = errno;
 
@@ -773,12 +773,12 @@ sigwinch_handler(int sig) {
 	errno = errsv;
 }
 
-void
+static void
 sigterm_handler(int sig) {
 	running = false;
 }
 
-void
+static void
 resize_screen() {
 	debug("resize_screen()\n");
 	if (need_screen_resize) {
@@ -800,13 +800,13 @@ resize_screen() {
 	need_screen_resize = false;
 }
 
-void
+static void
 startup(const char *args[]) {
 	for (int i = 0; i < countof(actions); i++)
 		actions[i].cmd(actions[i].args);
 }
 
-void
+static void
 setup() {
 	if (!(shell = getenv("SHELL")))
 		shell = "/bin/sh";
@@ -828,7 +828,7 @@ setup() {
 	signal(SIGTERM, sigterm_handler);
 }
 
-void
+static void
 cleanup() {
 	endwin();
 #ifdef CONFIG_STATUSBAR
@@ -843,13 +843,13 @@ cleanup() {
 #endif
 }
 
-void
+static void
 quit(const char *args[]) {
 	cleanup();
 	exit(EXIT_SUCCESS);
 }
 
-void
+static void
 usage() {
 	cleanup();
 	eprint("usage: dvtm [-v] [-m mod] [-h n] "
@@ -863,7 +863,7 @@ usage() {
 	exit(EXIT_FAILURE);
 }
 
-int
+static int
 open_or_create_fifo(const char *name) {
 	struct stat info;
 	int fd;
@@ -880,7 +880,7 @@ open:
 	return fd;
 }
 
-bool
+static bool
 parse_args(int argc, char *argv[]) {
 	int arg;
 	bool init = false;

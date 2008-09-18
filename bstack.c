@@ -1,4 +1,4 @@
-void
+static void
 bstack(void) {
 	unsigned int i, m, n, nx, ny, nw, nh, mh, tw;
 	Client *c;

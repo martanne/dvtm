@@ -1,6 +1,6 @@
-int cmdfd = -1;
-unsigned short int client_id = 0;
-const char *cmdpath = NULL;
+static int cmdfd = -1;
+static unsigned short int client_id = 0;
+static const char *cmdpath = NULL;
 
 /* glibc has a non-standard realpath(3) implementation which allocates
  * the destination buffer, other C libraries may have a broken implementation
@@ -14,7 +14,7 @@ const char *cmdpath = NULL;
 # endif
 #endif
 
-char *get_realpath(const char *path) {
+static char *get_realpath(const char *path) {
 #ifdef __GLIBC__
 	return realpath(path, NULL);
 #else
@@ -23,7 +23,7 @@ char *get_realpath(const char *path) {
 #endif
 }
 
-Cmd *
+static Cmd *
 get_cmd_by_name(const char *name) {
 	for (int i = 0; i < countof(commands); i++) {
 		if (!strcmp(name, commands[i].name))
@@ -32,7 +32,7 @@ get_cmd_by_name(const char *name) {
 	return NULL;
 }
 
-void
+static void
 handle_cmdfifo() {
 	int r;
 	char *p, *s, cmdbuf[512], c;
