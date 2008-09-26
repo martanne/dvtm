@@ -25,6 +25,9 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <errno.h>
+#ifdef __CYGWIN__
+# include <termios.h>
+#endif
 #include "madtty.h"
 
 typedef struct {

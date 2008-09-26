@@ -41,6 +41,10 @@
 #elif defined(__OpenBSD__) || defined(__NetBSD__)
 # include <util.h>
 #endif
+#ifdef __CYGWIN__
+# include <alloca.h>
+#endif
+
 #include "madtty.h"
 
 #ifndef NCURSES_ATTR_SHIFT
