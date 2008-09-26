@@ -149,6 +149,14 @@ static char const * const keytable[KEY_MAX+1] = {
     [KEY_DOWN]      = "B",
     [KEY_RIGHT]     = "C",
     [KEY_LEFT]      = "D",
+#ifdef KEY_SUP
+    [KEY_SUP]       = "\e[1;2A",
+#endif
+#ifdef KEY_SDOWN
+    [KEY_SDOWN]     = "\e[1;2B",
+#endif
+    [KEY_SRIGHT]    = "\e[1;2C",
+    [KEY_SLEFT]     = "\e[1;2D",
     [KEY_BACKSPACE] = "\177",
     [KEY_HOME]      = "\e[1~",
     [KEY_IC]        = "\e[2~",
