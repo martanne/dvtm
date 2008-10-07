@@ -623,7 +623,7 @@ create(const char *args[]) {
 	snprintf(buf, sizeof buf, "%d", c->id);
 	const char *env[] = { "DVTM_WINDOW_ID", buf, NULL };
 #else
-	const char *env[] = NULL;
+	const char *env[] = { NULL };
 #endif
 	c->window = newwin(wah, waw, way, wax);
 	c->term = madtty_create(height - 1, width, scroll_buf_size);
