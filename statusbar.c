@@ -8,8 +8,6 @@ updatebarpos(void) {
 	by = 0;
 	wax = 0;
 	way = 0;
-	waw = width;
-	wah = height;
 	if (statusfd == -1)
 		return;
 	if (barpos == BarTop) {

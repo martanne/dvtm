@@ -795,6 +795,8 @@ resize_screen() {
 		wrefresh(curscr);
 		refresh();
 	}
+	waw = width;
+	wah = height;
 #ifdef CONFIG_STATUSBAR
 	updatebarpos();
 	drawbar();
