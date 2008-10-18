@@ -621,10 +621,15 @@ create(const char *args[]) {
 	c->id = ++client_id;
 	char buf[8];
 	snprintf(buf, sizeof buf, "%d", c->id);
-	const char *env[] = { "DVTM_WINDOW_ID", buf, NULL };
-#else
-	const char *env[] = { NULL };
 #endif
+	const char *env[] = {
+		"DVTM", VERSION,
+#ifdef CONFIG_CMDFIFO
+		"DVTM_WINDOW_ID", buf,
+#endif
+		NULL
+	};
+
 	c->window = newwin(wah, waw, way, wax);
 	c->term = madtty_create(height - 1, width, scroll_buf_size);
 	c->cmd = cmd;
