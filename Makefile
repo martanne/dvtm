@@ -38,7 +38,7 @@ dist: clean
 	@echo creating dist tarball
 	@mkdir -p dvtm-${VERSION}
 	@cp -R LICENSE Makefile README config.h config.mk \
-		${SRC} tile.c bstack.c grid.c fullscreen.c \
+		${SRC} tile.c bstack.c tstack.c grid.c fullscreen.c \
 		madtty.h statusbar.c mouse.c cmdfifo.c \
 		dvtm-status dvtm.1 dvtm-${VERSION}
 	@tar -cf dvtm-${VERSION}.tar dvtm-${VERSION}
