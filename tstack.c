@@ -17,31 +17,36 @@ tstack(void) {
 	nx = wax, nw = waw;
 	for(i = 0, c = clients; c; c = c->next, i++){
 		if(i == 0){ /* master */
-			ny = wah - mh;
+			ny = way + wah - mh;
 			nh = mh;
-		} else { /* tile window */
+		}
+		else { /* tile window */
 			if(i == 1){
 				nx = wax;
 				ny = way + m;
-				nh = wah - mh - ny;
+				nh = wah - mh - ny + way;
 			}
 			if(i == n - m - 1){ /* last not minimized client */
 				nw = (wax + waw) - nx;
-			} else if(i == n - m){ /* first minimized client */
+			}
+			else if(i == n - m) { /* first minimized client */
 				nx = wax;
-				ny--;
+				--ny;
 				nh = 1;
 				nw = waw;
-			} else if(c->minimized) { /* minimized window */
-				ny--;
+			}
+			else if(c->minimized) { /* minimized window */
+				--ny;
 				nh = 1;
 				nw = waw;
-			} else /* normal non minimized tile window */
+			}
+			else /* normal non minimized tile window */
 				nw = tw;
+
 			if(i > 1 && !c->minimized){
 				mvvline(ny, nx, ACS_VLINE, nh);
 				mvaddch(ny, nx, ACS_TTEE);
-				nx++, nw--;
+				++nx, --nw;
 			}
 		}
 
