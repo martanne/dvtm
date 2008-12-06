@@ -12,7 +12,7 @@
  * A_INVIS         Invisible or blank mode
  *
  */
-#define BLUE       COLORS==256 ? 68 : COLOR_BLUE
+#define BLUE            (COLORS==256 ? 68 : COLOR_BLUE)
 
 #define SELECTED_ATTR   A_NORMAL
 #define SELECTED_FG     BLUE
