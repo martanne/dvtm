@@ -22,25 +22,28 @@ updatebarpos(void) {
 
 static void
 drawbar() {
-	int s, l, maxlen = width - 2;
-	char t = stext[maxlen];
+	wchar_t wbuf[sizeof stext];
+	int w, maxwidth = width - 2;
 	if (barpos == BarOff || !*stext)
 		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
 	madtty_color_set(stdscr, BAR_FG, BAR_BG);
 	mvaddch(by, 0, '[');
-	stext[maxlen] = '\0';
-	l = strlen(stext);
-	if (BAR_ALIGN_RIGHT)
-		for (s = 0; s + l < maxlen; s++)
+	if (mbstowcs(wbuf, stext, sizeof stext) == -1)
+		return;
+	if ((w = wcswidth(wbuf, maxwidth)) == -1)
+		return;
+	if (BAR_ALIGN == ALIGN_RIGHT) {
+		for (int i = 0; i + w < maxwidth; i++)
 			addch(' ');
-	else
-		for (; l < maxlen; l++)
-			stext[l] = ' ';
+	}
 	addstr(stext);
-	stext[maxlen] = t;
-	addch(']');
+	if (BAR_ALIGN == ALIGN_LEFT) {
+		for (; w < maxwidth; w++)
+			addch(' ');
+	}
+	mvaddch(by, width - 1, ']');
 	attrset(NORMAL_ATTR);
 	if (sel)
 		curs_set(madtty_cursor(sel->term));

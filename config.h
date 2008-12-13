@@ -27,9 +27,8 @@
 #define BAR_ATTR        A_NORMAL
 #define BAR_FG          BLUE
 #define BAR_BG          -1
-/* true if the statusbar text should be right aligned,
- * set to false if you prefer it left aligned */
-#define BAR_ALIGN_RIGHT true
+/* determines whether the statusbar text should be right or left aligned */
+#define BAR_ALIGN       ALIGN_RIGHT
 /* separator between window title and window number */
 #define SEPARATOR " | "
 /* printf format string for the window title, first %s

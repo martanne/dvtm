@@ -126,6 +126,7 @@ static void zoom(const char *args[]);
 static void lock(const char *key[]);
 
 #ifdef CONFIG_STATUSBAR
+enum { ALIGN_LEFT, ALIGN_RIGHT };
 static void togglebar(const char *args[]);
 #endif
 
