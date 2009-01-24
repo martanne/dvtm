@@ -73,6 +73,9 @@ Key keys[] = {
 #ifdef CONFIG_STATUSBAR
 	{ MOD, 's',       { togglebar,      { NULL }                    } },
 #endif
+#ifdef CONFIG_MOUSE
+	{ MOD, 'M',       { mouse_toggle,   { NULL }                    } },
+#endif
 	{ MOD, '\n',      { zoom ,          { NULL }                    } },
 	{ MOD, '1',       { focusn,         { "1" }                     } },
 	{ MOD, '2',       { focusn,         { "2" }                     } },

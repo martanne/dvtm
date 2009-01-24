@@ -68,3 +68,13 @@ mouse_setup() {
 	if (mask)
 		mousemask(mask, NULL);
 }
+
+static void
+mouse_toggle() {
+	static int state = 0;
+	if(!state)
+		mousemask(0, NULL);
+	else
+		mouse_setup();
+	state = !state;
+}

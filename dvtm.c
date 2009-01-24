@@ -135,6 +135,7 @@ static void mouse_focus(const char *args[]);
 static void mouse_fullscreen(const char *args[]);
 static void mouse_minimize(const char *args[]);
 static void mouse_zoom(const char *args[]);
+static void mouse_toggle();
 #endif
 
 static void clear_workspace();
