@@ -161,7 +161,6 @@ static const char *shell;
 static bool need_screen_resize = true;
 static int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
 static bool running = true;
-static int esc_delay = 100;
 
 #ifdef CONFIG_MOUSE
 # include "mouse.c"
@@ -839,7 +838,6 @@ setup() {
 	signal(SIGWINCH, sigwinch_handler);
 	signal(SIGCHLD, sigchld_handler);
 	signal(SIGTERM, sigterm_handler);
-	set_escdelay(esc_delay);
 }
 
 static void
@@ -898,6 +896,9 @@ static bool
 parse_args(int argc, char *argv[]) {
 	int arg;
 	bool init = false;
+
+	if (!getenv("ESCDELAY"))
+		ESCDELAY = 100;
 	for (arg = 1; arg < argc; arg++) {
 		if (argv[arg][0] != '-') {
 			const char *args[] = { argv[arg], NULL };
@@ -923,11 +924,11 @@ parse_args(int argc, char *argv[]) {
 				break;
 			}
 			case 'd':
-				esc_delay = atoi(argv[++arg]);
-				if (esc_delay < 50)
-					esc_delay = 50;
-				else if (esc_delay > 1000)
-					esc_delay = 1000;
+				ESCDELAY = atoi(argv[++arg]);
+				if (ESCDELAY < 50)
+					ESCDELAY = 50;
+				else if (ESCDELAY > 1000)
+					ESCDELAY = 1000;
 				break;
 			case 'h':
 				scroll_buf_size = atoi(argv[++arg]);
