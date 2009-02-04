@@ -22,13 +22,13 @@ dvtm: ${OBJ}
 	@${CC} -o $@ ${OBJ} ${LDFLAGS}
 
 unicode: clean
-	@make LIBS='${LIBS_UTF8}' CFLAGS='${CFLAGS} -DUSE_UTF8'
+	@make LIBS='${LIBS_UTF8}'
 
 debug: clean
 	@make CFLAGS='${DEBUG_CFLAGS}'
 
 unicode-debug: clean
-	@make LIBS='${LIBS_UTF8}' CFLAGS='${DEBUG_CFLAGS} -DUSE_UTF8'
+	@make LIBS='${LIBS_UTF8}'
 
 clean:
 	@echo cleaning
