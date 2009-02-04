@@ -7,8 +7,8 @@ PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 
 INCS = -I. -I/usr/include -I/usr/local/include 
-LIBS = -lc -lutil -lncurses
-LIBS_UTF8 = -lc -lutil -lncursesw
+LIBS = -lc -lutil -lncursesw
+#LIBS = -lc -lutil -lncurses
 
 CFLAGS += -std=c99 -Os ${INCS} -DVERSION=\"${VERSION}\" -DNDEBUG
 LDFLAGS += -L/usr/lib -L/usr/local/lib ${LIBS}
