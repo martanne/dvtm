@@ -14,19 +14,12 @@ In order to build dvtm you will need:
 Installation
 ------------
 Edit config.mk to match your local setup (dvtm is installed into
-the /usr/local namespace by default).
+the /usr/local namespace and links against libncursesw by default).
 
 Afterwards enter the following command to build and install dvtm (if
-necessary as root). If you are building for a system with wide characters 
-(check whether $LANG or the output of "locale" contains UTF-8) then do:
-
-    make unicode && make install
-
-Otherwise a plain:
+necessary as root).
 
     make && make install
-
-should suffice.
 
 Running dvtm
 ------------
