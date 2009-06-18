@@ -117,6 +117,7 @@ static void focusnext(const char *args[]);
 static void focusnextnm(const char *args[]);
 static void focusprev(const char *args[]);
 static void focusprevnm(const char *args[]);
+static void togglebell(const char *key[]);
 static void toggleminimize(const char *args[]);
 static void setmwfact(const char *args[]);
 static void setlayout(const char *args[]);
@@ -352,6 +353,11 @@ zoom(const char *args[]) {
 	if (c->minimized)
 		toggleminimize(NULL);
 	arrange();
+}
+
+static void
+togglebell(const char *args[]) {
+	madtty_togglebell(sel->term);
 }
 
 static void
