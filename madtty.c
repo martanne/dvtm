@@ -100,6 +100,7 @@ struct madtty_t {
     unsigned graphmode  : 1;
     unsigned curshid    : 1;
     unsigned curskeymode: 1;
+    unsigned bell       : 1;
 
     /* geometry */
     int rows, cols;
@@ -767,7 +768,9 @@ static void madtty_process_nonprinting(madtty_t *t, wchar_t wc)
         break;
 
       case C0_BEL:
-        /* do nothing for now... maybe a visual bell would be nice? */
+        /* maybe a visual bell would be nice? */
+        if(t->bell)
+            beep();
         break;
 
       case C0_BS:
@@ -1182,6 +1185,16 @@ void madtty_noscroll(madtty_t *t)
 {
     if (t->scroll_amount)
 	madtty_scroll(t, t->scroll_amount);
+}
+
+void madtty_bell(madtty_t *t, bool bell)
+{
+    t->bell = bell;
+}
+
+void madtty_togglebell(madtty_t *t)
+{
+    t->bell = !t->bell;
 }
 
 /******************************************************/
