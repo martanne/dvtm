@@ -38,7 +38,7 @@
 # include <pty.h>
 #elif defined(__FreeBSD__)
 # include <libutil.h>
-#elif defined(__OpenBSD__) || defined(__NetBSD__)
+#elif defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 # include <util.h>
 #endif
 #ifdef __CYGWIN__
