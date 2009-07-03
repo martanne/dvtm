@@ -144,6 +144,7 @@ static void draw(Client *c);
 static void draw_all(bool border);
 static void draw_border(Client *c);
 static void resize(Client *c, int x, int y, int w, int h);
+static void resize_screen();
 static void eprint(const char *errstr, ...);
 static bool isarrange(void (*func)());
 static void arrange();
@@ -159,7 +160,7 @@ static Client *sel = NULL;
 double mwfact = MWFACT;
 static Layout *layout = layouts;
 static const char *shell;
-static bool need_screen_resize = true;
+static bool need_screen_resize;
 static int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
 static bool running = true;
 
@@ -775,18 +776,8 @@ sigchld_handler(int sig) {
 
 static void
 sigwinch_handler(int sig) {
-	int errsv = errno;
-
-	struct winsize ws;
 	signal(SIGWINCH, sigwinch_handler);
-	if (ioctl(0, TIOCGWINSZ, &ws) == -1)
-		return;
-
-	width = ws.ws_col;
-	height = ws.ws_row;
 	need_screen_resize = true;
-
-	errno = errsv;
 }
 
 static void
@@ -796,18 +787,25 @@ sigterm_handler(int sig) {
 
 static void
 resize_screen() {
-	debug("resize_screen()\n");
-	if (need_screen_resize) {
-		debug("resize_screen(), w: %d h: %d\n", width, height);
-	#if defined(__OpenBSD__) || defined(__NetBSD__)
-		resizeterm(height, width);
-	#else
-		resize_term(height, width);
-	#endif
-		wresize(stdscr, height, width);
-		wrefresh(curscr);
-		refresh();
-	}
+	struct winsize ws;
+
+	if (ioctl(0, TIOCGWINSZ, &ws) == -1)
+		return;
+
+	width = ws.ws_col;
+	height = ws.ws_row;
+
+	debug("resize_screen(), w: %d h: %d\n", width, height);
+
+#if defined(__OpenBSD__) || defined(__NetBSD__)
+	resizeterm(height, width);
+#else
+	resize_term(height, width);
+#endif
+	wresize(stdscr, height, width);
+	wrefresh(curscr);
+	refresh();
+
 	waw = width;
 	wah = height;
 #ifdef CONFIG_STATUSBAR
@@ -815,7 +813,6 @@ resize_screen() {
 	drawbar();
 #endif
 	arrange();
-	need_screen_resize = false;
 }
 
 static void
@@ -972,8 +969,10 @@ main(int argc, char *argv[]) {
 		int r, nfds = 0;
 		fd_set rd;
 
-		if (need_screen_resize)
+		if (need_screen_resize) {
 			resize_screen();
+			need_screen_resize = false;
+		}
 
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
