@@ -456,6 +456,7 @@ scrollback(const char *args[]) {
 static void
 redraw(const char *args[]) {
 	wrefresh(curscr);
+	resize_screen();
 	draw_all(true);
 }
 
