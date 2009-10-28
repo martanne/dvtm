@@ -45,6 +45,7 @@
 #include "bstack.c"
 #include "fullscreen.c"
 
+/* by default the first layout entry is used */
 Layout layouts[] = {
 	{ "[]=", tile },
 	{ "+++", grid },
