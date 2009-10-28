@@ -88,6 +88,7 @@ Key keys[] = {
 	{ MOD, '9',       { focusn,         { "9" }                     } },
 	{ MOD, 'q',       { quit,           { NULL }                    } },
 	{ MOD, 'G',       { escapekey,      { NULL }                    } },
+	{ MOD, 'a',       { togglerunall,   { NULL }                    } },
 	{ MOD, 'r',       { redraw,         { NULL }                    } },
 	{ MOD, 'X',       { lock,           { NULL }                    } },
 	{ MOD, 'B',       { togglebell,     { NULL }                    } },

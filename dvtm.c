@@ -125,6 +125,7 @@ static void scrollback(const char *args[]);
 static void redraw(const char *args[]);
 static void zoom(const char *args[]);
 static void lock(const char *key[]);
+static void togglerunall(const char *args[]);
 
 #ifdef CONFIG_STATUSBAR
 enum { ALIGN_LEFT, ALIGN_RIGHT };
@@ -149,6 +150,7 @@ static void eprint(const char *errstr, ...);
 static bool isarrange(void (*func)());
 static void arrange();
 static void focus(Client *c);
+static void keypress(int code);
 
 static unsigned int waw, wah, wax, way;
 static Client *clients = NULL;
@@ -163,6 +165,7 @@ static const char *shell;
 static bool need_screen_resize;
 static int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
 static bool running = true;
+static bool runinall = false;
 
 #ifdef CONFIG_MOUSE
 # include "mouse.c"
@@ -545,13 +548,9 @@ draw_all(bool border) {
 static void
 escapekey(const char *args[]) {
 	int key;
-	if (sel && (!sel->minimized || isarrange(fullscreen))) {
-		if ((key = getch()) >= 0) {
-			debug("escaping key `%c'\n", key);
-			madtty_keypress(sel->term, CTRL(key));
-			draw_content(sel);
-			wrefresh(sel->window);
-		}
+	if ((key = getch()) >= 0) {
+		debug("escaping key `%c'\n", key);
+		keypress(CTRL(key));
 	}
 }
 
@@ -594,6 +593,11 @@ lock(const char *args[]) {
 	}
 
 	arrange();
+}
+
+static void
+togglerunall(const char *args[]) {
+	runinall = !runinall;
 }
 
 static void
@@ -958,6 +962,33 @@ parse_args(int argc, char *argv[]) {
 	return init;
 }
 
+void
+keypress(int code) {
+	Client *c;
+	int len = 1;
+	char buf[8] = { '\e' };
+
+	if (code == '\e') {
+		/* pass characters following escape to the underlying app */
+		nodelay(stdscr, TRUE);
+		while (len < sizeof(buf) - 1 && (buf[len] = getch()) != ERR)
+			len++;
+		buf[len] = '\0';
+		nodelay(stdscr, FALSE);
+	}
+
+	for (c = runinall ? clients : sel; c; c = c->next) {
+		if (!c->minimized || isarrange(fullscreen)) {
+			if (code == '\e')
+				madtty_keypress_sequence(c->term, buf);
+			else
+				madtty_keypress(c->term, code);
+		}
+		if (!runinall)
+			break;
+	}
+}
+
 int
 main(int argc, char *argv[]) {
 	if (!parse_args(argc, argv)) {
@@ -1025,32 +1056,14 @@ main(int argc, char *argv[]) {
 					code = getch();
 					if (code >= 0) {
 						if (code == mod)
-							goto keypress;
-						if ((key = keybinding(mod, code)))
+							keypress(code);
+						else if ((key = keybinding(mod, code)))
 							key->action.cmd(key->action.args);
 					}
 				} else if ((key = keybinding(0, code))) {
 					key->action.cmd(key->action.args);
 				} else {
-			keypress:
-					if (sel && (!sel->minimized || isarrange(fullscreen))) {
-						if (code == '\e') {
-							/* pass characters following escape to the underlying app */
-							char buf[8] = { '\e' };
-							int len = 1;
-							nodelay(stdscr, TRUE);
-							while (len < sizeof(buf) - 1 && (code = getch()) != ERR)
-								buf[len++] = code;
-							buf[len] = '\0';
-							nodelay(stdscr, FALSE);
-							madtty_keypress_sequence(sel->term, buf);
-						} else
-							madtty_keypress(sel->term, code);
-						if (r == 1) {
-							draw_content(sel);
-							wrefresh(sel->window);
-						}
-					}
+					keypress(code);
 				}
 			}
 			if (r == 1) /* no data available on pty's */
