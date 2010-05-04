@@ -1204,6 +1204,7 @@ pid_t madtty_forkpty(madtty_t *t, const char *p, const char *argv[], const char 
     struct winsize ws;
     pid_t pid;
     const char **envp = env;
+    int fd, maxfd;
 
     ws.ws_row    = t->rows;
     ws.ws_col    = t->cols;
@@ -1215,6 +1216,12 @@ pid_t madtty_forkpty(madtty_t *t, const char *p, const char *argv[], const char 
 
     if (pid == 0) {
         setsid();
+
+        maxfd = sysconf(_SC_OPEN_MAX);
+        for (fd = 3; fd < maxfd; fd++)
+            if (close(fd) == EBADF)
+                break;
+
         while (envp && envp[0]) {
             setenv(envp[0], envp[1], 1);
             envp += 2;
