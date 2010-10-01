@@ -103,7 +103,7 @@ struct madtty_t {
     unsigned bell       : 1;
 
     /* geometry */
-    int rows, cols;
+    int rows, cols, maxcols;
     unsigned curattrs;
     short curfg, curbg;
 
@@ -293,6 +293,7 @@ static void fill_scroll_buf(madtty_t *t, int s)
 
 static void cursor_line_down(madtty_t *t)
 {
+    t_row_set(t->curs_row, t->cols, t->maxcols - t->cols, 0);
     t->curs_row++;
     if (t->curs_row < t->scroll_bot)
         return;
@@ -993,6 +994,7 @@ madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz)
     /* record dimensions */
     t->rows = rows;
     t->cols = cols;
+    t->maxcols = cols;
 
     /* default mode is replace */
     t->insert = false;
@@ -1058,7 +1060,7 @@ void madtty_resize(madtty_t *t, int rows, int cols)
         lines = realloc(lines, sizeof(t_row_t) * rows);
     }
 
-    if (t->cols != cols) {
+    if (t->maxcols < cols) {
         for (int row = 0; row < t->rows; row++) {
             lines[row].text = realloc(lines[row].text, sizeof(wchar_t) * cols);
             lines[row].attr = realloc(lines[row].attr, sizeof(uint16_t) * cols);
@@ -1066,8 +1068,7 @@ void madtty_resize(madtty_t *t, int rows, int cols)
             lines[row].bg   = realloc(lines[row].bg, sizeof(short) * cols);
             if (t->cols < cols)
                 t_row_set(lines + row, t->cols, cols - t->cols, 0);
-            else
-                lines[row].dirty = true;
+            lines[row].dirty = true;
         }
 	t_row_t *sbuf = t->scroll_buf;
         for (int row = 0; row < t->scroll_buf_sz; row++) {
@@ -1078,15 +1079,19 @@ void madtty_resize(madtty_t *t, int rows, int cols)
             if (t->cols < cols)
                 t_row_set(sbuf + row, t->cols, cols - t->cols, 0);
         }
+        t->maxcols = cols;
+        t->cols = cols;
+    } else if (t->cols != cols) {
+        madtty_dirty(t);
         t->cols = cols;
     }
 
     while (t->rows < rows) {
-        lines[t->rows].text = (wchar_t *)calloc(sizeof(wchar_t), cols);
-        lines[t->rows].attr = (uint16_t *)calloc(sizeof(uint16_t), cols);
-        lines[t->rows].fg   = calloc(sizeof(short), cols);
-        lines[t->rows].bg   = calloc(sizeof(short), cols);
-        t_row_set(lines + t->rows, 0, t->cols, 0);
+        lines[t->rows].text = (wchar_t *)calloc(sizeof(wchar_t), t->maxcols);
+        lines[t->rows].attr = (uint16_t *)calloc(sizeof(uint16_t), t->maxcols);
+        lines[t->rows].fg   = calloc(sizeof(short), t->maxcols);
+        lines[t->rows].bg   = calloc(sizeof(short), t->maxcols);
+        t_row_set(lines + t->rows, 0, t->maxcols, 0);
         t->rows++;
     }
 
