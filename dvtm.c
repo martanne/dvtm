@@ -760,8 +760,6 @@ sigchld_handler(int sig) {
 	pid_t pid;
 	Client *c;
 
-	signal(SIGCHLD, sigchld_handler);
-
 	while ((pid = waitpid(-1, &status, WNOHANG)) != 0) {
 		if (pid == -1) {
 			if (errno == ECHILD) {
@@ -775,6 +773,8 @@ sigchld_handler(int sig) {
 		if ((c = get_client_by_pid(pid)))
 			c->died = true;
 	}
+
+	signal(SIGCHLD, sigchld_handler);
 
 	errno = errsv;
 }
