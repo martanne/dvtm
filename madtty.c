@@ -1224,7 +1224,7 @@ pid_t madtty_forkpty(madtty_t *t, const char *p, const char *argv[], const char 
 
         maxfd = sysconf(_SC_OPEN_MAX);
         for (fd = 3; fd < maxfd; fd++)
-            if (close(fd) == EBADF)
+            if (close(fd) == -1 && errno == EBADF)
                 break;
 
         while (envp && envp[0]) {
