@@ -730,6 +730,20 @@ static void es_interpret_csi(madtty_t *t)
     }
 }
 
+static void interpret_char_set(madtty_t *t)
+{
+    if (*t->ebuf == '(') {
+        switch (t->ebuf[1]) {
+          case '0':
+            t->graphmode = true;
+            break;
+          case 'B':
+            t->graphmode = false;
+            break;
+        }
+    }
+}
+
 static void try_interpret_escape_seq(madtty_t *t)
 {
     char lastchar  = t->ebuf[t->elen-1];
@@ -753,8 +767,12 @@ static void try_interpret_escape_seq(madtty_t *t)
 
       case '(':
       case ')':
-        if (t->elen == 2)
-            goto cancel;
+      case '#':
+        if (t->elen == 2) {
+            interpret_char_set(t);
+            cancel_escape_sequence(t);
+            return;
+        }
         break;
 
       case ']': /* xterm thing */
