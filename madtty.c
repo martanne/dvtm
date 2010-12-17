@@ -101,6 +101,7 @@ struct madtty_t {
     unsigned curshid    : 1;
     unsigned curskeymode: 1;
     unsigned bell       : 1;
+    unsigned relposmode : 1;
 
     /* geometry */
     int rows, cols, maxcols;
@@ -454,14 +455,13 @@ static void interpret_csi_CUP(madtty_t *t, int param[], int pcount)
         /* special case */
         t->curs_row = t->lines;
         t->curs_col = 0;
-        return;
-    } else
-    if (pcount < 2) {
-        return;  /* malformed */
+    } else if (pcount == 1) {
+        t->curs_row = (t->relposmode ? t->scroll_top : t->lines) + param[0] - 1;
+        t->curs_col = 0;
+    } else {
+        t->curs_row = (t->relposmode ? t->scroll_top : t->lines) + param[0] - 1;
+        t->curs_col = param[1] - 1;
     }
-
-    t->curs_row = t->lines + param[0] - 1;
-    t->curs_col = param[1] - 1;
 
     clamp_cursor_to_bounds(t);
 }
@@ -664,6 +664,8 @@ static void es_interpret_csi(madtty_t *t)
                 t->curshid = true;
             if (csiparam[0] == 1) /* DECCKM: reset ANSI cursor (normal) key mode */
                 t->curskeymode = 0;
+            if (csiparam[0] == 6) /* DECOM: set origin to absolute */
+                t->relposmode = false;
             if (csiparam[0] == 47) {
                 /* use normal screen buffer */
                 t->curattrs = A_NORMAL;
@@ -676,6 +678,8 @@ static void es_interpret_csi(madtty_t *t)
                 t->curshid = false;
             if (csiparam[0] == 1) /* DECCKM: set ANSI cursor (application) key mode */
                 t->curskeymode = 1;
+            if (csiparam[0] == 6) /* DECOM: set origin to relative */
+                t->relposmode = true;
             if (csiparam[0] == 47) {
                 /* use alternate screen buffer */
                 t->curattrs = A_NORMAL;
