@@ -1075,6 +1075,12 @@ madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz)
     }
     t->scroll_buf_ptr = t->scroll_buf_len = 0;
     t->scroll_amount = 0;
+
+    /* clear the screen */
+    t_row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
+    for (t_row_t *row = t->curs_row + 1; row < t->lines + t->rows; row++)
+        t_row_set(row, 0, t->cols, t);
+
     return t;
 }
 
