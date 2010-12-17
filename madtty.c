@@ -420,6 +420,10 @@ static void interpret_csi_ED(madtty_t *t, int param[], int pcount)
 {
     t_row_t *row, *start, *end;
 
+    save_attrs(t);
+    t->curattrs = A_NORMAL;
+    t->curfg = t->curbg = -1;
+
     /* decide range */
     if (pcount && param[0] == 2) {
         start = t->lines;
@@ -439,6 +443,8 @@ static void interpret_csi_ED(madtty_t *t, int param[], int pcount)
     for (row = start; row < end; row++) {
         t_row_set(row, 0, t->cols, t);
     }
+
+    restore_attrs(t);
 }
 
 /* interprets a 'move cursor' (CUP) escape sequence */
