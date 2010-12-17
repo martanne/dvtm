@@ -104,8 +104,8 @@ struct madtty_t {
 
     /* geometry */
     int rows, cols, maxcols;
-    unsigned curattrs;
-    short curfg, curbg;
+    unsigned curattrs, savattrs;
+    short curfg, curbg, savfg, savbg;
 
     /* scrollback buffer */
     struct t_row_t *scroll_buf;
@@ -244,6 +244,33 @@ static void clamp_cursor_to_bounds(madtty_t *t)
     if (t->curs_col >= t->cols) {
         t->curs_col = t->cols - 1;
     }
+}
+
+static void save_curs(madtty_t *t)
+{
+    t->curs_srow = t->curs_row - t->lines;
+    t->curs_scol = t->curs_col;
+}
+
+static void restore_curs(madtty_t *t)
+{
+    t->curs_row = t->lines + t->curs_srow;
+    t->curs_col = t->curs_scol;
+    clamp_cursor_to_bounds(t);
+}
+
+static void save_attrs(madtty_t *t)
+{
+    t->savattrs = t->curattrs;
+    t->savfg = t->curfg;
+    t->savbg = t->curbg;
+}
+
+static void restore_attrs(madtty_t *t)
+{
+    t->curattrs = t->savattrs;
+    t->curfg = t->savfg;
+    t->curbg = t->savbg;
 }
 
 static void fill_scroll_buf(madtty_t *t, int s)
@@ -687,13 +714,10 @@ static void es_interpret_csi(madtty_t *t)
       case 'r': /* set scrolling region */
         interpret_csi_DECSTBM(t, csiparam, param_count); break;
       case 's': /* save cursor location */
-        t->curs_srow = t->curs_row - t->lines;
-        t->curs_scol = t->curs_col;
+        save_curs(t);
         break;
       case 'u': /* restore cursor location */
-        t->curs_row = t->lines + t->curs_srow;
-        t->curs_col = t->curs_scol;
-        clamp_cursor_to_bounds(t);
+        restore_curs(t);
         break;
       default:
         break;
@@ -742,6 +766,18 @@ static void try_interpret_escape_seq(madtty_t *t)
             return;
         }
         break;
+
+      case '7': /* DECSC: save cursor and attributes */
+        save_attrs(t);
+        save_curs(t);
+        cancel_escape_sequence(t);
+        return;
+
+      case '8': /* DECRC: restore cursor and attributes */
+        restore_attrs(t);
+        restore_curs(t);
+        cancel_escape_sequence(t);
+        return;
     }
 
     if (t->elen + 1 >= (int)sizeof(t->ebuf)) {
