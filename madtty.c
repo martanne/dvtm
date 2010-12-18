@@ -357,48 +357,62 @@ static void interpret_csi_SGR(madtty_t *t, int param[], int pcount)
 
     for (int i = 0; i < pcount; i++) {
         switch (param[i]) {
-#define CASE(x, op)  case x: op; break
-            CASE(0,  t->curattrs = A_NORMAL; t->curfg = t->curbg = -1);
-            CASE(1,  t->curattrs |= A_BOLD);
-            CASE(4,  t->curattrs |= A_UNDERLINE);
-            CASE(5,  t->curattrs |= A_BLINK);
-            CASE(6,  t->curattrs |= A_BLINK);
-            CASE(7,  t->curattrs |= A_REVERSE);
-            CASE(8,  t->curattrs |= A_INVIS);
-            CASE(22, t->curattrs &= ~A_BOLD);
-            CASE(24, t->curattrs &= ~A_UNDERLINE);
-            CASE(25, t->curattrs &= ~A_BLINK);
-            CASE(27, t->curattrs &= ~A_REVERSE);
-            CASE(28, t->curattrs &= ~A_INVIS);
-
+          case 0:
+            t->curattrs = A_NORMAL;
+            t->curfg = t->curbg = -1;
+            break;
+          case 1:
+            t->curattrs |= A_BOLD;
+            break;
+          case 4:
+            t->curattrs |= A_UNDERLINE;
+            break;
+          case 5:
+            t->curattrs |= A_BLINK;
+            break;
+          case 7:
+            t->curattrs |= A_REVERSE;
+            break;
+          case 8:
+            t->curattrs |= A_INVIS;
+            break;
+          case 22:
+            t->curattrs &= ~A_BOLD;
+            break;
+          case 24:
+            t->curattrs &= ~A_UNDERLINE;
+            break;
+          case 25:
+            t->curattrs &= ~A_BLINK;
+            break;
+          case 27:
+            t->curattrs &= ~A_REVERSE;
+            break;
+          case 28:
+            t->curattrs &= ~A_INVIS;
+            break;
           case 30 ... 37: /* fg */
-            t->curfg = param[i]-30;
+            t->curfg = param[i] - 30;
             break;
-
           case 38:
-            assert(param[i+1] == 5);
-            t->curfg = param[i+2];
-            i+=2;
+            assert(param[i + 1] == 5);
+            t->curfg = param[i + 2];
+            i += 2;
             break;
-
           case 39:
             t->curfg = -1;
             break;
-
           case 40 ... 47: /* bg */
             t->curbg = param[i] - 40;
             break;
-
           case 48:
-            assert(param[i+1] == 5);
-            t->curbg = param[i+2];
-            i+=2;
+            assert(param[i + 1] == 5);
+            t->curbg = param[i + 2];
+            i += 2;
             break;
-
           case 49:
             t->curbg = -1;
             break;
-
           default:
             break;
         }
