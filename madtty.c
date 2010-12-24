@@ -540,13 +540,6 @@ static void interpret_csi_DCH(madtty_t *t, int param[], int pcount)
     t_row_set(row, t->cols - n, n, t);
 }
 
-/* Interpret a 'scroll reverse' (SR) */
-static void interpret_csi_SR(madtty_t *t)
-{
-    t_row_roll(t->scroll_top, t->scroll_bot, -1);
-    t_row_set(t->scroll_top, 0, t->cols, t);
-}
-
 /* Interpret an 'insert line' sequence (IL) */
 static void interpret_csi_IL(madtty_t *t, int param[], int pcount)
 {
@@ -725,6 +718,29 @@ static void es_interpret_csi(madtty_t *t)
     }
 }
 
+/* Interpret an 'index' (IND) sequence */
+static void interpret_esc_IND(madtty_t *t)
+{
+    if (t->curs_row < t->lines + t->rows - 1)
+        t->curs_row++;
+}
+
+/* Interpret a 'reverse index' (RI) sequence */
+static void interpret_esc_RI(madtty_t *t)
+{
+    if (t->curs_row > t->lines)
+        t->curs_row--;
+}
+
+/* Interpret a 'next line' (NEL) sequence */
+static void interpret_esc_NEL(madtty_t *t)
+{
+    if (t->curs_row < t->lines + t->rows - 1) {
+        t->curs_row++;
+        t->curs_col = 0;
+    }
+}
+
 static void interpret_char_set(madtty_t *t)
 {
     if (*t->ebuf == '(') {
@@ -758,11 +774,6 @@ static void try_interpret_escape_seq(madtty_t *t)
     }
 
     switch (*t->ebuf) {
-      case 'M':
-        interpret_csi_SR(t);
-        cancel_escape_sequence(t);
-        return;
-
       case '(':
       case ')':
       case '#':
@@ -795,6 +806,21 @@ static void try_interpret_escape_seq(madtty_t *t)
       case '8': /* DECRC: restore cursor and attributes */
         restore_attrs(t);
         restore_curs(t);
+        cancel_escape_sequence(t);
+        return;
+
+      case 'D': /* IND: index */
+        interpret_esc_IND(t);
+        cancel_escape_sequence(t);
+        return;
+
+      case 'M': /* RI: reverse index */
+        interpret_esc_RI(t);
+        cancel_escape_sequence(t);
+        return;
+
+      case 'E': /* NEL: next line */
+        interpret_esc_NEL(t);
         cancel_escape_sequence(t);
         return;
 
