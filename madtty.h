@@ -17,6 +17,7 @@
 
     Copyright © 2004 Bruno T. C. de Oliveira
     Copyright © 2006 Pierre Habouzit
+    Copyright © 2008-2011 Marc Andre Tanner
  */
 
 #ifndef MADTTY_MADTTY_H
