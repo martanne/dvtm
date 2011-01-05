@@ -95,11 +95,12 @@ struct madtty_t {
     unsigned seen_input : 1;
     unsigned insert     : 1;
     unsigned escaped    : 1;
-    unsigned graphmode  : 1;
     unsigned curshid    : 1;
     unsigned curskeymode: 1;
     unsigned bell       : 1;
     unsigned relposmode : 1;
+    unsigned graphmode  : 1;
+    bool charsets[2];
 
     /* geometry */
     int rows, cols, maxcols;
@@ -745,18 +746,12 @@ static void interpret_esc_NEL(madtty_t *t)
     }
 }
 
-static void interpret_char_set(madtty_t *t)
+/* Interpret a 'select character set' (SCS) sequence */
+static void interpret_esc_SCS(madtty_t *t)
 {
-    if (*t->ebuf == '(') {
-        switch (t->ebuf[1]) {
-          case '0':
-            t->graphmode = true;
-            break;
-          case 'B':
-            t->graphmode = false;
-            break;
-        }
-    }
+    /* ESC ( sets G0, ESC ) sets G1 */
+    t->charsets[!!(t->ebuf[0] == ')')] = (t->ebuf[1] == '0');
+    t->graphmode = t->charsets[0];
 }
 
 static void try_interpret_escape_seq(madtty_t *t)
@@ -780,9 +775,8 @@ static void try_interpret_escape_seq(madtty_t *t)
     switch (*t->ebuf) {
       case '(':
       case ')':
-      case '#':
         if (t->elen == 2) {
-            interpret_char_set(t);
+            interpret_esc_SCS(t);
             cancel_escape_sequence(t);
             return;
         }
@@ -883,11 +877,11 @@ static void madtty_process_nonprinting(madtty_t *t, wchar_t wc)
         cursor_line_down(t);
         break;
 
-      case C0_SO:		/* shift out - acs */
-        t->graphmode = true;
+      case C0_SO:		/* shift out, invoke the G1 character set */
+        t->graphmode = t->charsets[1];
         break;
-      case C0_SI:		/* shift in - acs */
-        t->graphmode = false;
+      case C0_SI:		/* shift in, invoke the G0 character set */
+        t->graphmode = t->charsets[0];
         break;
     }
 }
