@@ -99,6 +99,7 @@ struct madtty_t {
     unsigned curskeymode: 1;
     unsigned bell       : 1;
     unsigned relposmode : 1;
+    unsigned mousetrack : 1;
     unsigned graphmode  : 1;
     bool charsets[2];
 
@@ -662,6 +663,9 @@ static void es_interpret_csi(madtty_t *t)
                 t->curattrs = A_NORMAL;
                 t->curfg = t->curbg = -1;
                 break;
+              case 1000: /* enable normal mouse tracking */
+                t->mousetrack = true;
+                break;
             }
         } else if (verb == 'l') { /* DEC Private Mode Reset (DECRST) */
             switch (csiparam[0]) {
@@ -677,6 +681,9 @@ static void es_interpret_csi(madtty_t *t)
               case 47: /* use normal screen buffer */
                 t->curattrs = A_NORMAL;
                 t->curfg = t->curbg = -1;
+                break;
+              case 1000: /* disable normal mouse tracking */
+                t->mousetrack = false;
                 break;
             }
         }
@@ -1387,6 +1394,43 @@ void madtty_keypress_sequence(madtty_t *t, const char *seq)
             madtty_keypress(t, key);
     } else
         term_write(t, seq, len);
+}
+
+void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask)
+{
+    char seq[6] = { '\e', '[', 'M' }, state = 0, button = 0;
+
+    if (!t->mousetrack)
+        return;
+
+    if (mask & (BUTTON1_PRESSED | BUTTON1_CLICKED))
+        button = 0;
+    else if (mask & (BUTTON2_PRESSED | BUTTON2_CLICKED))
+        button = 1;
+    else if (mask & (BUTTON3_PRESSED | BUTTON3_CLICKED))
+        button = 2;
+    else if (mask & (BUTTON1_RELEASED | BUTTON2_RELEASED | BUTTON3_RELEASED))
+        button = 3;
+
+    if (mask & BUTTON_SHIFT)
+        state |= 4;
+    if (mask & BUTTON_ALT)
+        state |= 8;
+    if (mask & BUTTON_CTRL)
+        state |= 16;
+
+    seq[3] = 32 + button + state;
+    seq[4] = 32 + x;
+    seq[5] = 32 + y;
+
+    term_write(t, seq, sizeof seq);
+
+    if (mask & (BUTTON1_CLICKED | BUTTON2_CLICKED | BUTTON3_CLICKED)) {
+        /* send a button release event */
+        button = 3;
+        seq[3] = 32 + button + state;
+        term_write(t, seq, sizeof seq);
+    }
 }
 
 static unsigned color_hash(short f, short b)
