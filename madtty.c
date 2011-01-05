@@ -642,34 +642,38 @@ static void es_interpret_csi(madtty_t *t)
     }
 
     if (t->ebuf[1] == '?') {
-        switch (verb) {
-          case 'l':
-            if (csiparam[0] == 25)
-                t->curshid = true;
-            if (csiparam[0] == 1) /* DECCKM: reset ANSI cursor (normal) key mode */
-                t->curskeymode = 0;
-            if (csiparam[0] == 6) /* DECOM: set origin to absolute */
-                t->relposmode = false;
-            if (csiparam[0] == 47) {
-                /* use normal screen buffer */
-                t->curattrs = A_NORMAL;
-                t->curfg = t->curbg = -1;
-            }
-            break;
-
-          case 'h':
-            if (csiparam[0] == 25)
-                t->curshid = false;
-            if (csiparam[0] == 1) /* DECCKM: set ANSI cursor (application) key mode */
-                t->curskeymode = 1;
-            if (csiparam[0] == 6) /* DECOM: set origin to relative */
+        if (verb == 'h') { /* DEC Private Mode Set (DECSET) */
+            switch (csiparam[0]) {
+              case 1: /* set ANSI cursor (application) key mode (DECCKM) */
+                t->curskeymode = true;
+                break;
+              case 6: /* set origin to relative (DECOM) */
                 t->relposmode = true;
-            if (csiparam[0] == 47) {
-                /* use alternate screen buffer */
+                break;
+              case 25: /* make cursor visible (DECCM) */
+                t->curshid = false;
+                break;
+              case 47: /* use alternate screen buffer */
                 t->curattrs = A_NORMAL;
                 t->curfg = t->curbg = -1;
+                break;
             }
-            break;
+        } else if (verb == 'l') { /* DEC Private Mode Reset (DECRST) */
+            switch (csiparam[0]) {
+              case 1: /* reset ANSI cursor (normal) key mode (DECCKM) */
+                t->curskeymode = false;
+                break;
+              case 6: /* set origin to absolute (DECOM) */
+                t->relposmode = false;
+                break;
+              case 25: /* make cursor visible (DECCM) */
+                t->curshid = true;
+                break;
+              case 47: /* use normal screen buffer */
+                t->curattrs = A_NORMAL;
+                t->curfg = t->curbg = -1;
+                break;
+            }
         }
     }
 
