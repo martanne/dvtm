@@ -188,6 +188,8 @@ static char const * const keytable[KEY_MAX+1] = {
     [KEY_F(20)]     = "\e[34~",
 };
 
+static void madtty_process_nonprinting(madtty_t *t, wchar_t wc);
+
 __attribute__((const)) static uint16_t build_attrs(unsigned curattrs)
 {
     return ((curattrs & ~A_COLOR) | COLOR_PAIR(curattrs & 0xff))
@@ -627,12 +629,14 @@ static void es_interpret_csi(madtty_t *t)
     p += (t->ebuf[1] == '?'); /* CSI private mode */
 
     /* parse numeric parameters */
-    while (isdigit((unsigned char)*p) || *p == ';') {
-        if (*p == ';') {
+    while (*p) {
+        if (IS_CONTROL(*p)) {
+            madtty_process_nonprinting(t, *p);
+        } else if (*p == ';') {
             if (param_count >= (int)sizeof(csiparam))
                 return; /* too long! */
             csiparam[param_count++] = 0;
-        } else {
+        } else if (isdigit((unsigned char)*p)) {
             if (param_count == 0)
                 csiparam[param_count++] = 0;
             csiparam[param_count - 1] *= 10;
