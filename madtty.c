@@ -746,6 +746,10 @@ static void interpret_esc_RI(madtty_t *t)
 {
     if (t->curs_row > t->lines)
         t->curs_row--;
+    else {
+        t_row_roll(t->scroll_top, t->scroll_bot, -1);
+        t_row_set(t->scroll_top, 0, t->cols, t);
+    }
 }
 
 /* Interpret a 'next line' (NEL) sequence */
