@@ -189,6 +189,7 @@ static char const * const keytable[KEY_MAX+1] = {
 };
 
 static void madtty_process_nonprinting(madtty_t *t, wchar_t wc);
+static void send_curs(madtty_t *t);
 
 __attribute__((const)) static uint16_t build_attrs(unsigned curattrs)
 {
@@ -735,6 +736,10 @@ static void es_interpret_csi(madtty_t *t)
         break;
       case 'u': /* restore cursor location */
         restore_curs(t);
+        break;
+      case 'n': /* query cursor location */
+        if (param_count == 1 && csiparam[0] == 6)
+            send_curs(t);
         break;
       default:
         break;
@@ -1369,6 +1374,13 @@ static void term_write(madtty_t *t, const char *buf, int len)
         buf += res;
         len -= res;
     }
+}
+
+static void send_curs(madtty_t *t)
+{
+    char keyseq[16];
+    sprintf(keyseq, "\e[%d;%dR", (int)(t->curs_row - t->lines), t->curs_col);
+    term_write(t, keyseq, strlen(keyseq));
 }
 
 void madtty_keypress(madtty_t *t, int keycode)
