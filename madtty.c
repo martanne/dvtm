@@ -104,8 +104,8 @@ struct madtty_t {
 
     /* geometry */
     int rows, cols, maxcols;
-    unsigned curattrs, savattrs;
-    short curfg, curbg, savfg, savbg;
+    unsigned curattrs, savattrs, defattrs;
+    short curfg, curbg, savfg, savbg, deffg, defbg;
 
     /* scrollback buffer */
     struct t_row_t *scroll_buf;
@@ -1103,6 +1103,13 @@ int madtty_process(madtty_t *t)
     return 0;
 }
 
+void madtty_set_default_colors(madtty_t *t, unsigned attrs, short fg, short bg)
+{
+    t->defattrs = attrs;
+    t->deffg = fg;
+    t->defbg = bg;
+}
+
 madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz)
 {
     madtty_t *t;
@@ -1138,7 +1145,7 @@ madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz)
     t->curs_row = t->lines;
     t->curs_col = 0;
     t->curattrs = A_NORMAL;  /* white text over black background */
-    t->curfg = t->curbg = -1;
+    t->curfg = t->curbg = t->deffg = t->defbg = -1;
 
     /* initial scrolling area is the whole window */
     t->scroll_top = t->lines;
@@ -1296,6 +1303,12 @@ void madtty_draw(madtty_t *t, WINDOW *win, int srow, int scol)
                 || row->attr[j] != row->attr[j - 1]
                 || row->fg[j] != row->fg[j-1] 
                 || row->bg[j] != row->bg[j-1]) {
+                if (row->attr[j] == A_NORMAL)
+                    row->attr[j] = t->defattrs;
+                if (row->fg[j] == -1)
+                    row->fg[j] = t->deffg;
+                if (row->bg[j] == -1)
+                    row->bg[j] = t->defbg;
                 wattrset(win, (attr_t)row->attr[j] << NCURSES_ATTR_SHIFT);
                 madtty_color_set(win, row->fg[j], row->bg[j]);
             }

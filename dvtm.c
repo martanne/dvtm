@@ -57,6 +57,13 @@ struct Client {
 	Client *prev;
 };
 
+typedef struct {
+	const char *title;
+	unsigned attrs;
+	short fg;
+	short bg;
+} ColorRule;
+
 #define ALT(k)      ((k) + (161 - 'a'))
 #ifndef CTRL
   #define CTRL(k)   ((k) & 0x1F)
@@ -608,6 +615,25 @@ killclient(const char *args[]) {
 	kill(-sel->pid, SIGKILL);
 }
 
+static void
+applycolorrules(madtty_t *term, char *title) {
+	unsigned int i;
+	unsigned attrs = A_NORMAL;
+	short fg = -1, bg = -1;
+	const ColorRule *r;
+
+	for (i = 0; i < countof(colorrules); i++) {
+		r = &colorrules[i];
+		if (strstr(title, r->title)) {
+			attrs = r->attrs;
+			fg = r->fg;
+			bg = r->bg;
+			break;
+		}
+	}
+	madtty_set_default_colors(term, attrs, fg, bg);
+}
+
 static int
 title_escape_seq_handler(madtty_t *term, char *es) {
 	Client *c;
@@ -621,6 +647,7 @@ title_escape_seq_handler(madtty_t *term, char *es) {
 	strncpy(c->title, es + 3, sizeof(c->title));
 	draw_border(c);
 	debug("window title: %s\n", c->title);
+	applycolorrules(term, c->title);
 	return MADTTY_HANDLER_OK;
 }
 

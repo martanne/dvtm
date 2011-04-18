@@ -98,6 +98,13 @@ Key keys[] = {
 	{ MOD, '?',       { create,         { "man dvtm", "dvtm help" } } },
 };
 
+static const ColorRule colorrules[] = {
+	/* title attrs     fgcolor      bgcolor */
+#if 0
+	{ "ssh", A_NORMAL, COLOR_BLACK, 224      },
+#endif
+};
+
 /* possible values for the mouse buttons are listed below:
  *
  * BUTTON1_PRESSED          mouse button 1 down
