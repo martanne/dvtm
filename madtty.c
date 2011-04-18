@@ -464,7 +464,7 @@ static void interpret_csi_CUP(madtty_t *t, int param[], int pcount)
 {
     if (pcount == 0) {
         /* special case */
-        t->curs_row = t->lines;
+        t->curs_row = (t->relposmode ? t->scroll_top : t->lines);
         t->curs_col = 0;
     } else if (pcount == 1) {
         t->curs_row = (t->relposmode ? t->scroll_top : t->lines) + param[0] - 1;
