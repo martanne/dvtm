@@ -52,11 +52,11 @@
 #endif
 
 #define IS_CONTROL(ch) !((ch) & 0xffffff60UL)
+#define min(x, y) ((x) < (y) ? (x) : (y))
+#define COLOR_PALETTE_START 1
+#define COLOR_PALETTE_END min(512, COLOR_PAIRS)
 
-static int has_default, is_utf8, use_palette;
-static const unsigned palette_start = 1;
-static const unsigned palette_end = 512;
-static unsigned palette_cur;
+static bool is_utf8, has_default_colors, use_color_palette;
 static short *color2palette;
 
 enum {
@@ -1339,7 +1339,7 @@ pid_t madtty_forkpty(madtty_t *t, const char *p, const char *argv[], const char 
             setenv(envp[0], envp[1], 1);
             envp += 2;
         }
-        setenv("TERM", use_palette ? "rxvt-256color" : "rxvt", 1);
+        setenv("TERM", use_color_palette ? "rxvt-256color" : "rxvt", 1);
         execv(p, (char *const*)argv);
         fprintf(stderr, "\nexecv() failed.\nCommand: '%s'\n", argv[0]);
         exit(1);
@@ -1450,50 +1450,46 @@ static unsigned color_hash(short f, short b)
 
 void madtty_color_set(WINDOW *win, short fg, short bg)
 {
-    if (use_palette) {
+    static unsigned palette_cur = COLOR_PALETTE_START;
+
+    if (use_color_palette) {
         if (fg == -1 && bg == -1) {
-            wcolor_set(win, 0, 0);
+            wcolor_set(win, 0, NULL);
         } else {
             unsigned c = color_hash(fg, bg);
             if (color2palette[c] == 0) {
-                short f, g;
-                color2palette[c] = palette_cur;
-                pair_content(palette_cur, &f, &g);
-                color2palette[color_hash(f, g)] = 0;
+                short oldfg, oldbg;
+                pair_content(palette_cur, &oldfg, &oldbg);
+                color2palette[color_hash(oldfg, oldbg)] = 0;
                 init_pair(palette_cur, fg, bg);
-                palette_cur++;
-                if (palette_cur >= palette_end) {
-                    palette_cur = palette_start;
+                color2palette[c] = palette_cur++;
+                if (palette_cur >= COLOR_PALETTE_END) {
+                    palette_cur = COLOR_PALETTE_START;
 		    /* possibly use mvwinch/mvchgat to update palette */
 		}
             }
-            wcolor_set(win, color2palette[c], 0);
+            wcolor_set(win, color2palette[c], NULL);
         }
     } else {
-        if (has_default) {
-            wcolor_set(win, (fg+1)*16 + bg+1, 0);
-        } else {
+        if (has_default_colors) {
             if (fg == -1)
                 fg = COLOR_WHITE;
             if (bg == -1)
                 bg = COLOR_BLACK;
-            wcolor_set(win, (7-fg)*8 + bg, 0);
         }
+        wcolor_set(win, (7-fg)*8 + bg, NULL);
     }
 }
 
 void madtty_init_colors(void)
 {
-    int use_default = use_default_colors() == OK;
-    use_palette = 0;
+    has_default_colors = (use_default_colors() == OK);
 
     if (COLORS >= 256 && COLOR_PAIRS >= 256) {
-        use_palette = 1;
-        has_default = 1;
-
+        use_color_palette = true;
         color2palette = calloc((COLORS+1)*(COLORS+1), sizeof(short));
         int bg = 0, fg = 0;
-        for (int i = palette_start; i < palette_end; i++) {
+        for (int i = COLOR_PALETTE_START; i < COLOR_PALETTE_END; i++) {
             init_pair(i, fg, bg);
             color2palette[color_hash(fg, bg)] = i;
             if (++fg == COLORS) {
@@ -1501,19 +1497,10 @@ void madtty_init_colors(void)
                 bg++;
             }
         }
-        palette_cur = palette_start;
-    } else if (COLOR_PAIRS > 64) {
-        has_default = 1;
-
-        for (int bg = -1; bg < 8; bg++) {
-            for (int fg = -1; fg < 8; fg++) {
-                init_pair((fg + 1) * 16 + bg + 1, fg, bg);
-            }
-        }
     } else {
         for (int bg = 0; bg < 8; bg++) {
             for (int fg = 0; fg < 8; fg++) {
-                if (use_default) {
+                if (has_default_colors) {
                     init_pair((7 - fg) * 8 + bg,
                               fg == COLOR_WHITE ? -1 : fg,
                               bg == COLOR_BLACK ? -1 : bg);
