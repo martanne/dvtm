@@ -708,29 +708,40 @@ static void es_interpret_csi(madtty_t *t)
             t->insert = false;
         break;
       case 'm': /* it's a 'set attribute' sequence */
-        interpret_csi_SGR(t, csiparam, param_count); break;
+        interpret_csi_SGR(t, csiparam, param_count);
+        break;
       case 'J': /* it's an 'erase display' sequence */
-        interpret_csi_ED(t, csiparam, param_count); break;
+        interpret_csi_ED(t, csiparam, param_count);
+        break;
       case 'H': case 'f': /* it's a 'move cursor' sequence */
-        interpret_csi_CUP(t, csiparam, param_count); break;
+        interpret_csi_CUP(t, csiparam, param_count);
+        break;
       case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G':
       case 'e': case 'a': case 'd': case '`':
         /* it is a 'relative move' */
-        interpret_csi_C(t, verb, csiparam, param_count); break;
+        interpret_csi_C(t, verb, csiparam, param_count);
+        break;
       case 'K': /* erase line */
-        interpret_csi_EL(t, csiparam, param_count); break;
+        interpret_csi_EL(t, csiparam, param_count);
+        break;
       case '@': /* insert characters */
-        interpret_csi_ICH(t, csiparam, param_count); break;
+        interpret_csi_ICH(t, csiparam, param_count);
+        break;
       case 'P': /* delete characters */
-        interpret_csi_DCH(t, csiparam, param_count); break;
+        interpret_csi_DCH(t, csiparam, param_count);
+        break;
       case 'L': /* insert lines */
-        interpret_csi_IL(t, csiparam, param_count); break;
+        interpret_csi_IL(t, csiparam, param_count);
+        break;
       case 'M': /* delete lines */
-        interpret_csi_DL(t, csiparam, param_count); break;
+        interpret_csi_DL(t, csiparam, param_count);
+        break;
       case 'X': /* erase chars */
-        interpret_csi_ECH(t, csiparam, param_count); break;
+        interpret_csi_ECH(t, csiparam, param_count);
+        break;
       case 'r': /* set scrolling region */
-        interpret_csi_DECSTBM(t, csiparam, param_count); break;
+        interpret_csi_DECSTBM(t, csiparam, param_count);
+        break;
       case 's': /* save cursor location */
         save_curs(t);
         break;
