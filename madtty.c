@@ -55,7 +55,7 @@
 
 static int has_default, is_utf8, use_palette;
 static const unsigned palette_start = 1;
-static const unsigned palette_end = 256;
+static const unsigned palette_end = 512;
 static unsigned palette_cur;
 static short *color2palette;
 
@@ -416,6 +416,12 @@ static void interpret_csi_SGR(madtty_t *t, int param[], int pcount)
             break;
           case 49:
             t->curbg = -1;
+            break;
+          case 90 ... 97: /* hi fg */
+            t->curfg = param[i] - 82;
+            break;
+          case 100 ... 107: /* hi bg */
+            t->curbg = param[i] - 92;
             break;
           default:
             break;
@@ -1439,7 +1445,7 @@ void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask)
 
 static unsigned color_hash(short f, short b)
 {
-	return ((f+1) * (COLORS+1)) + b + 1;
+	return ((f+1) * COLORS) + b + 1;
 }
 
 void madtty_color_set(WINDOW *win, short fg, short bg)
@@ -1488,8 +1494,8 @@ void madtty_init_colors(void)
         color2palette = calloc((COLORS+1)*(COLORS+1), sizeof(short));
         int bg = 0, fg = 0;
         for (int i = palette_start; i < palette_end; i++) {
-            init_pair(i, bg, fg);
-            color2palette[color_hash(bg, fg)] = i;
+            init_pair(i, fg, bg);
+            color2palette[color_hash(fg, bg)] = i;
             if (++fg == COLORS) {
                 fg = 0;
                 bg++;
