@@ -21,7 +21,6 @@
  */
 
 #define _GNU_SOURCE
-#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -399,9 +398,10 @@ static void interpret_csi_SGR(madtty_t *t, int param[], int pcount)
             t->curfg = param[i] - 30;
             break;
           case 38:
-            assert(param[i + 1] == 5);
-            t->curfg = param[i + 2];
-            i += 2;
+            if ((i + 2) < pcount && param[i + 1] == 5) {
+              t->curfg = param[i + 2];
+              i += 2;
+            }
             break;
           case 39:
             t->curfg = -1;
@@ -410,9 +410,10 @@ static void interpret_csi_SGR(madtty_t *t, int param[], int pcount)
             t->curbg = param[i] - 40;
             break;
           case 48:
-            assert(param[i + 1] == 5);
-            t->curbg = param[i + 2];
-            i += 2;
+            if ((i + 2) < pcount && param[i + 1] == 5) {
+              t->curbg = param[i + 2];
+              i += 2;
+            }
             break;
           case 49:
             t->curbg = -1;
@@ -980,10 +981,13 @@ static void madtty_putc(madtty_t *t, wchar_t wc)
     }
 
     if (t->escaped) {
-        assert (t->elen + 1 < (int)sizeof(t->ebuf));
-        t->ebuf[t->elen]   = wc;
-        t->ebuf[++t->elen] = '\0';
-        try_interpret_escape_seq(t);
+        if (t->elen + 1 < (int)sizeof(t->ebuf)) {
+            t->ebuf[t->elen]   = wc;
+            t->ebuf[++t->elen] = '\0';
+            try_interpret_escape_seq(t);
+        } else {
+            cancel_escape_sequence(t);
+        }
     } else if (IS_CONTROL(wc)) {
         madtty_process_nonprinting(t, wc);
     } else {
