@@ -1168,7 +1168,7 @@ void madtty_resize(madtty_t *t, int rows, int cols)
     if (t->rows != rows) {
         if (t->curs_row > lines+rows) {
             /* scroll up instead of simply chopping off bottom */
-            fill_scroll_buf(t, t->rows - rows);
+            fill_scroll_buf(t, (t->curs_row - t->lines) - rows + 1);
         }
         while (t->rows > rows) {
             free(lines[t->rows - 1].text);
@@ -1205,13 +1205,23 @@ void madtty_resize(madtty_t *t, int rows, int cols)
         t->cols = cols;
     }
 
-    while (t->rows < rows) {
-        lines[t->rows].text = (wchar_t *)calloc(sizeof(wchar_t), t->maxcols);
-        lines[t->rows].attr = (uint16_t *)calloc(sizeof(uint16_t), t->maxcols);
-        lines[t->rows].fg   = calloc(sizeof(short), t->maxcols);
-        lines[t->rows].bg   = calloc(sizeof(short), t->maxcols);
-        t_row_set(lines + t->rows, 0, t->maxcols, 0);
-        t->rows++;
+    int deltarows = 0;
+    if (t->rows < rows) {
+        while (t->rows < rows) {
+            lines[t->rows].text = (wchar_t *)calloc(sizeof(wchar_t), t->maxcols);
+            lines[t->rows].attr = (uint16_t *)calloc(sizeof(uint16_t), t->maxcols);
+            lines[t->rows].fg   = calloc(sizeof(short), t->maxcols);
+            lines[t->rows].bg   = calloc(sizeof(short), t->maxcols);
+            t_row_set(lines + t->rows, 0, t->maxcols, t);
+            t->rows++;
+        }
+
+        /* prepare for backfill */
+        if (t->curs_row >= t->scroll_bot - 1) {
+            deltarows = t->lines + rows - t->curs_row - 1;
+            if (deltarows > t->scroll_buf_len)
+                deltarows = t->scroll_buf_len;
+        }
     }
 
     t->curs_row   += lines - t->lines;
@@ -1219,6 +1229,13 @@ void madtty_resize(madtty_t *t, int rows, int cols)
     t->scroll_bot = lines + rows;
     t->lines = lines;
     clamp_cursor_to_bounds(t);
+
+    /* perform backfill */
+    if (deltarows > 0) {
+        fill_scroll_buf(t, -deltarows);
+        t->curs_row += deltarows;
+    }
+
     ioctl(t->pty, TIOCSWINSZ, &ws);
     kill(-t->childpid, SIGWINCH);
 }
