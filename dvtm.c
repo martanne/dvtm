@@ -866,8 +866,7 @@ setup() {
 	mouse_setup();
 #endif
 	raw();
-	madtty_init_colors();
-	madtty_init_vt100_graphics();
+	madtty_init();
 	getmaxyx(stdscr, height, width);
 	resize_screen();
 	signal(SIGWINCH, sigwinch_handler);

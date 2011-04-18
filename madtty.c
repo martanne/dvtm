@@ -947,7 +947,7 @@ static uint16_t const vt100_utf8[62] = {
 
 static uint32_t vt100[62];
 
-void madtty_init_vt100_graphics(void)
+static void init_vt100_graphics(void)
 {
     vt100['l' - 0x41] = ACS_ULCORNER;
     vt100['m' - 0x41] = ACS_LLCORNER;
@@ -1538,7 +1538,7 @@ void madtty_color_set(WINDOW *win, short fg, short bg)
     }
 }
 
-void madtty_init_colors(void)
+static void init_colors(void)
 {
     has_default_colors = (use_default_colors() == OK);
 
@@ -1567,6 +1567,12 @@ void madtty_init_colors(void)
             }
         }
     }
+}
+
+void madtty_init(void)
+{
+    init_colors();
+    init_vt100_graphics();
 }
 
 void madtty_set_handler(madtty_t *t, madtty_handler_t handler)

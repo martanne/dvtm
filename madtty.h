@@ -53,8 +53,7 @@ enum {
 typedef struct madtty_t madtty_t;
 typedef int (*madtty_handler_t)(madtty_t *, char *es);
 
-void madtty_init_colors(void);
-void madtty_init_vt100_graphics(void);
+void madtty_init(void);
 void madtty_set_handler(madtty_t *, madtty_handler_t);
 void madtty_set_data(madtty_t *, void *);
 void *madtty_get_data(madtty_t *);
