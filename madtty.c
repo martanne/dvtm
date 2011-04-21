@@ -635,10 +635,8 @@ static void es_interpret_csi(madtty_t *t)
     const char *p = t->ebuf + 1;
     char verb = t->ebuf[t->elen - 1];
 
-    p += (t->ebuf[1] == '?'); /* CSI private mode */
-
     /* parse numeric parameters */
-    while (*p) {
+    for (p += (t->ebuf[1] == '?'); *p; p++) {
         if (IS_CONTROL(*p)) {
             madtty_process_nonprinting(t, *p);
         } else if (*p == ';') {
@@ -651,8 +649,6 @@ static void es_interpret_csi(madtty_t *t)
             csiparam[param_count - 1] *= 10;
             csiparam[param_count - 1] += *p - '0';
         }
-
-        p++;
     }
 
     if (t->ebuf[1] == '?') {
@@ -1437,7 +1433,7 @@ void madtty_keypress(madtty_t *t, int keycode)
             case KEY_RIGHT:
             case KEY_LEFT: {
                 char keyseq[3] = { '\e', (t->curskeymode ? 'O' : '['), keytable[keycode][0] };
-                term_write(t, keyseq, 3);
+                term_write(t, keyseq, sizeof keyseq);
                 break;
             }
             default:
