@@ -47,10 +47,10 @@ struct Client {
 #ifdef CONFIG_CMDFIFO
 	unsigned short int id;
 #endif
-	short int x;
-	short int y;
-	short int w;
-	short int h;
+	unsigned short int x;
+	unsigned short int y;
+	unsigned short int w;
+	unsigned short int h;
 	bool minimized;
 	bool died;
 	Client *next;
@@ -487,7 +487,7 @@ draw_border(Client *c) {
 	o = c->w - (4 + sstrlen(TITLE) - 5  + sstrlen(SEPARATOR));
 	if (o < 0)
 		o = 0;
-	if (o < sizeof(c->title)) {
+	if ((size_t)o < sizeof(c->title)) {
 		t = *(s = &c->title[o]);
 		*s = '\0';
 	}
@@ -520,8 +520,7 @@ draw(Client *c) {
 
 static void
 clear_workspace() {
-	unsigned int y;
-	for (y = 0; y < wah; y++)
+	for (unsigned int y = 0; y < wah; y++)
 		mvhline(way + y, 0, ' ', waw);
 	wnoutrefresh(stdscr);
 }
@@ -575,7 +574,8 @@ escapekey(const char *args[]) {
 static void
 lock(const char *args[]) {
 	size_t len = 0, i = 0;
-	char buf[16], *pass = buf, c;
+	char buf[16], *pass = buf;
+	int c;
 
 	erase();
 	curs_set(0);
@@ -849,7 +849,7 @@ resize_screen() {
 
 static void
 startup(const char *args[]) {
-	for (int i = 0; i < countof(actions); i++)
+	for (unsigned int i = 0; i < countof(actions); i++)
 		actions[i].cmd(actions[i].args);
 }
 
@@ -953,7 +953,7 @@ parse_args(int argc, char *argv[]) {
 				char *mod = argv[++arg];
 				if (mod[0] == '^' && mod[1])
 					*mod = CTRL(mod[1]);
-				for (int i = 0; i < countof(keys); i++)
+				for (unsigned int i = 0; i < countof(keys); i++)
 					keys[i].mod = *mod;
 				break;
 			}
@@ -991,14 +991,14 @@ parse_args(int argc, char *argv[]) {
 void
 keypress(int code) {
 	Client *c;
-	int len = 1;
+	unsigned int len = 1;
 	char buf[8] = { '\e' };
 
 	if (code == '\e') {
 		/* pass characters following escape to the underlying app */
 		nodelay(stdscr, TRUE);
-		while (len < sizeof(buf) - 1 && (buf[len] = getch()) != ERR)
-			len++;
+		for (int t; len < sizeof(buf) - 1 && (t = getch()) != ERR; len++)
+			buf[len] = t;
 		buf[len] = '\0';
 		nodelay(stdscr, FALSE);
 	}

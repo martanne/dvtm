@@ -30,7 +30,7 @@ mouse_zoom(const char *args[]) {
 }
 
 static Client*
-get_client_by_coord(int x, int y) {
+get_client_by_coord(unsigned int x, unsigned int y) {
 	Client *c;
 	if (y < way || y >= wah)
 		return NULL;
@@ -72,9 +72,8 @@ handle_mouse() {
 
 static void
 mouse_setup() {
-	int i;
 	mmask_t mask = BUTTON1_CLICKED | BUTTON2_CLICKED;
-	for (i = 0; i < countof(buttons); i++)
+	for (unsigned int i = 0; i < countof(buttons); i++)
 		mask |= buttons[i].mask;
 	mousemask(mask, NULL);
 }

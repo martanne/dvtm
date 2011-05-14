@@ -25,7 +25,7 @@ static char *get_realpath(const char *path) {
 
 static Cmd *
 get_cmd_by_name(const char *name) {
-	for (int i = 0; i < countof(commands); i++) {
+	for (unsigned int i = 0; i < countof(commands); i++) {
 		if (!strcmp(name, commands[i].name))
 			return &commands[i];
 	}

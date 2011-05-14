@@ -30,7 +30,7 @@ drawbar() {
 	attrset(BAR_ATTR);
 	madtty_color_set(stdscr, BAR_FG, BAR_BG);
 	mvaddch(by, 0, '[');
-	if (mbstowcs(wbuf, stext, sizeof stext) == -1)
+	if (mbstowcs(wbuf, stext, sizeof stext) == (size_t)-1)
 		return;
 	if ((w = wcswidth(wbuf, maxwidth)) == -1)
 		return;

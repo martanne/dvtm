@@ -53,7 +53,7 @@
 #define IS_CONTROL(ch) !((ch) & 0xffffff60UL)
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #define COLOR_PALETTE_START 1
-#define COLOR_PALETTE_END min(512, COLOR_PAIRS)
+#define COLOR_PALETTE_END (unsigned)(min(512, COLOR_PAIRS))
 
 static bool is_utf8, has_default_colors, use_color_palette;
 static short *color2palette;
@@ -1542,7 +1542,7 @@ static void init_colors(void)
         use_color_palette = true;
         color2palette = calloc((COLORS+1)*(COLORS+1), sizeof(short));
         int bg = 0, fg = 0;
-        for (int i = COLOR_PALETTE_START; i < COLOR_PALETTE_END; i++) {
+        for (unsigned int i = COLOR_PALETTE_START; i < COLOR_PALETTE_END; i++) {
             init_pair(i, fg, bg);
             color2palette[color_hash(fg, bg)] = i;
             if (++fg == COLORS) {
