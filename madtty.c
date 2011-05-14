@@ -1306,7 +1306,7 @@ void madtty_draw(madtty_t *t, WINDOW *win, int srow, int scol)
                 if (row->bg[j] == -1)
                     row->bg[j] = t->defbg;
                 wattrset(win, (attr_t)row->attr[j] << NCURSES_ATTR_SHIFT);
-                madtty_color_set(win, row->fg[j], row->bg[j]);
+                wcolor_set(win, madtty_color_get(row->fg[j], row->bg[j]), NULL);
             }
             if (is_utf8 && row->text[j] >= 128) {
                 char buf[MB_CUR_MAX + 1];
@@ -1501,13 +1501,13 @@ static unsigned color_hash(short f, short b)
 	return ((f+1) * COLORS) + b + 1;
 }
 
-void madtty_color_set(WINDOW *win, short fg, short bg)
+short madtty_color_get(short fg, short bg)
 {
     static unsigned palette_cur = COLOR_PALETTE_START;
 
     if (use_color_palette) {
         if (fg == -1 && bg == -1) {
-            wcolor_set(win, 0, NULL);
+            return 0;
         } else {
             unsigned c = color_hash(fg, bg);
             if (color2palette[c] == 0) {
@@ -1521,7 +1521,7 @@ void madtty_color_set(WINDOW *win, short fg, short bg)
 		    /* possibly use mvwinch/mvchgat to update palette */
 		}
             }
-            wcolor_set(win, color2palette[c], NULL);
+            return color2palette[c];
         }
     } else {
         if (has_default_colors) {
@@ -1530,7 +1530,7 @@ void madtty_color_set(WINDOW *win, short fg, short bg)
             if (bg == -1)
                 bg = COLOR_BLACK;
         }
-        wcolor_set(win, (7-fg)*8 + bg, NULL);
+        return (7-fg)*8 + bg;
     }
 }
 

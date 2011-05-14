@@ -28,7 +28,7 @@ drawbar() {
 		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
-	madtty_color_set(stdscr, BAR_FG, BAR_BG);
+	wcolor_set(stdscr, madtty_color_get(BAR_FG, BAR_BG), NULL);
 	mvaddch(by, 0, '[');
 	if (mbstowcs(wbuf, stext, sizeof stext) == (size_t)-1)
 		return;

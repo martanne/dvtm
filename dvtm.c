@@ -476,10 +476,10 @@ draw_border(Client *c) {
 	int x, y, o;
 	if (sel == c) {
 		wattrset(c->window, SELECTED_ATTR);
-		madtty_color_set(c->window, SELECTED_FG, SELECTED_BG);
+		wcolor_set(c->window, madtty_color_get(SELECTED_FG, SELECTED_BG), NULL);
 	} else {
 		wattrset(c->window, NORMAL_ATTR);
-		madtty_color_set(c->window, NORMAL_FG, NORMAL_BG);
+		wcolor_set(c->window, madtty_color_get(NORMAL_FG, NORMAL_BG), NULL);
 	}
 	getyx(c->window, y, x);
 	curs_set(0);

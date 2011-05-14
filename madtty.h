@@ -72,7 +72,7 @@ void madtty_keypress_sequence(madtty_t *, const char *seq);
 void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask);
 void madtty_dirty(madtty_t *t);
 void madtty_draw(madtty_t *, WINDOW *win, int startrow, int startcol);
-void madtty_color_set(WINDOW *win, short fg, short bg);
+short madtty_color_get(short fg, short bg);
 
 void madtty_scroll(madtty_t *, int rows);
 void madtty_noscroll(madtty_t *);
