@@ -13,7 +13,11 @@
 #define _GNU_SOURCE
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/fcntl.h>
+#ifdef _AIX
+# include <fcntl.h>
+#else
+# include <sys/fcntl.h>
+#endif
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/types.h>

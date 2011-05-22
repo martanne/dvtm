@@ -40,7 +40,7 @@
 #elif defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 # include <util.h>
 #endif
-#ifdef __CYGWIN__
+#if defined(__CYGWIN__) || defined(_AIX)
 # include <alloca.h>
 #endif
 
