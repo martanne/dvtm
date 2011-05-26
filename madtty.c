@@ -1156,6 +1156,8 @@ void madtty_resize(madtty_t *t, int rows, int cols)
         while (t->rows > rows) {
             free(lines[t->rows - 1].text);
             free(lines[t->rows - 1].attr);
+            free(lines[t->rows - 1].fg);
+            free(lines[t->rows - 1].bg);
             t->rows--;
         }
 
