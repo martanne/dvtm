@@ -256,6 +256,8 @@ detach(Client *c) {
 static void
 arrange() {
 	clear_workspace();
+	attrset(NORMAL_ATTR);
+	color_set(madtty_color_get(NORMAL_FG, NORMAL_BG), NULL);
 	layout->arrange();
 	wnoutrefresh(stdscr);
 	draw_all(true);
