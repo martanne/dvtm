@@ -48,9 +48,7 @@ struct Client {
 	uint8_t order;
 	pid_t pid;
 	int pty;
-#ifdef CONFIG_CMDFIFO
 	unsigned short int id;
-#endif
 	unsigned short int x;
 	unsigned short int y;
 	unsigned short int w;
@@ -94,12 +92,10 @@ typedef struct {
 	Action action;
 } Button;
 
-#ifdef CONFIG_CMDFIFO
 typedef struct {
 	const char *name;
 	Action action;
 } Cmd;
-#endif
 
 enum { BarTop, BarBot, BarOff };
 
@@ -171,11 +167,7 @@ static bool running = true;
 static bool runinall = false;
 
 #include "mouse.c"
-
-#ifdef CONFIG_CMDFIFO
-# include "cmdfifo.c"
-#endif
-
+#include "cmdfifo.c"
 #include "statusbar.c"
 
 static void
@@ -652,16 +644,12 @@ create(const char *args[]) {
 		return;
 	const char *cmd = (args && args[0]) ? args[0] : shell;
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
-#ifdef CONFIG_CMDFIFO
 	c->id = ++client_id;
 	char buf[8];
 	snprintf(buf, sizeof buf, "%d", c->id);
-#endif
 	const char *env[] = {
 		"DVTM", VERSION,
-#ifdef CONFIG_CMDFIFO
 		"DVTM_WINDOW_ID", buf,
-#endif
 		NULL
 	};
 
@@ -869,12 +857,10 @@ cleanup() {
 	endwin();
 	if (statusfd > 0)
 		close(statusfd);
-#ifdef CONFIG_CMDFIFO
 	if (cmdfd > 0)
 		close(cmdfd);
 	if (cmdpath)
 		unlink(cmdpath);
-#endif
 }
 
 static void
@@ -888,9 +874,7 @@ usage() {
 	cleanup();
 	eprint("usage: dvtm [-v] [-m mod] [-d escdelay] [-h n] "
 		"[-s status-fifo] "
-#ifdef CONFIG_CMDFIFO
 		"[-c cmd-fifo] "
-#endif
 		"[cmd...]\n");
 	exit(EXIT_FAILURE);
 }
@@ -957,14 +941,12 @@ parse_args(int argc, char *argv[]) {
 				statusfd = open_or_create_fifo(argv[++arg]);
 				updatebarpos();
 				break;
-#ifdef CONFIG_CMDFIFO
 			case 'c':
 				cmdfd = open_or_create_fifo(argv[++arg]);
 				if (!(cmdpath = get_realpath(argv[arg])))
 					error("%s\n", strerror(errno));
 				setenv("DVTM_CMD_FIFO", cmdpath, 1);
 				break;
-#endif
 			default:
 				usage();
 		}
@@ -1018,12 +1000,11 @@ main(int argc, char *argv[]) {
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
 
-#ifdef CONFIG_CMDFIFO
 		if (cmdfd != -1) {
 			FD_SET(cmdfd, &rd);
 			nfds = cmdfd;
 		}
-#endif
+
 		if (statusfd != -1) {
 			FD_SET(statusfd, &rd);
 			nfds = max(nfds, statusfd);
@@ -1075,10 +1056,9 @@ main(int argc, char *argv[]) {
 				continue;
 		}
 
-#ifdef CONFIG_CMDFIFO
 		if (cmdfd != -1 && FD_ISSET(cmdfd, &rd))
 			handle_cmdfifo();
-#endif
+
 		if (statusfd != -1 && FD_ISSET(statusfd, &rd))
 			handle_statusbar();
 
