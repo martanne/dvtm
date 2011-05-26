@@ -1401,23 +1401,27 @@ int madtty_getpty(madtty_t *t)
     return t->pty;
 }
 
-static void term_write(madtty_t *t, const char *buf, int len)
+int madtty_write(madtty_t *t, const char *buf, int len)
 {
+    int ret = len;
+
     while (len > 0) {
         int res = write(t->pty, buf, len);
         if (res < 0 && errno != EAGAIN && errno != EINTR)
-            return;
+            return -1;
 
         buf += res;
         len -= res;
     }
+
+    return ret;
 }
 
 static void send_curs(madtty_t *t)
 {
     char keyseq[16];
     sprintf(keyseq, "\e[%d;%dR", (int)(t->curs_row - t->lines), t->curs_col);
-    term_write(t, keyseq, strlen(keyseq));
+    madtty_write(t, keyseq, strlen(keyseq));
 }
 
 void madtty_keypress(madtty_t *t, int keycode)
@@ -1433,30 +1437,14 @@ void madtty_keypress(madtty_t *t, int keycode)
             case KEY_RIGHT:
             case KEY_LEFT: {
                 char keyseq[3] = { '\e', (t->curskeymode ? 'O' : '['), keytable[keycode][0] };
-                term_write(t, keyseq, sizeof keyseq);
+                madtty_write(t, keyseq, sizeof keyseq);
                 break;
             }
             default:
-                term_write(t, keytable[keycode], strlen(keytable[keycode]));
+                madtty_write(t, keytable[keycode], strlen(keytable[keycode]));
         }
     } else
-        term_write(t, &c, 1);
-}
-
-void madtty_keypress_sequence(madtty_t *t, const char *seq)
-{
-    int key, len = strlen(seq);
-    /* check for function keys from putty, this makes the
-     * keypad work but it's probably not the right way to
-     * do it. the sequence we look for is \eO + a character
-     * representing the number.
-     */
-    if (len == 3 && seq[0] == '\e' && seq[1] == 'O') {
-        key = seq[2] - 64;
-        if (key >= '0' && key <= '9')
-            madtty_keypress(t, key);
-    } else
-        term_write(t, seq, len);
+        madtty_write(t, &c, 1);
 }
 
 void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask)
@@ -1486,13 +1474,13 @@ void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask)
     seq[4] = 32 + x;
     seq[5] = 32 + y;
 
-    term_write(t, seq, sizeof seq);
+    madtty_write(t, seq, sizeof seq);
 
     if (mask & (BUTTON1_CLICKED | BUTTON2_CLICKED | BUTTON3_CLICKED)) {
         /* send a button release event */
         button = 3;
         seq[3] = 32 + button + state;
-        term_write(t, seq, sizeof seq);
+        madtty_write(t, seq, sizeof seq);
     }
 }
 

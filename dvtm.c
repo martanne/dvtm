@@ -1001,16 +1001,15 @@ keypress(int code) {
 	if (code == '\e') {
 		/* pass characters following escape to the underlying app */
 		nodelay(stdscr, TRUE);
-		for (int t; len < sizeof(buf) - 1 && (t = getch()) != ERR; len++)
+		for (int t; len < sizeof(buf) && (t = getch()) != ERR; len++)
 			buf[len] = t;
-		buf[len] = '\0';
 		nodelay(stdscr, FALSE);
 	}
 
 	for (c = runinall ? clients : sel; c; c = c->next) {
 		if (!c->minimized || isarrange(fullscreen)) {
 			if (code == '\e')
-				madtty_keypress_sequence(c->term, buf);
+				madtty_write(c->term, buf, len);
 			else
 				madtty_keypress(c->term, code);
 		}
