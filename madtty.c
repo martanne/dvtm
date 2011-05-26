@@ -1184,7 +1184,8 @@ void madtty_resize(madtty_t *t, int rows, int cols)
         t->maxcols = cols;
         t->cols = cols;
     } else if (t->cols != cols) {
-        madtty_dirty(t);
+        for (int row = 0; row < t->rows; row++)
+            lines[row].dirty = true;
         t->cols = cols;
     }
 
