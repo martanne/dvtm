@@ -89,12 +89,10 @@ typedef struct {
 	Action action;
 } Key;
 
-#ifdef CONFIG_MOUSE
 typedef struct {
 	mmask_t mask;
 	Action action;
 } Button;
-#endif
 
 #ifdef CONFIG_CMDFIFO
 typedef struct {
@@ -139,13 +137,11 @@ static void togglerunall(const char *args[]);
 enum { ALIGN_LEFT, ALIGN_RIGHT };
 static void togglebar(const char *args[]);
 
-#ifdef CONFIG_MOUSE
 static void mouse_focus(const char *args[]);
 static void mouse_fullscreen(const char *args[]);
 static void mouse_minimize(const char *args[]);
 static void mouse_zoom(const char *args[]);
 static void mouse_toggle();
-#endif
 
 static void clear_workspace();
 static void draw(Client *c);
@@ -174,15 +170,13 @@ static int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
 static bool running = true;
 static bool runinall = false;
 
-#ifdef CONFIG_MOUSE
-# include "mouse.c"
-#endif
+#include "mouse.c"
 
 #ifdef CONFIG_CMDFIFO
 # include "cmdfifo.c"
 #endif
 
-# include "statusbar.c"
+#include "statusbar.c"
 
 static void
 eprint(const char *errstr, ...) {
@@ -860,9 +854,7 @@ setup() {
 	start_color();
 	noecho();
 	keypad(stdscr, TRUE);
-#ifdef CONFIG_MOUSE
 	mouse_setup();
-#endif
 	raw();
 	madtty_init();
 	getmaxyx(stdscr, height, width);
@@ -1062,12 +1054,9 @@ main(int argc, char *argv[]) {
 			int code = getch();
 			Key *key;
 			if (code >= 0) {
-#ifdef CONFIG_MOUSE
 				if (code == KEY_MOUSE) {
 					handle_mouse();
-				} else
-#endif /* CONFIG_MOUSE */
-				if (is_modifier(code)) {
+				} else if (is_modifier(code)) {
 					int mod = code;
 					code = getch();
 					if (code >= 0) {
