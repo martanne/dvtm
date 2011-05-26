@@ -68,6 +68,7 @@ unsigned madtty_cursor(madtty_t *t);
 
 int madtty_process(madtty_t *);
 void madtty_keypress(madtty_t *, int keycode);
+void madtty_keypress_sequence(madtty_t *, const char *seq);
 void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask);
 void madtty_dirty(madtty_t *t);
 void madtty_draw(madtty_t *, WINDOW *win, int startrow, int startcol);

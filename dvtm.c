@@ -995,10 +995,25 @@ parse_args(int argc, char *argv[]) {
 void
 keypress(int code) {
 	Client *c;
+	unsigned int len = 1;
+	char buf[8] = { '\e' };
+
+	if (code == '\e') {
+		/* pass characters following escape to the underlying app */
+		nodelay(stdscr, TRUE);
+		for (int t; len < sizeof(buf) - 1 && (t = getch()) != ERR; len++)
+			buf[len] = t;
+		buf[len] = '\0';
+		nodelay(stdscr, FALSE);
+	}
 
 	for (c = runinall ? clients : sel; c; c = c->next) {
-		if (!c->minimized || isarrange(fullscreen))
-			madtty_keypress(c->term, code);
+		if (!c->minimized || isarrange(fullscreen)) {
+			if (code == '\e')
+				madtty_keypress_sequence(c->term, buf);
+			else
+				madtty_keypress(c->term, code);
+		}
 		if (!runinall)
 			break;
 	}
