@@ -71,9 +71,7 @@ Key keys[] = {
 	{ MOD, 'h',       { setmwfact,      { "-0.05" }                 } },
 	{ MOD, 'l',       { setmwfact,      { "+0.05" }                 } },
 	{ MOD, '.',       { toggleminimize, { NULL }                    } },
-#ifdef CONFIG_STATUSBAR
 	{ MOD, 's',       { togglebar,      { NULL }                    } },
-#endif
 #ifdef CONFIG_MOUSE
 	{ MOD, 'M',       { mouse_toggle,   { NULL }                    } },
 #endif

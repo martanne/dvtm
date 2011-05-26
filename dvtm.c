@@ -103,9 +103,7 @@ typedef struct {
 } Cmd;
 #endif
 
-#ifdef CONFIG_STATUSBAR
 enum { BarTop, BarBot, BarOff };
-#endif
 
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define sstrlen(str) (sizeof(str) - 1)
@@ -138,10 +136,8 @@ static void zoom(const char *args[]);
 static void lock(const char *key[]);
 static void togglerunall(const char *args[]);
 
-#ifdef CONFIG_STATUSBAR
 enum { ALIGN_LEFT, ALIGN_RIGHT };
 static void togglebar(const char *args[]);
-#endif
 
 #ifdef CONFIG_MOUSE
 static void mouse_focus(const char *args[]);
@@ -186,9 +182,7 @@ static bool runinall = false;
 # include "cmdfifo.c"
 #endif
 
-#ifdef CONFIG_STATUSBAR
 # include "statusbar.c"
-#endif
 
 static void
 eprint(const char *errstr, ...) {
@@ -846,10 +840,8 @@ resize_screen() {
 
 	waw = width;
 	wah = height;
-#ifdef CONFIG_STATUSBAR
 	updatebarpos();
 	drawbar();
-#endif
 	arrange();
 }
 
@@ -883,10 +875,8 @@ setup() {
 static void
 cleanup() {
 	endwin();
-#ifdef CONFIG_STATUSBAR
 	if (statusfd > 0)
 		close(statusfd);
-#endif
 #ifdef CONFIG_CMDFIFO
 	if (cmdfd > 0)
 		close(cmdfd);
@@ -905,9 +895,7 @@ static void
 usage() {
 	cleanup();
 	eprint("usage: dvtm [-v] [-m mod] [-d escdelay] [-h n] "
-#ifdef CONFIG_STATUSBAR
 		"[-s status-fifo] "
-#endif
 #ifdef CONFIG_CMDFIFO
 		"[-c cmd-fifo] "
 #endif
@@ -973,12 +961,10 @@ parse_args(int argc, char *argv[]) {
 			case 'h':
 				scroll_buf_size = atoi(argv[++arg]);
 				break;
-#ifdef CONFIG_STATUSBAR
 			case 's':
 				statusfd = open_or_create_fifo(argv[++arg]);
 				updatebarpos();
 				break;
-#endif
 #ifdef CONFIG_CMDFIFO
 			case 'c':
 				cmdfd = open_or_create_fifo(argv[++arg]);
@@ -1046,12 +1032,11 @@ main(int argc, char *argv[]) {
 			nfds = cmdfd;
 		}
 #endif
-#ifdef CONFIG_STATUSBAR
 		if (statusfd != -1) {
 			FD_SET(statusfd, &rd);
 			nfds = max(nfds, statusfd);
 		}
-#endif
+
 		for (c = clients; c; ) {
 			if (c->died) {
 				t = c->next;
@@ -1105,10 +1090,8 @@ main(int argc, char *argv[]) {
 		if (cmdfd != -1 && FD_ISSET(cmdfd, &rd))
 			handle_cmdfifo();
 #endif
-#ifdef CONFIG_STATUSBAR
 		if (statusfd != -1 && FD_ISSET(statusfd, &rd))
 			handle_statusbar();
-#endif
 
 		for (c = clients; c; ) {
 			if (FD_ISSET(c->pty, &rd)) {
