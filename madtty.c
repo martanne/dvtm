@@ -926,61 +926,30 @@ static void is_utf8_locale(void)
     is_utf8 = !strcmp(cset, "UTF-8");
 }
 
-/* vt100 special graphics and line drawing
- * 5f-7e standard vt100
- * 40-5e rxvt extension for extra curses acs chars
- */
-static uint16_t const vt100_utf8[62] = {
-            0x2191, 0x2193, 0x2192, 0x2190, 0x2588, 0x259a, 0x2603, // 41-47
-         0,      0,      0,      0,      0,      0,      0,      0, // 48-4f
-         0,      0,      0,      0,      0,      0,      0,      0, // 50-57
-         0,      0,      0,      0,      0,      0,      0, 0x0020, // 58-5f
-    0x25c6, 0x2592, 0x2409, 0x240c, 0x240d, 0x240a, 0x00b0, 0x00b1, // 60-67
-    0x2424, 0x240b, 0x2518, 0x2510, 0x250c, 0x2514, 0x253c, 0x23ba, // 68-6f
-    0x23bb, 0x2500, 0x23bc, 0x23bd, 0x251c, 0x2524, 0x2534, 0x252c, // 70-77
-    0x2502, 0x2264, 0x2265, 0x03c0, 0x2260, 0x00a3, 0x00b7,         // 78-7e
-};
-
-static uint32_t vt100[62];
-
-static void init_vt100_graphics(void)
+static wchar_t get_vt100_graphic(char c)
 {
-    vt100['l' - 0x41] = ACS_ULCORNER;
-    vt100['m' - 0x41] = ACS_LLCORNER;
-    vt100['k' - 0x41] = ACS_URCORNER;
-    vt100['j' - 0x41] = ACS_LRCORNER;
-    vt100['u' - 0x41] = ACS_RTEE;
-    vt100['t' - 0x41] = ACS_LTEE;
-    vt100['v' - 0x41] = ACS_TTEE;
-    vt100['w' - 0x41] = ACS_BTEE;
-    vt100['q' - 0x41] = ACS_HLINE;
-    vt100['x' - 0x41] = ACS_VLINE;
-    vt100['n' - 0x41] = ACS_PLUS;
-    vt100['o' - 0x41] = ACS_S1;
-    vt100['s' - 0x41] = ACS_S9;
-    vt100['`' - 0x41] = ACS_DIAMOND;
-    vt100['a' - 0x41] = ACS_CKBOARD;
-    vt100['f' - 0x41] = ACS_DEGREE;
-    vt100['g' - 0x41] = ACS_PLMINUS;
-    vt100['~' - 0x41] = ACS_BULLET;
-#if 0 /* out of bounds */
-    vt100[',' - 0x41] = ACS_LARROW;
-    vt100['+' - 0x41] = ACS_RARROW;
-    vt100['.' - 0x41] = ACS_DARROW;
-    vt100['-' - 0x41] = ACS_UARROW;
-    vt100['0' - 0x41] = ACS_BLOCK;
-#endif
-    vt100['h' - 0x41] = ACS_BOARD;
-    vt100['i' - 0x41] = ACS_LANTERN;
-    /* these defaults were invented for ncurses */
-    vt100['p' - 0x41] = ACS_S3;
-    vt100['r' - 0x41] = ACS_S7;
-    vt100['y' - 0x41] = ACS_LEQUAL;
-    vt100['z' - 0x41] = ACS_GEQUAL;
-    vt100['{' - 0x41] = ACS_PI;
-    vt100['|' - 0x41] = ACS_NEQUAL;
-    vt100['}' - 0x41] = ACS_STERLING;
-    is_utf8_locale();
+	static char vt100_acs[]="`afgjklmnopqrstuvwxyz{|}~";
+
+	/*
+	 * 5f-7e standard vt100
+	 * 40-5e rxvt extension for extra curses acs chars
+	 */
+	static uint16_t const vt100_utf8[62] = {
+		        0x2191, 0x2193, 0x2192, 0x2190, 0x2588, 0x259a, 0x2603, // 41-47
+		     0,      0,      0,      0,      0,      0,      0,      0, // 48-4f
+		     0,      0,      0,      0,      0,      0,      0,      0, // 50-57
+		     0,      0,      0,      0,      0,      0,      0, 0x0020, // 58-5f
+		0x25c6, 0x2592, 0x2409, 0x240c, 0x240d, 0x240a, 0x00b0, 0x00b1, // 60-67
+		0x2424, 0x240b, 0x2518, 0x2510, 0x250c, 0x2514, 0x253c, 0x23ba, // 68-6f
+		0x23bb, 0x2500, 0x23bc, 0x23bd, 0x251c, 0x2524, 0x2534, 0x252c, // 70-77
+		0x2502, 0x2264, 0x2265, 0x03c0, 0x2260, 0x00a3, 0x00b7,         // 78-7e
+	};
+
+	if (is_utf8)
+		return vt100_utf8[c - 0x41];
+	else if (strchr(vt100_acs, c))
+		return NCURSES_ACS(c);
+	return '\0';
 }
 
 static void madtty_putc(madtty_t *t, wchar_t wc)
@@ -1007,7 +976,7 @@ static void madtty_putc(madtty_t *t, wchar_t wc)
 
         if (t->graphmode) {
             if (wc >= 0x41 && wc <= 0x7e) {
-                wchar_t gc = is_utf8 ? vt100_utf8[wc - 0x41] : vt100[wc - 0x41];
+                wchar_t gc = get_vt100_graphic(wc);
                 if (gc)
                     wc = gc;
             }
@@ -1556,7 +1525,7 @@ static void init_colors(void)
 void madtty_init(void)
 {
     init_colors();
-    init_vt100_graphics();
+    is_utf8_locale();
 }
 
 void madtty_set_handler(madtty_t *t, madtty_handler_t handler)
