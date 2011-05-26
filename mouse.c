@@ -1,5 +1,5 @@
 static Client *msel = NULL;
-static bool mouse_events_enabled = true;
+static bool mouse_events_enabled = ENABLE_MOUSE;
 
 static void
 mouse_focus(const char *args[]) {
@@ -60,11 +60,9 @@ handle_mouse() {
 
 	madtty_mouse(msel->term, event.x - msel->x, event.y - msel->y, event.bstate);
 
-	if (mouse_events_enabled) {
-		for (i = 0; i < countof(buttons); i++) {
-			if (event.bstate & buttons[i].mask)
-				buttons[i].action.cmd(buttons[i].action.args);
-		}
+	for (i = 0; i < countof(buttons); i++) {
+		if (event.bstate & buttons[i].mask)
+			buttons[i].action.cmd(buttons[i].action.args);
 	}
 
 	msel = NULL;
@@ -72,13 +70,18 @@ handle_mouse() {
 
 static void
 mouse_setup() {
-	mmask_t mask = BUTTON1_CLICKED | BUTTON2_CLICKED;
-	for (unsigned int i = 0; i < countof(buttons); i++)
-		mask |= buttons[i].mask;
+	mmask_t mask = 0;
+
+	if (mouse_events_enabled) {
+		mask = BUTTON1_CLICKED | BUTTON2_CLICKED;
+		for (unsigned int i = 0; i < countof(buttons); i++)
+			mask |= buttons[i].mask;
+	}
 	mousemask(mask, NULL);
 }
 
 static void
 mouse_toggle() {
 	mouse_events_enabled = !mouse_events_enabled;
+	mouse_setup();
 }

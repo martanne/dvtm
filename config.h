@@ -130,6 +130,8 @@ static const ColorRule colorrules[] = {
  * REPORT_MOUSE_POSITION    report mouse movement
  */
 
+#define ENABLE_MOUSE true /* whether to enable mouse events by default */
+
 Button buttons[] = {
 	{ BUTTON1_CLICKED,        { mouse_focus,      { NULL  } } },
 	{ BUTTON1_DOUBLE_CLICKED, { mouse_fullscreen, { "[ ]" } } },
