@@ -1204,27 +1204,6 @@ usage() {
 	exit(EXIT_FAILURE);
 }
 
-/* glibc has a non-standard realpath(3) implementation which allocates
- * the destination buffer, other C libraries may have a broken implementation
- * which expect an already allocated destination buffer.
- */
-
-#ifndef __GLIBC__
-# include <limits.h>
-# ifndef PATH_MAX
-#  define PATH_MAX 1024
-# endif
-#endif
-
-static char *get_realpath(const char *path) {
-#ifdef __GLIBC__
-	return realpath(path, NULL);
-#else
-	static char buf[PATH_MAX];
-	return realpath(path, buf);
-#endif
-}
-
 static bool
 parse_args(int argc, char *argv[]) {
 	int arg;
@@ -1273,7 +1252,7 @@ parse_args(int argc, char *argv[]) {
 			case 'c': {
 				const char *fifo;
 				cmdfifo.fd = open_or_create_fifo(argv[++arg], &cmdfifo.file);
-				if (!(fifo = get_realpath(argv[arg])))
+				if (!(fifo = realpath(argv[arg], NULL)))
 					error("%s\n", strerror(errno));
 				setenv("DVTM_CMD_FIFO", fifo, 1);
 				break;
