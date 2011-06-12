@@ -97,7 +97,16 @@ typedef struct {
 	Action action;
 } Cmd;
 
-enum { BarTop, BarBot, BarOff };
+enum BarPos { BarTop, BarBot, BarOff };
+enum { ALIGN_LEFT, ALIGN_RIGHT };
+
+typedef struct {
+	int fd;
+	char text[512];
+	int pos;
+	unsigned short int h;
+	unsigned short int y;
+} StatusBar;
 
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define sstrlen(str) (sizeof(str) - 1)
@@ -130,7 +139,6 @@ static void zoom(const char *args[]);
 static void lock(const char *key[]);
 static void togglerunall(const char *args[]);
 
-enum { ALIGN_LEFT, ALIGN_RIGHT };
 static void togglebar(const char *args[]);
 
 static void mouse_focus(const char *args[]);
@@ -160,6 +168,7 @@ extern double mwfact;
 static Client *sel = NULL;
 double mwfact = MWFACT;
 static Layout *layout = layouts;
+static StatusBar bar = { -1, "", BARPOS, 1, 0 };
 static const char *shell;
 static bool need_screen_resize;
 static int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
@@ -855,8 +864,8 @@ setup() {
 static void
 cleanup() {
 	endwin();
-	if (statusfd > 0)
-		close(statusfd);
+	if (bar.fd > 0)
+		close(bar.fd);
 	if (cmdfd > 0)
 		close(cmdfd);
 	if (cmdpath)
@@ -938,7 +947,7 @@ parse_args(int argc, char *argv[]) {
 				scroll_buf_size = atoi(argv[++arg]);
 				break;
 			case 's':
-				statusfd = open_or_create_fifo(argv[++arg]);
+				bar.fd = open_or_create_fifo(argv[++arg]);
 				updatebarpos();
 				break;
 			case 'c':
@@ -1005,9 +1014,9 @@ main(int argc, char *argv[]) {
 			nfds = cmdfd;
 		}
 
-		if (statusfd != -1) {
-			FD_SET(statusfd, &rd);
-			nfds = max(nfds, statusfd);
+		if (bar.fd != -1) {
+			FD_SET(bar.fd, &rd);
+			nfds = max(nfds, bar.fd);
 		}
 
 		for (c = clients; c; ) {
@@ -1059,7 +1068,7 @@ main(int argc, char *argv[]) {
 		if (cmdfd != -1 && FD_ISSET(cmdfd, &rd))
 			handle_cmdfifo();
 
-		if (statusfd != -1 && FD_ISSET(statusfd, &rd))
+		if (bar.fd != -1 && FD_ISSET(bar.fd, &rd))
 			handle_statusbar();
 
 		for (c = clients; c; ) {
