@@ -36,9 +36,9 @@
  * the SEPARATOR, %d stands for the window number */
 #define TITLE "[%s%s#%d]"
 /* master width factor [0.1 .. 0.9] */
-#define MWFACT  0.5
+#define MFACT 0.5
 /* scroll back buffer size in lines */
-#define SCROLL_BUF_SIZE 500
+#define SCROLL_HISTORY 500
 
 #include "tile.c"
 #include "grid.c"
@@ -68,8 +68,8 @@ Key keys[] = {
 	{ MOD, 'b',       { setlayout,      { "TTT" }                   } },
 	{ MOD, 'm',       { setlayout,      { "[ ]" }                   } },
 	{ MOD, ' ',       { setlayout,      { NULL }                    } },
-	{ MOD, 'h',       { setmwfact,      { "-0.05" }                 } },
-	{ MOD, 'l',       { setmwfact,      { "+0.05" }                 } },
+	{ MOD, 'h',       { setmfact,       { "-0.05" }                 } },
+	{ MOD, 'l',       { setmfact,       { "+0.05" }                 } },
 	{ MOD, '.',       { toggleminimize, { NULL }                    } },
 	{ MOD, 's',       { togglebar,      { NULL }                    } },
 	{ MOD, 'M',       { mouse_toggle,   { NULL }                    } },

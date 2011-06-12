@@ -12,7 +12,7 @@ bstack(void) {
 	else if(n - 1 == m)
 		mh = wah - m;
 	else
-		mh = mwfact * (wah - m);
+		mh = screen.mfact * (wah - m);
 	/* true if there are at least 2 non minimized clients */
 	if(n - 1 > m)
 		tw = waw / (n - m - 1);

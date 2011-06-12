@@ -3,7 +3,7 @@ updatebarpos(void) {
 	bar.y = 0;
 	wax = 0;
 	way = 0;
-	wah = height;
+	wah = screen.h;
 	if (bar.fd == -1)
 		return;
 	if (bar.pos == BarTop) {
@@ -18,7 +18,7 @@ updatebarpos(void) {
 static void
 drawbar() {
 	wchar_t wbuf[sizeof bar.text];
-	int w, maxwidth = width - 2;
+	int w, maxwidth = screen.w - 2;
 	if (bar.pos == BarOff || !bar.text[0])
 		return;
 	curs_set(0);
@@ -38,7 +38,7 @@ drawbar() {
 		for (; w < maxwidth; w++)
 			addch(' ');
 	}
-	mvaddch(bar.y, width - 1, ']');
+	mvaddch(bar.y, screen.w - 1, ']');
 	attrset(NORMAL_ATTR);
 	if (sel)
 		curs_set(madtty_cursor(sel->term));

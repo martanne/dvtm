@@ -8,7 +8,7 @@ tile(void) {
 			m++;
 	nm = n - m;
 	/* window geoms */
-	mw = (n == 1 || n - 1 == m) ? waw : mwfact * waw;
+	mw = (n == 1 || n - 1 == m) ? waw : screen.mfact * waw;
 	/* check if there are at least 2 non minimized clients */
 	if(n - 1 > m)
 		th = (wah - m) / (nm - 1);

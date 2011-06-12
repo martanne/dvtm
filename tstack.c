@@ -8,7 +8,7 @@ tstack(void) {
 			m++;
 
 	/* relative height */
-	mh = (wah - m) * (n == 1 || n - 1 == m ? 1 : mwfact);
+	mh = (wah - m) * (n == 1 || n - 1 == m ? 1 : screen.mfact);
 
 	/* true if there are at least 2 non minimized clients */
 	if(n - 1 > m)

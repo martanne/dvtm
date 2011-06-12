@@ -35,6 +35,14 @@
 #include "madtty.h"
 
 typedef struct {
+	double mfact;
+	int history;
+	int w;
+	int h;
+	bool need_resize;
+} Screen;
+
+typedef struct {
 	const char *symbol;
 	void (*arrange)(void);
 } Layout;
@@ -137,7 +145,7 @@ static void focusprev(const char *args[]);
 static void focusprevnm(const char *args[]);
 static void togglebell(const char *key[]);
 static void toggleminimize(const char *args[]);
-static void setmwfact(const char *args[]);
+static void setmfact(const char *args[]);
 static void setlayout(const char *args[]);
 static void scrollback(const char *args[]);
 static void redraw(const char *args[]);
@@ -167,18 +175,16 @@ static void keypress(int code);
 
 static unsigned int waw, wah, wax, way;
 static Client *clients = NULL;
-extern double mwfact;
+extern Screen screen;
 
 #include "config.h"
 
+Screen screen = { MFACT, SCROLL_HISTORY };
 static Client *sel = NULL;
-double mwfact = MWFACT;
 static Layout *layout = layouts;
 static StatusBar bar = { -1, "", BARPOS, 1, 0 };
 static CmdFifo cmdfifo = { -1 };
 static const char *shell;
-static bool need_screen_resize;
-static int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
 static bool running = true;
 static bool runinall = false;
 
@@ -432,23 +438,23 @@ setlayout(const char *args[]) {
 }
 
 static void
-setmwfact(const char *args[]) {
+setmfact(const char *args[]) {
 	double delta;
 
 	if (isarrange(fullscreen) || isarrange(grid))
 		return;
-	/* arg handling, manipulate mwfact */
+	/* arg handling, manipulate mfact */
 	if (args[0] == NULL)
-		mwfact = MWFACT;
+		screen.mfact = MFACT;
 	else if (1 == sscanf(args[0], "%lf", &delta)) {
 		if (args[0][0] == '+' || args[0][0] == '-')
-			mwfact += delta;
+			screen.mfact += delta;
 		else
-			mwfact = delta;
-		if (mwfact < 0.1)
-			mwfact = 0.1;
-		else if (mwfact > 0.9)
-			mwfact = 0.9;
+			screen.mfact = delta;
+		if (screen.mfact < 0.1)
+			screen.mfact = 0.1;
+		else if (screen.mfact > 0.9)
+			screen.mfact = 0.9;
 	}
 	arrange();
 }
@@ -670,15 +676,15 @@ create(const char *args[]) {
 	};
 
 	c->window = newwin(wah, waw, way, wax);
-	c->term = madtty_create(height - 1, width, scroll_buf_size);
+	c->term = madtty_create(screen.h - 1, screen.w, screen.history);
 	c->cmd = cmd;
 	if (args && args[1])
 		strncpy(c->title, args[1], sizeof(c->title));
 	c->pid = madtty_forkpty(c->term, "/bin/sh", pargs, env, &c->pty);
 	madtty_set_data(c->term, c);
 	madtty_set_handler(c->term, title_escape_seq_handler);
-	c->w = width;
-	c->h = height;
+	c->w = screen.w;
+	c->h = screen.h;
 	c->x = wax;
 	c->y = way;
 	c->order = 0;
@@ -807,7 +813,7 @@ sigchld_handler(int sig) {
 static void
 sigwinch_handler(int sig) {
 	signal(SIGWINCH, sigwinch_handler);
-	need_screen_resize = true;
+	screen.need_resize = true;
 }
 
 static void
@@ -822,22 +828,22 @@ resize_screen() {
 	if (ioctl(0, TIOCGWINSZ, &ws) == -1)
 		return;
 
-	width = ws.ws_col;
-	height = ws.ws_row;
+	screen.w = ws.ws_col;
+	screen.h = ws.ws_row;
 
-	debug("resize_screen(), w: %d h: %d\n", width, height);
+	debug("resize_screen(), w: %d h: %d\n", screen.w, screen.h);
 
 #if defined(__OpenBSD__) || defined(__NetBSD__)
-	resizeterm(height, width);
+	resizeterm(screen.h, screen.w);
 #else
-	resize_term(height, width);
+	resize_term(screen.h, screen.w);
 #endif
-	wresize(stdscr, height, width);
+	wresize(stdscr, screen.h, screen.w);
 	wrefresh(curscr);
 	refresh();
 
-	waw = width;
-	wah = height;
+	waw = screen.w;
+	wah = screen.h;
 	updatebarpos();
 	drawbar();
 	arrange();
@@ -861,7 +867,7 @@ setup() {
 	mouse_setup();
 	raw();
 	madtty_init();
-	getmaxyx(stdscr, height, width);
+	getmaxyx(stdscr, screen.h, screen.w);
 	resize_screen();
 	signal(SIGWINCH, sigwinch_handler);
 	signal(SIGCHLD, sigchld_handler);
@@ -951,7 +957,7 @@ parse_args(int argc, char *argv[]) {
 					ESCDELAY = 1000;
 				break;
 			case 'h':
-				scroll_buf_size = atoi(argv[++arg]);
+				screen.history = atoi(argv[++arg]);
 				break;
 			case 's':
 				bar.fd = open_or_create_fifo(argv[++arg]);
@@ -1008,9 +1014,9 @@ main(int argc, char *argv[]) {
 		int r, nfds = 0;
 		fd_set rd;
 
-		if (need_screen_resize) {
+		if (screen.need_resize) {
 			resize_screen();
-			need_screen_resize = false;
+			screen.need_resize = false;
 		}
 
 		FD_ZERO(&rd);
