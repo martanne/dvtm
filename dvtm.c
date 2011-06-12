@@ -21,7 +21,7 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <ncurses.h>
+#include <curses.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <signal.h>

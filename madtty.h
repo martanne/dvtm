@@ -23,7 +23,7 @@
 #ifndef MADTTY_MADTTY_H
 #define MADTTY_MADTTY_H
 
-#include <ncurses.h>
+#include <curses.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
