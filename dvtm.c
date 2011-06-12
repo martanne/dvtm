@@ -108,6 +108,12 @@ typedef struct {
 	unsigned short int y;
 } StatusBar;
 
+typedef struct {
+	int fd;
+	const char *path;
+	unsigned short int id;
+} CmdFifo;
+
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define sstrlen(str) (sizeof(str) - 1)
 #define max(x, y) ((x) > (y) ? (x) : (y))
@@ -169,6 +175,7 @@ static Client *sel = NULL;
 double mwfact = MWFACT;
 static Layout *layout = layouts;
 static StatusBar bar = { -1, "", BARPOS, 1, 0 };
+static CmdFifo cmdfifo = { -1 };
 static const char *shell;
 static bool need_screen_resize;
 static int width, height, scroll_buf_size = SCROLL_BUF_SIZE;
@@ -653,7 +660,7 @@ create(const char *args[]) {
 		return;
 	const char *cmd = (args && args[0]) ? args[0] : shell;
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
-	c->id = ++client_id;
+	c->id = ++cmdfifo.id;
 	char buf[8];
 	snprintf(buf, sizeof buf, "%d", c->id);
 	const char *env[] = {
@@ -866,10 +873,10 @@ cleanup() {
 	endwin();
 	if (bar.fd > 0)
 		close(bar.fd);
-	if (cmdfd > 0)
-		close(cmdfd);
-	if (cmdpath)
-		unlink(cmdpath);
+	if (cmdfifo.fd > 0)
+		close(cmdfifo.fd);
+	if (cmdfifo.path)
+		unlink(cmdfifo.path);
 }
 
 static void
@@ -951,10 +958,10 @@ parse_args(int argc, char *argv[]) {
 				updatebarpos();
 				break;
 			case 'c':
-				cmdfd = open_or_create_fifo(argv[++arg]);
-				if (!(cmdpath = get_realpath(argv[arg])))
+				cmdfifo.fd = open_or_create_fifo(argv[++arg]);
+				if (!(cmdfifo.path = get_realpath(argv[arg])))
 					error("%s\n", strerror(errno));
-				setenv("DVTM_CMD_FIFO", cmdpath, 1);
+				setenv("DVTM_CMD_FIFO", cmdfifo.path, 1);
 				break;
 			default:
 				usage();
@@ -1009,9 +1016,9 @@ main(int argc, char *argv[]) {
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
 
-		if (cmdfd != -1) {
-			FD_SET(cmdfd, &rd);
-			nfds = cmdfd;
+		if (cmdfifo.fd != -1) {
+			FD_SET(cmdfifo.fd, &rd);
+			nfds = cmdfifo.fd;
 		}
 
 		if (bar.fd != -1) {
@@ -1065,7 +1072,7 @@ main(int argc, char *argv[]) {
 				continue;
 		}
 
-		if (cmdfd != -1 && FD_ISSET(cmdfd, &rd))
+		if (cmdfifo.fd != -1 && FD_ISSET(cmdfifo.fd, &rd))
 			handle_cmdfifo();
 
 		if (bar.fd != -1 && FD_ISSET(bar.fd, &rd))

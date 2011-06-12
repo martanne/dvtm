@@ -1,7 +1,3 @@
-static int cmdfd = -1;
-static unsigned short int client_id = 0;
-static const char *cmdpath = NULL;
-
 /* glibc has a non-standard realpath(3) implementation which allocates
  * the destination buffer, other C libraries may have a broken implementation
  * which expect an already allocated destination buffer.
@@ -37,10 +33,10 @@ handle_cmdfifo() {
 	int r;
 	char *p, *s, cmdbuf[512], c;
 	Cmd *cmd;
-	switch (r = read(cmdfd, cmdbuf, sizeof cmdbuf - 1)) {
+	switch (r = read(cmdfifo.fd, cmdbuf, sizeof cmdbuf - 1)) {
 		case -1:
 		case 0:
-			cmdfd = -1;
+			cmdfifo.fd = -1;
 			break;
 		default:
 			cmdbuf[r] = '\0';
