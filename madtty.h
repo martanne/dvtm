@@ -31,6 +31,10 @@
 #include <unistd.h>
 #include <wchar.h>
 
+#ifndef NCURSES_MOUSE_VERSION
+#define mmask_t unsigned long
+#endif
+
 enum {
     /* means escape sequence was handled */
     MADTTY_HANDLER_OK,

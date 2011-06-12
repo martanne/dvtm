@@ -50,6 +50,11 @@
 # define NCURSES_ATTR_SHIFT 8
 #endif
 
+/* hack for BSD curses */
+#ifndef NCURSES_ACS
+# define NCURSES_ACS(c) (_acs_map[(unsigned char)(c)])
+#endif
+
 #define IS_CONTROL(ch) !((ch) & 0xffffff60UL)
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #define COLOR_PALETTE_START 1
@@ -1421,6 +1426,7 @@ void madtty_keypress(madtty_t *t, int keycode)
 
 void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask)
 {
+#ifdef NCURSES_MOUSE_VERSION
     char seq[6] = { '\e', '[', 'M' }, state = 0, button = 0;
 
     if (!t->mousetrack)
@@ -1454,6 +1460,7 @@ void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask)
         seq[3] = 32 + button + state;
         madtty_write(t, seq, sizeof seq);
     }
+#endif /* NCURSES_MOUSE_VERSION */
 }
 
 static unsigned color_hash(short f, short b)
