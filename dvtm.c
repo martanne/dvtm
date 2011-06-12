@@ -35,6 +35,10 @@
 #endif
 #include "madtty.h"
 
+#ifdef PDCURSES
+int ESCDELAY;
+#endif
+
 typedef struct {
 	double mfact;
 	int history;

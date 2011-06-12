@@ -50,9 +50,12 @@
 # define NCURSES_ATTR_SHIFT 8
 #endif
 
-/* hack for BSD curses */
 #ifndef NCURSES_ACS
-# define NCURSES_ACS(c) (_acs_map[(unsigned char)(c)])
+# ifdef PDCURSES
+#  define NCURSES_ACS(c) (acs_map[(unsigned char)(c)])
+# else /* BSD curses */
+#  define NCURSES_ACS(c) (_acs_map[(unsigned char)(c)])
+# endif
 #endif
 
 #define IS_CONTROL(ch) !((ch) & 0xffffff60UL)
