@@ -22,7 +22,7 @@
 #define NORMAL_FG       -1
 #define NORMAL_BG       -1
 /* status bar (command line option -s) position */
-#define BARPOS		BarTop /* BarBot, BarOff */
+#define BAR_POS		BAR_TOP /* BAR_BOTTOM, BAR_OFF */
 /* curses attributes for the status bar */
 #define BAR_ATTR        A_NORMAL
 #define BAR_FG          BLUE
