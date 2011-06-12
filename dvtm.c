@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <ncurses.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <signal.h>
 #include <locale.h>
 #include <string.h>
