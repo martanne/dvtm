@@ -1,6 +1,3 @@
-static Client *msel = NULL;
-static bool mouse_events_enabled = ENABLE_MOUSE;
-
 static void
 mouse_focus(const char *args[]) {
 	focus(msel);
@@ -78,10 +75,4 @@ mouse_setup() {
 			mask |= buttons[i].mask;
 	}
 	mousemask(mask, NULL);
-}
-
-static void
-mouse_toggle() {
-	mouse_events_enabled = !mouse_events_enabled;
-	mouse_setup();
 }

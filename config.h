@@ -72,7 +72,7 @@ Key keys[] = {
 	{ MOD, 'l',       { setmfact,       { "+0.05" }                 } },
 	{ MOD, '.',       { toggleminimize, { NULL }                    } },
 	{ MOD, 's',       { togglebar,      { NULL }                    } },
-	{ MOD, 'M',       { mouse_toggle,   { NULL }                    } },
+	{ MOD, 'M',       { togglemouse,    { NULL }                    } },
 	{ MOD, '\n',      { zoom ,          { NULL }                    } },
 	{ MOD, '1',       { focusn,         { "1" }                     } },
 	{ MOD, '2',       { focusn,         { "2" }                     } },
@@ -130,14 +130,20 @@ static const ColorRule colorrules[] = {
  * REPORT_MOUSE_POSITION    report mouse movement
  */
 
+#ifdef NCURSES_MOUSE_VERSION
+# define CONFIG_MOUSE /* compile in mouse support if we build against ncurses */
+#endif
+
 #define ENABLE_MOUSE true /* whether to enable mouse events by default */
 
+#ifdef CONFIG_MOUSE
 Button buttons[] = {
 	{ BUTTON1_CLICKED,        { mouse_focus,      { NULL  } } },
 	{ BUTTON1_DOUBLE_CLICKED, { mouse_fullscreen, { "[ ]" } } },
 	{ BUTTON2_CLICKED,        { mouse_zoom,       { NULL  } } },
 	{ BUTTON3_CLICKED,        { mouse_minimize,   { NULL  } } },
 };
+#endif /* CONFIG_MOUSE */
 
 Cmd commands[] = {
 	{ "create", { create,	{ NULL } } },

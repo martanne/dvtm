@@ -156,12 +156,12 @@ static void lock(const char *key[]);
 static void togglerunall(const char *args[]);
 
 static void togglebar(const char *args[]);
+static void togglemouse(const char *args[]);
 
 static void mouse_focus(const char *args[]);
 static void mouse_fullscreen(const char *args[]);
 static void mouse_minimize(const char *args[]);
 static void mouse_zoom(const char *args[]);
-static void mouse_toggle();
 
 static void clear_workspace();
 static void draw(Client *c);
@@ -183,6 +183,8 @@ extern Screen screen;
 
 Screen screen = { MFACT, SCROLL_HISTORY };
 static Client *sel = NULL;
+static Client *msel = NULL;
+static bool mouse_events_enabled = ENABLE_MOUSE;
 static Layout *layout = layouts;
 static StatusBar bar = { -1, BARPOS, 1 };
 static CmdFifo cmdfifo = { -1 };
@@ -610,6 +612,12 @@ lock(const char *args[]) {
 	}
 
 	arrange();
+}
+
+static void
+togglemouse(const char *args[]) {
+	mouse_events_enabled = !mouse_events_enabled;
+	mouse_setup();
 }
 
 static void
