@@ -110,15 +110,16 @@ enum { ALIGN_LEFT, ALIGN_RIGHT };
 
 typedef struct {
 	int fd;
-	char text[512];
 	int pos;
 	unsigned short int h;
 	unsigned short int y;
+	char text[512];
+	const char *file;
 } StatusBar;
 
 typedef struct {
 	int fd;
-	const char *path;
+	const char *file;
 	unsigned short int id;
 } CmdFifo;
 
@@ -182,7 +183,7 @@ extern Screen screen;
 Screen screen = { MFACT, SCROLL_HISTORY };
 static Client *sel = NULL;
 static Layout *layout = layouts;
-static StatusBar bar = { -1, "", BARPOS, 1, 0 };
+static StatusBar bar = { -1, BARPOS, 1 };
 static CmdFifo cmdfifo = { -1 };
 static const char *shell;
 static bool running = true;
@@ -879,10 +880,12 @@ cleanup() {
 	endwin();
 	if (bar.fd > 0)
 		close(bar.fd);
+	if (bar.file)
+		unlink(bar.file);
 	if (cmdfifo.fd > 0)
 		close(cmdfifo.fd);
-	if (cmdfifo.path)
-		unlink(cmdfifo.path);
+	if (cmdfifo.file)
+		unlink(cmdfifo.file);
 }
 
 static void
@@ -902,15 +905,20 @@ usage() {
 }
 
 static int
-open_or_create_fifo(const char *name) {
+open_or_create_fifo(const char *name, const char **name_created) {
 	struct stat info;
 	int fd;
-open:
-	if ((fd = open(name, O_RDWR|O_NONBLOCK)) == -1) {
-		if (errno == ENOENT && !mkfifo(name, S_IRUSR|S_IWUSR))
-			goto open;
-		error("%s\n", strerror(errno));
-	}
+
+	do {
+		if ((fd = open(name, O_RDWR|O_NONBLOCK)) == -1) {
+			if (errno == ENOENT && !mkfifo(name, S_IRUSR|S_IWUSR)) {
+				*name_created = name;
+				continue;
+			}
+			error("%s\n", strerror(errno));
+		}
+	} while (fd == -1);
+
 	if (fstat(fd, &info) == -1)
 		error("%s\n", strerror(errno));
 	if (!S_ISFIFO(info.st_mode))
@@ -960,15 +968,17 @@ parse_args(int argc, char *argv[]) {
 				screen.history = atoi(argv[++arg]);
 				break;
 			case 's':
-				bar.fd = open_or_create_fifo(argv[++arg]);
+				bar.fd = open_or_create_fifo(argv[++arg], &bar.file);
 				updatebarpos();
 				break;
-			case 'c':
-				cmdfifo.fd = open_or_create_fifo(argv[++arg]);
-				if (!(cmdfifo.path = get_realpath(argv[arg])))
+			case 'c': {
+				const char *fifo;
+				cmdfifo.fd = open_or_create_fifo(argv[++arg], &cmdfifo.file);
+				if (!(fifo = get_realpath(argv[arg])))
 					error("%s\n", strerror(errno));
-				setenv("DVTM_CMD_FIFO", cmdfifo.path, 1);
+				setenv("DVTM_CMD_FIFO", fifo, 1);
 				break;
+			}
 			default:
 				usage();
 		}
