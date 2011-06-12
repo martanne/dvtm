@@ -834,11 +834,7 @@ resize_screen() {
 
 	debug("resize_screen(), w: %d h: %d\n", screen.w, screen.h);
 
-#if defined(__OpenBSD__) || defined(__NetBSD__)
 	resizeterm(screen.h, screen.w);
-#else
-	resize_term(screen.h, screen.w);
-#endif
 	wresize(stdscr, screen.h, screen.w);
 	wrefresh(curscr);
 	refresh();
