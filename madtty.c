@@ -196,7 +196,7 @@ static char const * const keytable[KEY_MAX+1] = {
     [KEY_F(20)]     = "\e[34~",
 };
 
-static void madtty_process_nonprinting(madtty_t *t, wchar_t wc);
+static void process_nonprinting(madtty_t *t, wchar_t wc);
 static void send_curs(madtty_t *t);
 
 __attribute__((const)) static uint16_t build_attrs(unsigned curattrs)
@@ -646,7 +646,7 @@ static void es_interpret_csi(madtty_t *t)
     /* parse numeric parameters */
     for (p += (t->ebuf[1] == '?'); *p; p++) {
         if (IS_CONTROL(*p)) {
-            madtty_process_nonprinting(t, *p);
+            process_nonprinting(t, *p);
         } else if (*p == ';') {
             if (param_count >= (int)sizeof(csiparam))
                 return; /* too long! */
@@ -885,7 +885,7 @@ cancel:
     }
 }
 
-static void madtty_process_nonprinting(madtty_t *t, wchar_t wc)
+static void process_nonprinting(madtty_t *t, wchar_t wc)
 {
     switch (wc) {
       case C0_ESC:
@@ -960,7 +960,7 @@ static wchar_t get_vt100_graphic(char c)
 	return '\0';
 }
 
-static void madtty_putc(madtty_t *t, wchar_t wc)
+static void put_wc(madtty_t *t, wchar_t wc)
 {
     int width = 0;
 
@@ -978,7 +978,7 @@ static void madtty_putc(madtty_t *t, wchar_t wc)
             cancel_escape_sequence(t);
         }
     } else if (IS_CONTROL(wc)) {
-        madtty_process_nonprinting(t, wc);
+        process_nonprinting(t, wc);
     } else {
         t_row_t *tmp;
 
@@ -1068,7 +1068,7 @@ int madtty_process(madtty_t *t)
         }
 
         pos += len ? len : 1;
-        madtty_putc(t, wc);
+        put_wc(t, wc);
     }
 
     t->rlen -= pos;
