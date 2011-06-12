@@ -33,7 +33,7 @@
 #ifdef __CYGWIN__
 # include <termios.h>
 #endif
-#include "madtty.h"
+#include "vt.h"
 
 #ifdef PDCURSES
 int ESCDELAY;
@@ -55,7 +55,7 @@ typedef struct {
 typedef struct Client Client;
 struct Client {
 	WINDOW *window;
-	madtty_t *term;
+	Vt *term;
 	const char *cmd;
 	char title[256];
 	uint8_t order;
@@ -224,7 +224,7 @@ drawbar() {
 		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
-	wcolor_set(stdscr, madtty_color_get(BAR_FG, BAR_BG), NULL);
+	wcolor_set(stdscr, vt_color_get(BAR_FG, BAR_BG), NULL);
 	mvaddch(bar.y, 0, '[');
 	if (mbstowcs(wbuf, bar.text, sizeof bar.text) == (size_t)-1)
 		return;
@@ -242,7 +242,7 @@ drawbar() {
 	mvaddch(bar.y, screen.w - 1, ']');
 	attrset(NORMAL_ATTR);
 	if (sel)
-		curs_set(madtty_cursor(sel->term));
+		curs_set(vt_cursor(sel->term));
 	refresh();
 }
 
@@ -252,10 +252,10 @@ draw_border(Client *c) {
 	int x, y, o;
 	if (sel == c) {
 		wattrset(c->window, SELECTED_ATTR);
-		wcolor_set(c->window, madtty_color_get(SELECTED_FG, SELECTED_BG), NULL);
+		wcolor_set(c->window, vt_color_get(SELECTED_FG, SELECTED_BG), NULL);
 	} else {
 		wattrset(c->window, NORMAL_ATTR);
-		wcolor_set(c->window, madtty_color_get(NORMAL_FG, NORMAL_BG), NULL);
+		wcolor_set(c->window, vt_color_get(NORMAL_FG, NORMAL_BG), NULL);
 	}
 	getyx(c->window, y, x);
 	curs_set(0);
@@ -275,13 +275,13 @@ draw_border(Client *c) {
 		*s = t;
 	wmove(c->window, y, x);
 	if (!c->minimized)
-		curs_set(madtty_cursor(c->term));
+		curs_set(vt_cursor(c->term));
 }
 
 static void
 draw_content(Client *c) {
 	if (!c->minimized || isarrange(fullscreen)) {
-		madtty_draw(c->term, c->window, 1, 0);
+		vt_draw(c->term, c->window, 1, 0);
 		if (c != sel)
 			curs_set(0);
 	}
@@ -324,7 +324,7 @@ static void
 arrange() {
 	clear_workspace();
 	attrset(NORMAL_ATTR);
-	color_set(madtty_color_get(NORMAL_FG, NORMAL_BG), NULL);
+	color_set(vt_color_get(NORMAL_FG, NORMAL_BG), NULL);
 	layout->arrange();
 	wnoutrefresh(stdscr);
 	draw_all(true);
@@ -393,7 +393,7 @@ focus(Client *c) {
 }
 
 static void
-applycolorrules(madtty_t *term, char *title) {
+applycolorrules(Vt *term, char *title) {
 	unsigned int i;
 	unsigned attrs = A_NORMAL;
 	short fg = -1, bg = -1;
@@ -408,24 +408,24 @@ applycolorrules(madtty_t *term, char *title) {
 			break;
 		}
 	}
-	madtty_set_default_colors(term, attrs, fg, bg);
+	vt_set_default_colors(term, attrs, fg, bg);
 }
 
 static int
-title_escape_seq_handler(madtty_t *term, char *es) {
+title_escape_seq_handler(Vt *term, char *es) {
 	Client *c;
 	unsigned int l;
 	if (es[0] != ']' || (es[1] && (es[1] < '0' || es[1] > '9')) || (es[2] && es[2] != ';'))
-		return MADTTY_HANDLER_NOWAY;
+		return VT_HANDLER_NOWAY;
 	if ((l = strlen(es)) < 3 || es[l - 1] != '\07')
-		return MADTTY_HANDLER_NOTYET;
+		return VT_HANDLER_NOTYET;
 	es[l - 1] = '\0';
-	c = (Client *)madtty_get_data(term);
+	c = (Client *)vt_get_data(term);
 	strncpy(c->title, es + 3, sizeof(c->title));
 	draw_border(c);
 	debug("window title: %s\n", c->title);
 	applycolorrules(term, c->title);
-	return MADTTY_HANDLER_OK;
+	return VT_HANDLER_OK;
 }
 
 static void
@@ -452,7 +452,7 @@ resize_client(Client *c, int w, int h) {
 		c->w = w;
 		c->h = h;
 	}
-	madtty_resize(c->term, h - 1, w);
+	vt_resize(c->term, h - 1, w);
 }
 
 static void
@@ -602,9 +602,9 @@ keypress(int code) {
 	for (c = runinall ? clients : sel; c; c = c->next) {
 		if (!c->minimized || isarrange(fullscreen)) {
 			if (code == '\e')
-				madtty_write(c->term, buf, len);
+				vt_write(c->term, buf, len);
 			else
-				madtty_keypress(c->term, code);
+				vt_keypress(c->term, code);
 		}
 		if (!runinall)
 			break;
@@ -636,7 +636,7 @@ setup() {
 	keypad(stdscr, TRUE);
 	mouse_setup();
 	raw();
-	madtty_init();
+	vt_init();
 	getmaxyx(stdscr, screen.h, screen.w);
 	resize_screen();
 	signal(SIGWINCH, sigwinch_handler);
@@ -658,7 +658,7 @@ destroy(Client *c) {
 	}
 	werase(c->window);
 	wrefresh(c->window);
-	madtty_destroy(c->term);
+	vt_destroy(c->term);
 	delwin(c->window);
 	if (!clients && countof(actions)) {
 		if (!strcmp(c->cmd, shell))
@@ -701,13 +701,13 @@ create(const char *args[]) {
 	};
 
 	c->window = newwin(wah, waw, way, wax);
-	c->term = madtty_create(screen.h - 1, screen.w, screen.history);
+	c->term = vt_create(screen.h - 1, screen.w, screen.history);
 	c->cmd = cmd;
 	if (args && args[1])
 		strncpy(c->title, args[1], sizeof(c->title));
-	c->pid = madtty_forkpty(c->term, "/bin/sh", pargs, env, &c->pty);
-	madtty_set_data(c->term, c);
-	madtty_set_handler(c->term, title_escape_seq_handler);
+	c->pid = vt_forkpty(c->term, "/bin/sh", pargs, env, &c->pty);
+	vt_set_data(c->term, c);
+	vt_set_handler(c->term, title_escape_seq_handler);
 	c->w = screen.w;
 	c->h = screen.h;
 	c->x = wax;
@@ -857,9 +857,9 @@ scrollback(const char *args[]) {
 	if (!sel) return;
 
 	if (!args[0] || atoi(args[0]) < 0)
-		madtty_scroll(sel->term, -sel->h/2);
+		vt_scroll(sel->term, -sel->h/2);
 	else
-		madtty_scroll(sel->term,  sel->h/2);
+		vt_scroll(sel->term,  sel->h/2);
 
 	draw(sel);
 }
@@ -923,7 +923,7 @@ togglebar(const char *args[]) {
 
 static void
 togglebell(const char *args[]) {
-	madtty_togglebell(sel->term);
+	Vtogglebell(sel->term);
 }
 
 static void
@@ -959,7 +959,7 @@ toggleminimize(const char *args[]) {
 		for (c = clients; c && c->next && !c->next->minimized; c = c->next);
 		attachafter(m, c);
 	} else { /* window is no longer minimized, move it to the master area */
-		madtty_dirty(m->term);
+		vt_dirty(m->term);
 		detach(m);
 		attach(m);
 	}
@@ -1142,7 +1142,7 @@ handle_mouse() {
 
 	debug("mouse x:%d y:%d cx:%d cy:%d mask:%d\n", event.x, event.y, event.x - msel->x, event.y - msel->y, event.bstate);
 
-	madtty_mouse(msel->term, event.x - msel->x, event.y - msel->y, event.bstate);
+	vt_mouse(msel->term, event.x - msel->x, event.y - msel->y, event.bstate);
 
 	for (i = 0; i < countof(buttons); i++) {
 		if (event.bstate & buttons[i].mask)
@@ -1352,7 +1352,7 @@ main(int argc, char *argv[]) {
 
 		for (c = clients; c; ) {
 			if (FD_ISSET(c->pty, &rd)) {
-				if (madtty_process(c->term) < 0 && errno == EIO) {
+				if (vt_process(c->term) < 0 && errno == EIO) {
 					/* client probably terminated */
 					t = c->next;
 					destroy(c);

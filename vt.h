@@ -16,8 +16,8 @@
  * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef MADTTY_MADTTY_H
-#define MADTTY_MADTTY_H
+#ifndef VT_VT_H
+#define VT_VT_H
 
 #include <curses.h>
 #include <stdbool.h>
@@ -33,7 +33,7 @@
 
 enum {
     /* means escape sequence was handled */
-    MADTTY_HANDLER_OK,
+    VT_HANDLER_OK,
     /* means the escape sequence was not  recognized yet, but
      * there is hope that it still will once more characters
      * arrive (i.e. it is not yet complete).
@@ -42,42 +42,42 @@ enum {
      * and calling the handler as each character arrives until
      * either OK or NOWAY is returned.
      */
-    MADTTY_HANDLER_NOTYET,
+    VT_HANDLER_NOTYET,
     /* means the escape sequence was not recognized, and there
      * is no chance that it will even if more characters  are
      * added to it.
      */
-    MADTTY_HANDLER_NOWAY
+    VT_HANDLER_NOWAY
 };
 
-typedef struct madtty_t madtty_t;
-typedef int (*madtty_handler_t)(madtty_t *, char *es);
+typedef struct Vt Vt;
+typedef int (*vt_handler_t)(Vt *, char *es);
 
-void madtty_init(void);
-void madtty_set_handler(madtty_t *, madtty_handler_t);
-void madtty_set_data(madtty_t *, void *);
-void *madtty_get_data(madtty_t *);
-void madtty_set_default_colors(madtty_t *, unsigned attrs, short fg, short bg);
+void vt_init(void);
+void vt_set_handler(Vt *, vt_handler_t);
+void vt_set_data(Vt *, void *);
+void *vt_get_data(Vt *);
+void vt_set_default_colors(Vt *, unsigned attrs, short fg, short bg);
 
-madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz);
-void madtty_resize(madtty_t *, int rows, int cols);
-void madtty_destroy(madtty_t *);
-pid_t madtty_forkpty(madtty_t *, const char *, const char *argv[], const char *envp[], int *pty);
-int madtty_getpty(madtty_t *);
-unsigned madtty_cursor(madtty_t *t);
+Vt *vt_create(int rows, int cols, int scroll_buf_sz);
+void vt_resize(Vt *, int rows, int cols);
+void vt_destroy(Vt *);
+pid_t vt_forkpty(Vt *, const char *, const char *argv[], const char *envp[], int *pty);
+int vt_getpty(Vt *);
+unsigned vt_cursor(Vt *t);
 
-int madtty_process(madtty_t *);
-void madtty_keypress(madtty_t *, int keycode);
-int madtty_write(madtty_t *t, const char *buf, int len);
-void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask);
-void madtty_dirty(madtty_t *t);
-void madtty_draw(madtty_t *, WINDOW *win, int startrow, int startcol);
-short madtty_color_get(short fg, short bg);
+int vt_process(Vt *);
+void vt_keypress(Vt *, int keycode);
+int vt_write(Vt *t, const char *buf, int len);
+void vt_mouse(Vt *t, int x, int y, mmask_t mask);
+void vt_dirty(Vt *t);
+void vt_draw(Vt *, WINDOW *win, int startrow, int startcol);
+short vt_color_get(short fg, short bg);
 
-void madtty_scroll(madtty_t *, int rows);
-void madtty_noscroll(madtty_t *);
+void vt_scroll(Vt *, int rows);
+void vt_noscroll(Vt *);
 
-void madtty_bell(madtty_t *, bool bell);
-void madtty_togglebell(madtty_t *);
+void vt_bell(Vt *, bool bell);
+void Vtogglebell(Vt *);
 
-#endif /* MADTTY_MADTTY_H */
+#endif /* VT_VT_H */

@@ -40,7 +40,7 @@
 # include <alloca.h>
 #endif
 
-#include "madtty.h"
+#include "vt.h"
 
 #ifndef NCURSES_ATTR_SHIFT
 # define NCURSES_ATTR_SHIFT 8
@@ -90,7 +90,7 @@ enum {
 	CSI_78, CSI_79, CSI_7A, CSI_7B, CSI_7C, CSI_7D, CSI_7E, CSI_7F
 };
 
-struct madtty_t {
+struct Vt {
 	int pty;
 	pid_t childpid;
 
@@ -112,18 +112,18 @@ struct madtty_t {
 	short curfg, curbg, savfg, savbg, deffg, defbg;
 
 	/* scrollback buffer */
-	struct t_row_t *scroll_buf;
+	struct Row *scroll_buf;
 	int scroll_buf_sz;
 	int scroll_buf_ptr;
 	int scroll_buf_len;
 	int scroll_amount;
 
-	struct t_row_t *lines;
-	struct t_row_t *scroll_top;
-	struct t_row_t *scroll_bot;
+	struct Row *lines;
+	struct Row *scroll_top;
+	struct Row *scroll_bot;
 
 	/* cursor */
-	struct t_row_t *curs_row;
+	struct Row *curs_row;
 	int curs_col, curs_srow, curs_scol;
 
 	/* buffers and parsing state */
@@ -133,17 +133,17 @@ struct madtty_t {
 	int rlen, elen;
 
 	/* custom escape sequence handler */
-	madtty_handler_t handler;
+	vt_handler_t handler;
 	void *data;
 };
 
-typedef struct t_row_t {
+typedef struct Row {
 	wchar_t *text;
 	uint16_t *attr;
 	short *fg;
 	short *bg;
 	unsigned dirty:1;
-} t_row_t;
+} Row;
 
 static char const * const keytable[KEY_MAX+1] = {
 	['\n']          = "\r",
@@ -192,8 +192,8 @@ static char const * const keytable[KEY_MAX+1] = {
 	[KEY_F(20)]     = "\e[34~",
 };
 
-static void process_nonprinting(madtty_t *t, wchar_t wc);
-static void send_curs(madtty_t *t);
+static void process_nonprinting(Vt *t, wchar_t wc);
+static void send_curs(Vt *t);
 
 __attribute__ ((const))
 static uint16_t build_attrs(unsigned curattrs)
@@ -202,7 +202,7 @@ static uint16_t build_attrs(unsigned curattrs)
 	    >> NCURSES_ATTR_SHIFT;
 }
 
-static void t_row_set(t_row_t *row, int start, int len, madtty_t *t)
+static void row_set(Row *row, int start, int len, Vt *t)
 {
 	row->dirty = true;
 	wmemset(row->text + start, 0, len);
@@ -216,7 +216,7 @@ static void t_row_set(t_row_t *row, int start, int len, madtty_t *t)
 	}
 }
 
-static void t_row_roll(t_row_t *start, t_row_t *end, int count)
+static void row_roll(Row *start, Row *end, int count)
 {
 	int n = end - start;
 
@@ -225,17 +225,17 @@ static void t_row_roll(t_row_t *start, t_row_t *end, int count)
 		count += n;
 
 	if (count) {
-		t_row_t *buf = alloca(count * sizeof(t_row_t));
+		Row *buf = alloca(count * sizeof(Row));
 
-		memcpy(buf, start, count * sizeof(t_row_t));
-		memmove(start, start + count, (n - count) * sizeof(t_row_t));
-		memcpy(end - count, buf, count * sizeof(t_row_t));
-		for (t_row_t *row = start; row < end; row++)
+		memcpy(buf, start, count * sizeof(Row));
+		memmove(start, start + count, (n - count) * sizeof(Row));
+		memcpy(end - count, buf, count * sizeof(Row));
+		for (Row *row = start; row < end; row++)
 			row->dirty = true;
 	}
 }
 
-static void clamp_cursor_to_bounds(madtty_t *t)
+static void clamp_cursor_to_bounds(Vt *t)
 {
 	if (t->curs_row < t->lines)
 		t->curs_row = t->lines;
@@ -247,34 +247,34 @@ static void clamp_cursor_to_bounds(madtty_t *t)
 		t->curs_col = t->cols - 1;
 }
 
-static void save_curs(madtty_t *t)
+static void save_curs(Vt *t)
 {
 	t->curs_srow = t->curs_row - t->lines;
 	t->curs_scol = t->curs_col;
 }
 
-static void restore_curs(madtty_t *t)
+static void restore_curs(Vt *t)
 {
 	t->curs_row = t->lines + t->curs_srow;
 	t->curs_col = t->curs_scol;
 	clamp_cursor_to_bounds(t);
 }
 
-static void save_attrs(madtty_t *t)
+static void save_attrs(Vt *t)
 {
 	t->savattrs = t->curattrs;
 	t->savfg = t->curfg;
 	t->savbg = t->curbg;
 }
 
-static void restore_attrs(madtty_t *t)
+static void restore_attrs(Vt *t)
 {
 	t->curattrs = t->savattrs;
 	t->curfg = t->savfg;
 	t->curbg = t->savbg;
 }
 
-static void fill_scroll_buf(madtty_t *t, int s)
+static void fill_scroll_buf(Vt *t, int s)
 {
 	/* work in screenfuls */
 	int ssz = t->scroll_bot - t->scroll_top;
@@ -295,7 +295,7 @@ static void fill_scroll_buf(madtty_t *t, int s)
 
 	if (s > 0 && t->scroll_buf_sz) {
 		for (int i = 0; i < s; i++) {
-			struct t_row_t tmp = t->scroll_top[i];
+			struct Row tmp = t->scroll_top[i];
 			t->scroll_top[i] = t->scroll_buf[t->scroll_buf_ptr];
 			t->scroll_buf[t->scroll_buf_ptr] = tmp;
 
@@ -304,14 +304,14 @@ static void fill_scroll_buf(madtty_t *t, int s)
 				t->scroll_buf_ptr = 0;
 		}
 	}
-	t_row_roll(t->scroll_top, t->scroll_bot, s);
+	row_roll(t->scroll_top, t->scroll_bot, s);
 	if (s < 0 && t->scroll_buf_sz) {
 		for (int i = (-s) - 1; i >= 0; i--) {
 			t->scroll_buf_ptr--;
 			if (t->scroll_buf_ptr == -1)
 				t->scroll_buf_ptr = t->scroll_buf_sz - 1;
 
-			struct t_row_t tmp = t->scroll_top[i];
+			struct Row tmp = t->scroll_top[i];
 			t->scroll_top[i] = t->scroll_buf[t->scroll_buf_ptr];
 			t->scroll_buf[t->scroll_buf_ptr] = tmp;
 			t->scroll_top[i].dirty = true;
@@ -319,28 +319,28 @@ static void fill_scroll_buf(madtty_t *t, int s)
 	}
 }
 
-static void cursor_line_down(madtty_t *t)
+static void cursor_line_down(Vt *t)
 {
-	t_row_set(t->curs_row, t->cols, t->maxcols - t->cols, 0);
+	row_set(t->curs_row, t->cols, t->maxcols - t->cols, 0);
 	t->curs_row++;
 	if (t->curs_row < t->scroll_bot)
 		return;
 
-	madtty_noscroll(t);
+	vt_noscroll(t);
 
 	t->curs_row = t->scroll_bot - 1;
 	fill_scroll_buf(t, 1);
-	t_row_set(t->curs_row, 0, t->cols, t);
+	row_set(t->curs_row, 0, t->cols, t);
 }
 
-static void new_escape_sequence(madtty_t *t)
+static void new_escape_sequence(Vt *t)
 {
 	t->escaped = true;
 	t->elen = 0;
 	t->ebuf[0] = '\0';
 }
 
-static void cancel_escape_sequence(madtty_t *t)
+static void cancel_escape_sequence(Vt *t)
 {
 	t->escaped = false;
 	t->elen = 0;
@@ -355,7 +355,7 @@ static bool is_valid_csi_ender(int c)
 }
 
 /* interprets a 'set attribute' (SGR) CSI escape sequence */
-static void interpret_csi_SGR(madtty_t *t, int param[], int pcount)
+static void interpret_csi_SGR(Vt *t, int param[], int pcount)
 {
 	if (pcount == 0) {
 		/* special case: reset attributes */
@@ -437,9 +437,9 @@ static void interpret_csi_SGR(madtty_t *t, int param[], int pcount)
 }
 
 /* interprets an 'erase display' (ED) escape sequence */
-static void interpret_csi_ED(madtty_t *t, int param[], int pcount)
+static void interpret_csi_ED(Vt *t, int param[], int pcount)
 {
-	t_row_t *row, *start, *end;
+	Row *row, *start, *end;
 
 	save_attrs(t);
 	t->curattrs = A_NORMAL;
@@ -451,21 +451,21 @@ static void interpret_csi_ED(madtty_t *t, int param[], int pcount)
 	} else if (pcount && param[0] == 1) {
 		start = t->lines;
 		end = t->curs_row;
-		t_row_set(t->curs_row, 0, t->curs_col + 1, t);
+		row_set(t->curs_row, 0, t->curs_col + 1, t);
 	} else {
-		t_row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
+		row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
 		start = t->curs_row + 1;
 		end = t->lines + t->rows;
 	}
 
 	for (row = start; row < end; row++)
-		t_row_set(row, 0, t->cols, t);
+		row_set(row, 0, t->cols, t);
 
 	restore_attrs(t);
 }
 
 /* interprets a 'move cursor' (CUP) escape sequence */
-static void interpret_csi_CUP(madtty_t *t, int param[], int pcount)
+static void interpret_csi_CUP(Vt *t, int param[], int pcount)
 {
 	if (pcount == 0) {
 		t->curs_row = (t->relposmode ? t->scroll_top : t->lines);
@@ -483,7 +483,7 @@ static void interpret_csi_CUP(madtty_t *t, int param[], int pcount)
 
 /* Interpret the 'relative mode' sequences: CUU, CUD, CUF, CUB, CNL,
  * CPL, CHA, HPR, VPA, VPR, HPA */
-static void interpret_csi_C(madtty_t *t, char verb, int param[], int pcount)
+static void interpret_csi_C(Vt *t, char verb, int param[], int pcount)
 {
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
@@ -523,25 +523,25 @@ static void interpret_csi_C(madtty_t *t, char verb, int param[], int pcount)
 }
 
 /* Interpret the 'erase line' escape sequence */
-static void interpret_csi_EL(madtty_t *t, int param[], int pcount)
+static void interpret_csi_EL(Vt *t, int param[], int pcount)
 {
 	switch (pcount ? param[0] : 0) {
 	case 1:
-		t_row_set(t->curs_row, 0, t->curs_col + 1, t);
+		row_set(t->curs_row, 0, t->curs_col + 1, t);
 		break;
 	case 2:
-		t_row_set(t->curs_row, 0, t->cols, t);
+		row_set(t->curs_row, 0, t->cols, t);
 		break;
 	default:
-		t_row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
+		row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
 		break;
 	}
 }
 
 /* Interpret the 'insert blanks' sequence (ICH) */
-static void interpret_csi_ICH(madtty_t *t, int param[], int pcount)
+static void interpret_csi_ICH(Vt *t, int param[], int pcount)
 {
-	t_row_t *row = t->curs_row;
+	Row *row = t->curs_row;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	if (t->curs_col + n > t->cols)
@@ -554,13 +554,13 @@ static void interpret_csi_ICH(madtty_t *t, int param[], int pcount)
 		row->fg[i] = row->fg[i - n];
 	}
 
-	t_row_set(row, t->curs_col, n, t);
+	row_set(row, t->curs_col, n, t);
 }
 
 /* Interpret the 'delete chars' sequence (DCH) */
-static void interpret_csi_DCH(madtty_t *t, int param[], int pcount)
+static void interpret_csi_DCH(Vt *t, int param[], int pcount)
 {
-	t_row_t *row = t->curs_row;
+	Row *row = t->curs_row;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	if (t->curs_col + n > t->cols)
@@ -573,52 +573,52 @@ static void interpret_csi_DCH(madtty_t *t, int param[], int pcount)
 		row->fg[i] = row->fg[i + n];
 	}
 
-	t_row_set(row, t->cols - n, n, t);
+	row_set(row, t->cols - n, n, t);
 }
 
 /* Interpret an 'insert line' sequence (IL) */
-static void interpret_csi_IL(madtty_t *t, int param[], int pcount)
+static void interpret_csi_IL(Vt *t, int param[], int pcount)
 {
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	if (t->curs_row + n >= t->scroll_bot) {
-		for (t_row_t *row = t->curs_row; row < t->scroll_bot; row++)
-			t_row_set(row, 0, t->cols, t);
+		for (Row *row = t->curs_row; row < t->scroll_bot; row++)
+			row_set(row, 0, t->cols, t);
 	} else {
-		t_row_roll(t->curs_row, t->scroll_bot, -n);
-		for (t_row_t *row = t->curs_row; row < t->curs_row + n; row++)
-			t_row_set(row, 0, t->cols, t);
+		row_roll(t->curs_row, t->scroll_bot, -n);
+		for (Row *row = t->curs_row; row < t->curs_row + n; row++)
+			row_set(row, 0, t->cols, t);
 	}
 }
 
 /* Interpret a 'delete line' sequence (DL) */
-static void interpret_csi_DL(madtty_t *t, int param[], int pcount)
+static void interpret_csi_DL(Vt *t, int param[], int pcount)
 {
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	if (t->curs_row + n >= t->scroll_bot) {
-		for (t_row_t *row = t->curs_row; row < t->scroll_bot; row++)
-			t_row_set(row, 0, t->cols, t);
+		for (Row *row = t->curs_row; row < t->scroll_bot; row++)
+			row_set(row, 0, t->cols, t);
 	} else {
-		t_row_roll(t->curs_row, t->scroll_bot, n);
-		for (t_row_t *row = t->scroll_bot - n; row < t->scroll_bot; row++)
-			t_row_set(row, 0, t->cols, t);
+		row_roll(t->curs_row, t->scroll_bot, n);
+		for (Row *row = t->scroll_bot - n; row < t->scroll_bot; row++)
+			row_set(row, 0, t->cols, t);
 	}
 }
 
 /* Interpret an 'erase characters' (ECH) sequence */
-static void interpret_csi_ECH(madtty_t *t, int param[], int pcount)
+static void interpret_csi_ECH(Vt *t, int param[], int pcount)
 {
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	if (t->curs_col + n < t->cols)
 		n = t->cols - t->curs_col;
 
-	t_row_set(t->curs_row, t->curs_col, n, t);
+	row_set(t->curs_row, t->curs_col, n, t);
 }
 
 /* Interpret a 'set scrolling region' (DECSTBM) sequence */
-static void interpret_csi_DECSTBM(madtty_t *t, int param[], int pcount)
+static void interpret_csi_DECSTBM(Vt *t, int param[], int pcount)
 {
 	int new_top, new_bot;
 
@@ -652,7 +652,7 @@ static void interpret_csi_DECSTBM(madtty_t *t, int param[], int pcount)
 	}
 }
 
-static void es_interpret_csi(madtty_t *t)
+static void es_interpret_csi(Vt *t)
 {
 	static int csiparam[BUFSIZ];
 	int param_count = 0;
@@ -788,25 +788,25 @@ static void es_interpret_csi(madtty_t *t)
 }
 
 /* Interpret an 'index' (IND) sequence */
-static void interpret_esc_IND(madtty_t *t)
+static void interpret_esc_IND(Vt *t)
 {
 	if (t->curs_row < t->lines + t->rows - 1)
 		t->curs_row++;
 }
 
 /* Interpret a 'reverse index' (RI) sequence */
-static void interpret_esc_RI(madtty_t *t)
+static void interpret_esc_RI(Vt *t)
 {
 	if (t->curs_row > t->lines)
 		t->curs_row--;
 	else {
-		t_row_roll(t->scroll_top, t->scroll_bot, -1);
-		t_row_set(t->scroll_top, 0, t->cols, t);
+		row_roll(t->scroll_top, t->scroll_bot, -1);
+		row_set(t->scroll_top, 0, t->cols, t);
 	}
 }
 
 /* Interpret a 'next line' (NEL) sequence */
-static void interpret_esc_NEL(madtty_t *t)
+static void interpret_esc_NEL(Vt *t)
 {
 	if (t->curs_row < t->lines + t->rows - 1) {
 		t->curs_row++;
@@ -815,14 +815,14 @@ static void interpret_esc_NEL(madtty_t *t)
 }
 
 /* Interpret a 'select character set' (SCS) sequence */
-static void interpret_esc_SCS(madtty_t *t)
+static void interpret_esc_SCS(Vt *t)
 {
 	/* ESC ( sets G0, ESC ) sets G1 */
 	t->charsets[! !(t->ebuf[0] == ')')] = (t->ebuf[1] == '0');
 	t->graphmode = t->charsets[0];
 }
 
-static void try_interpret_escape_seq(madtty_t *t)
+static void try_interpret_escape_seq(Vt *t)
 {
 	char lastchar = t->ebuf[t->elen - 1];
 
@@ -831,9 +831,9 @@ static void try_interpret_escape_seq(madtty_t *t)
 
 	if (t->handler) {
 		switch ((*(t->handler)) (t, t->ebuf)) {
-		case MADTTY_HANDLER_OK:
+		case VT_HANDLER_OK:
 			goto cancel;
-		case MADTTY_HANDLER_NOTYET:
+		case VT_HANDLER_NOTYET:
 			if (t->elen + 1 >= (int)sizeof(t->ebuf))
 				goto cancel;
 			return;
@@ -911,7 +911,7 @@ cancel:
 	}
 }
 
-static void process_nonprinting(madtty_t *t, wchar_t wc)
+static void process_nonprinting(Vt *t, wchar_t wc)
 {
 	switch (wc) {
 	case C0_ESC:
@@ -985,7 +985,7 @@ static wchar_t get_vt100_graphic(char c)
 	return '\0';
 }
 
-static void put_wc(madtty_t *t, wchar_t wc)
+static void put_wc(Vt *t, wchar_t wc)
 {
 	int width = 0;
 
@@ -1005,7 +1005,7 @@ static void put_wc(madtty_t *t, wchar_t wc)
 	} else if (IS_CONTROL(wc)) {
 		process_nonprinting(t, wc);
 	} else {
-		t_row_t *tmp;
+		Row *tmp;
 
 		if (t->graphmode) {
 			if (wc >= 0x41 && wc <= 0x7e) {
@@ -1062,7 +1062,7 @@ static void put_wc(madtty_t *t, wchar_t wc)
 	}
 }
 
-int madtty_process(madtty_t *t)
+int vt_process(Vt *t)
 {
 	int res, pos = 0;
 
@@ -1101,22 +1101,22 @@ int madtty_process(madtty_t *t)
 	return 0;
 }
 
-void madtty_set_default_colors(madtty_t *t, unsigned attrs, short fg, short bg)
+void vt_set_default_colors(Vt *t, unsigned attrs, short fg, short bg)
 {
 	t->defattrs = attrs;
 	t->deffg = fg;
 	t->defbg = bg;
 }
 
-madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz)
+Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 {
-	madtty_t *t;
+	Vt *t;
 	int i;
 
 	if (rows <= 0 || cols <= 0)
 		return NULL;
 
-	t = calloc(sizeof(madtty_t), 1);
+	t = calloc(sizeof(Vt), 1);
 	if (!t)
 		return NULL;
 
@@ -1129,7 +1129,7 @@ madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz)
 	t->insert = false;
 
 	/* create the cell matrix */
-	t->lines = calloc(sizeof(t_row_t), t->rows);
+	t->lines = calloc(sizeof(Row), t->rows);
 	for (i = 0; i < t->rows; i++) {
 		t->lines[i].text = calloc(sizeof(wchar_t), t->cols);
 		t->lines[i].attr = calloc(sizeof(uint16_t), t->cols);
@@ -1153,7 +1153,7 @@ madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz)
 	if (scroll_buf_sz < 0)
 		scroll_buf_sz = 0;
 	t->scroll_buf_sz = scroll_buf_sz;
-	t->scroll_buf = calloc(sizeof(t_row_t), t->scroll_buf_sz);
+	t->scroll_buf = calloc(sizeof(Row), t->scroll_buf_sz);
 	for (i = 0; i < t->scroll_buf_sz; i++) {
 		t->scroll_buf[i].text = calloc(sizeof(wchar_t), t->cols);
 		t->scroll_buf[i].attr = calloc(sizeof(uint16_t), t->cols);
@@ -1164,22 +1164,22 @@ madtty_t *madtty_create(int rows, int cols, int scroll_buf_sz)
 	t->scroll_amount = 0;
 
 	/* clear the screen */
-	t_row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
-	for (t_row_t *row = t->curs_row + 1; row < t->lines + t->rows; row++)
-		t_row_set(row, 0, t->cols, t);
+	row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
+	for (Row *row = t->curs_row + 1; row < t->lines + t->rows; row++)
+		row_set(row, 0, t->cols, t);
 
 	return t;
 }
 
-void madtty_resize(madtty_t *t, int rows, int cols)
+void vt_resize(Vt *t, int rows, int cols)
 {
 	struct winsize ws = {.ws_row = rows,.ws_col = cols };
-	t_row_t *lines = t->lines;
+	Row *lines = t->lines;
 
 	if (rows <= 0 || cols <= 0)
 		return;
 
-	madtty_noscroll(t);
+	vt_noscroll(t);
 
 	if (t->rows != rows) {
 		if (t->curs_row > lines + rows) {
@@ -1194,7 +1194,7 @@ void madtty_resize(madtty_t *t, int rows, int cols)
 			t->rows--;
 		}
 
-		lines = realloc(lines, sizeof(t_row_t) * rows);
+		lines = realloc(lines, sizeof(Row) * rows);
 	}
 
 	if (t->maxcols < cols) {
@@ -1204,17 +1204,17 @@ void madtty_resize(madtty_t *t, int rows, int cols)
 			lines[row].fg = realloc(lines[row].fg, sizeof(short) * cols);
 			lines[row].bg = realloc(lines[row].bg, sizeof(short) * cols);
 			if (t->cols < cols)
-				t_row_set(lines + row, t->cols, cols - t->cols, 0);
+				row_set(lines + row, t->cols, cols - t->cols, 0);
 			lines[row].dirty = true;
 		}
-		t_row_t *sbuf = t->scroll_buf;
+		Row *sbuf = t->scroll_buf;
 		for (int row = 0; row < t->scroll_buf_sz; row++) {
 			sbuf[row].text = realloc(sbuf[row].text, sizeof(wchar_t) * cols);
 			sbuf[row].attr = realloc(sbuf[row].attr, sizeof(uint16_t) * cols);
 			sbuf[row].fg = realloc(sbuf[row].fg, sizeof(short) * cols);
 			sbuf[row].bg = realloc(sbuf[row].bg, sizeof(short) * cols);
 			if (t->cols < cols)
-				t_row_set(sbuf + row, t->cols, cols - t->cols, 0);
+				row_set(sbuf + row, t->cols, cols - t->cols, 0);
 		}
 		t->maxcols = cols;
 		t->cols = cols;
@@ -1231,7 +1231,7 @@ void madtty_resize(madtty_t *t, int rows, int cols)
 			lines[t->rows].attr = calloc(sizeof(uint16_t), t->maxcols);
 			lines[t->rows].fg = calloc(sizeof(short), t->maxcols);
 			lines[t->rows].bg = calloc(sizeof(short), t->maxcols);
-			t_row_set(lines + t->rows, 0, t->maxcols, t);
+			row_set(lines + t->rows, 0, t->maxcols, t);
 			t->rows++;
 		}
 
@@ -1259,7 +1259,7 @@ void madtty_resize(madtty_t *t, int rows, int cols)
 	kill(-t->childpid, SIGWINCH);
 }
 
-void madtty_destroy(madtty_t *t)
+void vt_destroy(Vt *t)
 {
 	int i;
 	if (!t)
@@ -1282,17 +1282,17 @@ void madtty_destroy(madtty_t *t)
 	free(t);
 }
 
-void madtty_dirty(madtty_t *t)
+void vt_dirty(Vt *t)
 {
 	for (int i = 0; i < t->rows; i++)
 		t->lines[i].dirty = true;
 }
 
-void madtty_draw(madtty_t *t, WINDOW * win, int srow, int scol)
+void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 {
 	curs_set(0);
 	for (int i = 0; i < t->rows; i++) {
-		t_row_t *row = t->lines + i;
+		Row *row = t->lines + i;
 
 		if (!row->dirty)
 			continue;
@@ -1309,7 +1309,7 @@ void madtty_draw(madtty_t *t, WINDOW * win, int srow, int scol)
 				if (row->bg[j] == -1)
 					row->bg[j] = t->defbg;
 				wattrset(win, (attr_t) row->attr[j] << NCURSES_ATTR_SHIFT);
-				wcolor_set(win, madtty_color_get(row->fg[j], row->bg[j]), NULL);
+				wcolor_set(win, vt_color_get(row->fg[j], row->bg[j]), NULL);
 			}
 			if (is_utf8 && row->text[j] >= 128) {
 				char buf[MB_CUR_MAX + 1];
@@ -1327,10 +1327,10 @@ void madtty_draw(madtty_t *t, WINDOW * win, int srow, int scol)
 	}
 
 	wmove(win, srow + t->curs_row - t->lines, scol + t->curs_col);
-	curs_set(madtty_cursor(t));
+	curs_set(vt_cursor(t));
 }
 
-void madtty_scroll(madtty_t *t, int rows)
+void vt_scroll(Vt *t, int rows)
 {
 	if (rows < 0) { /* scroll back */
 		if (rows < -t->scroll_buf_len)
@@ -1343,23 +1343,23 @@ void madtty_scroll(madtty_t *t, int rows)
 	t->scroll_amount -= rows;
 }
 
-void madtty_noscroll(madtty_t *t)
+void vt_noscroll(Vt *t)
 {
 	if (t->scroll_amount)
-		madtty_scroll(t, t->scroll_amount);
+		vt_scroll(t, t->scroll_amount);
 }
 
-void madtty_bell(madtty_t *t, bool bell)
+void vt_bell(Vt *t, bool bell)
 {
 	t->bell = bell;
 }
 
-void madtty_togglebell(madtty_t *t)
+void Vtogglebell(Vt *t)
 {
 	t->bell = !t->bell;
 }
 
-pid_t madtty_forkpty(madtty_t *t, const char *p, const char *argv[], const char *env[], int *pty)
+pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *env[], int *pty)
 {
 	struct winsize ws;
 	pid_t pid;
@@ -1397,12 +1397,12 @@ pid_t madtty_forkpty(madtty_t *t, const char *p, const char *argv[], const char 
 	return t->childpid = pid;
 }
 
-int madtty_getpty(madtty_t *t)
+int vt_getpty(Vt *t)
 {
 	return t->pty;
 }
 
-int madtty_write(madtty_t *t, const char *buf, int len)
+int vt_write(Vt *t, const char *buf, int len)
 {
 	int ret = len;
 
@@ -1418,18 +1418,18 @@ int madtty_write(madtty_t *t, const char *buf, int len)
 	return ret;
 }
 
-static void send_curs(madtty_t *t)
+static void send_curs(Vt *t)
 {
 	char keyseq[16];
 	sprintf(keyseq, "\e[%d;%dR", (int)(t->curs_row - t->lines), t->curs_col);
-	madtty_write(t, keyseq, strlen(keyseq));
+	vt_write(t, keyseq, strlen(keyseq));
 }
 
-void madtty_keypress(madtty_t *t, int keycode)
+void vt_keypress(Vt *t, int keycode)
 {
 	char c = (char)keycode;
 
-	madtty_noscroll(t);
+	vt_noscroll(t);
 
 	if (keycode >= 0 && keycode < KEY_MAX && keytable[keycode]) {
 		switch (keycode) {
@@ -1438,18 +1438,18 @@ void madtty_keypress(madtty_t *t, int keycode)
 		case KEY_RIGHT:
 		case KEY_LEFT: {
 				char keyseq[3] = { '\e', (t->curskeymode ? 'O' : '['), keytable[keycode][0] };
-				madtty_write(t, keyseq, sizeof keyseq);
+				vt_write(t, keyseq, sizeof keyseq);
 				break;
 			}
 		default:
-			madtty_write(t, keytable[keycode], strlen(keytable[keycode]));
+			vt_write(t, keytable[keycode], strlen(keytable[keycode]));
 		}
 	} else {
-		madtty_write(t, &c, 1);
+		vt_write(t, &c, 1);
 	}
 }
 
-void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask)
+void vt_mouse(Vt *t, int x, int y, mmask_t mask)
 {
 #ifdef NCURSES_MOUSE_VERSION
 	char seq[6] = { '\e', '[', 'M' }, state = 0, button = 0;
@@ -1477,13 +1477,13 @@ void madtty_mouse(madtty_t *t, int x, int y, mmask_t mask)
 	seq[4] = 32 + x;
 	seq[5] = 32 + y;
 
-	madtty_write(t, seq, sizeof seq);
+	vt_write(t, seq, sizeof seq);
 
 	if (mask & (BUTTON1_CLICKED | BUTTON2_CLICKED | BUTTON3_CLICKED)) {
 		/* send a button release event */
 		button = 3;
 		seq[3] = 32 + button + state;
-		madtty_write(t, seq, sizeof seq);
+		vt_write(t, seq, sizeof seq);
 	}
 #endif /* NCURSES_MOUSE_VERSION */
 }
@@ -1493,7 +1493,7 @@ static unsigned color_hash(short f, short b)
 	return ((f + 1) * COLORS) + b + 1;
 }
 
-short madtty_color_get(short fg, short bg)
+short vt_color_get(short fg, short bg)
 {
 	static unsigned palette_cur = COLOR_PALETTE_START;
 
@@ -1557,28 +1557,28 @@ static void init_colors(void)
 	}
 }
 
-void madtty_init(void)
+void vt_init(void)
 {
 	init_colors();
 	is_utf8_locale();
 }
 
-void madtty_set_handler(madtty_t *t, madtty_handler_t handler)
+void vt_set_handler(Vt *t, vt_handler_t handler)
 {
 	t->handler = handler;
 }
 
-void madtty_set_data(madtty_t *t, void *data)
+void vt_set_data(Vt *t, void *data)
 {
 	t->data = data;
 }
 
-void *madtty_get_data(madtty_t *t)
+void *vt_get_data(Vt *t)
 {
 	return t->data;
 }
 
-unsigned madtty_cursor(madtty_t *t)
+unsigned vt_cursor(Vt *t)
 {
 	return t->scroll_amount ? 0 : !t->curshid;
 }
