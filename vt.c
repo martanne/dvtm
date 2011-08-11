@@ -1340,7 +1340,7 @@ void vt_bell(Vt *t, bool bell)
 	t->bell = bell;
 }
 
-void Vtogglebell(Vt *t)
+void vt_togglebell(Vt *t)
 {
 	t->bell = !t->bell;
 }

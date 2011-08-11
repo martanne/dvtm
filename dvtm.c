@@ -923,7 +923,7 @@ togglebar(const char *args[]) {
 
 static void
 togglebell(const char *args[]) {
-	Vtogglebell(sel->term);
+	vt_togglebell(sel->term);
 }
 
 static void

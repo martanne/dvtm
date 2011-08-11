@@ -78,6 +78,6 @@ void vt_scroll(Vt *, int rows);
 void vt_noscroll(Vt *);
 
 void vt_bell(Vt *, bool bell);
-void Vtogglebell(Vt *);
+void vt_togglebell(Vt *);
 
 #endif /* VT_VT_H */
