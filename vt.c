@@ -1102,7 +1102,7 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 	if (rows <= 0 || cols <= 0)
 		return NULL;
 
-	t = calloc(sizeof(Vt), 1);
+	t = calloc(1, sizeof(Vt));
 	if (!t)
 		return NULL;
 
@@ -1115,12 +1115,12 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 	t->insert = false;
 
 	/* create the cell matrix */
-	t->lines = calloc(sizeof(Row), t->rows);
+	t->lines = calloc(t->rows, sizeof(Row));
 	for (i = 0; i < t->rows; i++) {
-		t->lines[i].text = calloc(sizeof(wchar_t), t->cols);
-		t->lines[i].attr = calloc(sizeof(uint16_t), t->cols);
-		t->lines[i].fg = calloc(sizeof(short), t->cols);
-		t->lines[i].bg = calloc(sizeof(short), t->cols);
+		t->lines[i].text = calloc(t->cols, sizeof(wchar_t));
+		t->lines[i].attr = calloc(t->cols, sizeof(uint16_t));
+		t->lines[i].fg = calloc(t->cols, sizeof(short));
+		t->lines[i].bg = calloc(t->cols, sizeof(short));
 	}
 
 	t->pty = -1;		/* no pty for now */
@@ -1139,12 +1139,12 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 	if (scroll_buf_sz < 0)
 		scroll_buf_sz = 0;
 	t->scroll_buf_sz = scroll_buf_sz;
-	t->scroll_buf = calloc(sizeof(Row), t->scroll_buf_sz);
+	t->scroll_buf = calloc(t->scroll_buf_sz, sizeof(Row));
 	for (i = 0; i < t->scroll_buf_sz; i++) {
-		t->scroll_buf[i].text = calloc(sizeof(wchar_t), t->cols);
-		t->scroll_buf[i].attr = calloc(sizeof(uint16_t), t->cols);
-		t->scroll_buf[i].fg = calloc(sizeof(short), t->cols);
-		t->scroll_buf[i].bg = calloc(sizeof(short), t->cols);
+		t->scroll_buf[i].text = calloc(t->cols, sizeof(wchar_t));
+		t->scroll_buf[i].attr = calloc(t->cols, sizeof(uint16_t));
+		t->scroll_buf[i].fg = calloc(t->cols, sizeof(short));
+		t->scroll_buf[i].bg = calloc(t->cols, sizeof(short));
 	}
 	t->scroll_buf_ptr = t->scroll_buf_len = 0;
 	t->scroll_amount = 0;
@@ -1213,10 +1213,10 @@ void vt_resize(Vt *t, int rows, int cols)
 	int deltarows = 0;
 	if (t->rows < rows) {
 		while (t->rows < rows) {
-			lines[t->rows].text = calloc(sizeof(wchar_t), t->maxcols);
-			lines[t->rows].attr = calloc(sizeof(uint16_t), t->maxcols);
-			lines[t->rows].fg = calloc(sizeof(short), t->maxcols);
-			lines[t->rows].bg = calloc(sizeof(short), t->maxcols);
+			lines[t->rows].text = calloc(t->maxcols, sizeof(wchar_t));
+			lines[t->rows].attr = calloc(t->maxcols, sizeof(uint16_t));
+			lines[t->rows].fg = calloc(t->maxcols, sizeof(short));
+			lines[t->rows].bg = calloc(t->maxcols, sizeof(short));
 			row_set(lines + t->rows, 0, t->maxcols, t);
 			t->rows++;
 		}

@@ -686,7 +686,7 @@ cleanup() {
 /* commands for use by keybindings */
 static void
 create(const char *args[]) {
-	Client *c = calloc(sizeof(Client), 1);
+	Client *c = calloc(1, sizeof(Client));
 	if (!c)
 		return;
 	const char *cmd = (args && args[0]) ? args[0] : shell;
