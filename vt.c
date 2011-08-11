@@ -849,12 +849,10 @@ static void try_interpret_escape_seq(Vt *t)
 			return;
 		}
 		break;
-
 	case ']': /* xterm thing */
 		if (lastchar == '\a')
 			goto cancel;
 		break;
-
 	case '[':
 		if (is_valid_csi_ender(lastchar)) {
 			es_interpret_csi(t);
@@ -862,34 +860,28 @@ static void try_interpret_escape_seq(Vt *t)
 			return;
 		}
 		break;
-
 	case '7': /* DECSC: save cursor and attributes */
 		save_attrs(t);
 		save_curs(t);
 		cancel_escape_sequence(t);
 		return;
-
 	case '8': /* DECRC: restore cursor and attributes */
 		restore_attrs(t);
 		restore_curs(t);
 		cancel_escape_sequence(t);
 		return;
-
 	case 'D': /* IND: index */
 		interpret_esc_IND(t);
 		cancel_escape_sequence(t);
 		return;
-
 	case 'M': /* RI: reverse index */
 		interpret_esc_RI(t);
 		cancel_escape_sequence(t);
 		return;
-
 	case 'E': /* NEL: next line */
 		interpret_esc_NEL(t);
 		cancel_escape_sequence(t);
 		return;
-
 	default:
 		goto cancel;
 	}
@@ -917,33 +909,27 @@ static void process_nonprinting(Vt *t, wchar_t wc)
 	case C0_ESC:
 		new_escape_sequence(t);
 		break;
-
 	case C0_BEL:
 		if (t->bell)
 			beep();
 		break;
-
 	case C0_BS:
 		if (t->curs_col > 0)
 			t->curs_col--;
 		break;
-
 	case C0_HT: /* tab */
 		t->curs_col = (t->curs_col + 8) & ~7;
 		if (t->curs_col >= t->cols)
 			t->curs_col = t->cols - 1;
 		break;
-
 	case C0_CR:
 		t->curs_col = 0;
 		break;
-
 	case C0_VT:
 	case C0_FF:
 	case C0_LF:
 		cursor_line_down(t);
 		break;
-
 	case C0_SO: /* shift out, invoke the G1 character set */
 		t->graphmode = t->charsets[1];
 		break;
