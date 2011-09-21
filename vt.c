@@ -190,6 +190,7 @@ static char const * const keytable[KEY_MAX+1] = {
 	[KEY_F(18)]     = "\e[32~",
 	[KEY_F(19)]     = "\e[33~",
 	[KEY_F(20)]     = "\e[34~",
+	[KEY_RESIZE]    = "",
 };
 
 static void process_nonprinting(Vt *t, wchar_t wc);
