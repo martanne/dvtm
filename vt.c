@@ -139,7 +139,7 @@ struct Vt {
 	vt_event_handler_t event_handler;
 
 	/* custom escape sequence handler */
-	vt_handler_t handler;
+	vt_escseq_handler_t escseq_handler;
 	void *data;
 };
 
@@ -854,12 +854,12 @@ static void try_interpret_escape_seq(Vt *t)
 	if (!*t->ebuf)
 		return;
 
-	if (t->handler) {
-		switch ((*(t->handler)) (t, t->ebuf)) {
-		case VT_HANDLER_OK:
+	if (t->escseq_handler) {
+		switch ((*(t->escseq_handler)) (t, t->ebuf)) {
+		case VT_ESCSEQ_HANDLER_OK:
 			cancel_escape_sequence(t);
 			return;
-		case VT_HANDLER_NOTYET:
+		case VT_ESCSEQ_HANDLER_NOTYET:
 			if (t->elen + 1 >= sizeof(t->ebuf))
 				goto cancel;
 			return;
@@ -1579,9 +1579,9 @@ void vt_init(void)
 	is_utf8_locale();
 }
 
-void vt_set_handler(Vt *t, vt_handler_t handler)
+void vt_set_escseq_handler(Vt *t, vt_escseq_handler_t handler)
 {
-	t->handler = handler;
+	t->escseq_handler = handler;
 }
 
 void vt_set_event_handler(Vt *t, vt_event_handler_t handler)

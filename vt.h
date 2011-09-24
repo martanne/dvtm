@@ -33,7 +33,7 @@
 
 enum {
     /* means escape sequence was handled */
-    VT_HANDLER_OK,
+    VT_ESCSEQ_HANDLER_OK,
     /* means the escape sequence was not  recognized yet, but
      * there is hope that it still will once more characters
      * arrive (i.e. it is not yet complete).
@@ -42,16 +42,16 @@ enum {
      * and calling the handler as each character arrives until
      * either OK or NOWAY is returned.
      */
-    VT_HANDLER_NOTYET,
+    VT_ESCSEQ_HANDLER_NOTYET,
     /* means the escape sequence was not recognized, and there
      * is no chance that it will even if more characters  are
      * added to it.
      */
-    VT_HANDLER_NOWAY
+    VT_ESCSEQ_HANDLER_NOWAY
 };
 
 typedef struct Vt Vt;
-typedef int (*vt_handler_t)(Vt *, char *es);
+typedef int (*vt_escseq_handler_t)(Vt *, char *es);
 
 enum {
 	VT_EVENT_TITLE,
@@ -60,7 +60,7 @@ enum {
 typedef void (*vt_event_handler_t)(Vt *, int event, void *data);
 
 void vt_init(void);
-void vt_set_handler(Vt *, vt_handler_t);
+void vt_set_escseq_handler(Vt *, vt_escseq_handler_t);
 void vt_set_event_handler(Vt *, vt_event_handler_t);
 void vt_set_data(Vt *, void *);
 void *vt_get_data(Vt *);
