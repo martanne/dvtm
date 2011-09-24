@@ -53,8 +53,15 @@ enum {
 typedef struct Vt Vt;
 typedef int (*vt_handler_t)(Vt *, char *es);
 
+enum {
+	VT_EVENT_TITLE,
+};
+
+typedef void (*vt_event_handler_t)(Vt *, int event, void *data);
+
 void vt_init(void);
 void vt_set_handler(Vt *, vt_handler_t);
+void vt_set_event_handler(Vt *, vt_event_handler_t);
 void vt_set_data(Vt *, void *);
 void *vt_get_data(Vt *);
 void vt_set_default_colors(Vt *, unsigned attrs, short fg, short bg);

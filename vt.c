@@ -58,6 +58,7 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define COLOR_PALETTE_START 1
 #define COLOR_PALETTE_END (unsigned)(MIN(512, COLOR_PAIRS))
+#define sstrlen(str) (sizeof(str) - 1)
 
 static bool is_utf8, has_default_colors, use_color_palette;
 static short *color2palette;
@@ -131,6 +132,11 @@ struct Vt {
 	char rbuf[BUFSIZ];
 	char ebuf[BUFSIZ];
 	int rlen, elen;
+
+	/* xterm style window title */
+	char title[256];
+
+	vt_event_handler_t event_handler;
 
 	/* custom escape sequence handler */
 	vt_handler_t handler;
@@ -823,6 +829,24 @@ static void interpret_esc_SCS(Vt *t)
 	t->graphmode = t->charsets[0];
 }
 
+/* Interpret xterm specific escape sequences */
+static void interpret_esc_xterm(Vt *t)
+{
+	/* ESC]n;dataBEL -- the ESC is not part of t->ebuf */
+	char *title = NULL;
+
+	switch (t->ebuf[1]) {
+	case '0':
+	case '2':
+		t->ebuf[t->elen - 1] = '\0';
+		if (t->elen > sstrlen("]n;\a"))
+			title = t->ebuf + sstrlen("]n;");
+
+		if (t->event_handler)
+			t->event_handler(t, VT_EVENT_TITLE, title);
+	}
+}
+
 static void try_interpret_escape_seq(Vt *t)
 {
 	char lastchar = t->ebuf[t->elen - 1];
@@ -833,7 +857,8 @@ static void try_interpret_escape_seq(Vt *t)
 	if (t->handler) {
 		switch ((*(t->handler)) (t, t->ebuf)) {
 		case VT_HANDLER_OK:
-			goto cancel;
+			cancel_escape_sequence(t);
+			return;
 		case VT_HANDLER_NOTYET:
 			if (t->elen + 1 >= (int)sizeof(t->ebuf))
 				goto cancel;
@@ -851,8 +876,11 @@ static void try_interpret_escape_seq(Vt *t)
 		}
 		break;
 	case ']': /* xterm thing */
-		if (lastchar == '\a')
-			goto cancel;
+		if (lastchar == '\a') {
+			interpret_esc_xterm(t);
+			cancel_escape_sequence(t);
+			return;
+		}
 		break;
 	case '[':
 		if (is_valid_csi_ender(lastchar)) {
@@ -1553,6 +1581,11 @@ void vt_init(void)
 void vt_set_handler(Vt *t, vt_handler_t handler)
 {
 	t->handler = handler;
+}
+
+void vt_set_event_handler(Vt *t, vt_event_handler_t handler)
+{
+	t->event_handler = handler;
 }
 
 void vt_set_data(Vt *t, void *data)
