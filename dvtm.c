@@ -248,8 +248,9 @@ drawbar() {
 
 static void
 draw_border(Client *c) {
-	char *s, t = '\0';
-	int x, y, o;
+	char t = '\0';
+	int x, y, maxlen;
+
 	if (sel == c) {
 		wattrset(c->window, SELECTED_ATTR);
 		wcolor_set(c->window, vt_color_get(SELECTED_FG, SELECTED_BG), NULL);
@@ -260,19 +261,20 @@ draw_border(Client *c) {
 	getyx(c->window, y, x);
 	curs_set(0);
 	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
-	o = c->w - (4 + sstrlen(TITLE) - 5  + sstrlen(SEPARATOR));
-	if (o < 0)
-		o = 0;
-	if ((size_t)o < sizeof(c->title)) {
-		t = *(s = &c->title[o]);
-		*s = '\0';
+	maxlen = c->w - (2 + sstrlen(TITLE) - sstrlen("%s%sd")  + sstrlen(SEPARATOR) + 2);
+	if (maxlen < 0)
+		maxlen = 0;
+	if ((size_t)maxlen < sizeof(c->title)) {
+		t = c->title[maxlen];
+		c->title[maxlen] = '\0';
 	}
+
 	mvwprintw(c->window, 0, 2, TITLE,
 	          *c->title ? c->title : "",
 	          *c->title ? SEPARATOR : "",
 	          c->order);
 	if (t)
-		*s = t;
+		c->title[maxlen] = t;
 	wmove(c->window, y, x);
 	if (!c->minimized)
 		curs_set(vt_cursor(c->term));
@@ -393,7 +395,7 @@ focus(Client *c) {
 }
 
 static void
-applycolorrules(Vt *term, char *title) {
+applycolorrules(Client *c) {
 	unsigned int i;
 	unsigned attrs = A_NORMAL;
 	short fg = -1, bg = -1;
@@ -401,31 +403,29 @@ applycolorrules(Vt *term, char *title) {
 
 	for (i = 0; i < countof(colorrules); i++) {
 		r = &colorrules[i];
-		if (strstr(title, r->title)) {
+		if (strstr(c->title, r->title)) {
 			attrs = r->attrs;
 			fg = r->fg;
 			bg = r->bg;
 			break;
 		}
 	}
-	vt_set_default_colors(term, attrs, fg, bg);
+
+	vt_set_default_colors(c->term, attrs, fg, bg);
 }
 
-static int
-title_escape_seq_handler(Vt *term, char *es) {
-	Client *c;
-	unsigned int l;
-	if (es[0] != ']' || (es[1] && (es[1] < '0' || es[1] > '9')) || (es[2] && es[2] != ';'))
-		return VT_HANDLER_NOWAY;
-	if ((l = strlen(es)) < 3 || es[l - 1] != '\07')
-		return VT_HANDLER_NOTYET;
-	es[l - 1] = '\0';
-	c = (Client *)vt_get_data(term);
-	strncpy(c->title, es + 3, sizeof(c->title));
-	draw_border(c);
-	debug("window title: %s\n", c->title);
-	applycolorrules(term, c->title);
-	return VT_HANDLER_OK;
+static void
+term_event_handler(Vt *term, int event, void *event_data) {
+	Client *c = (Client *)vt_get_data(term);
+	switch (event) {
+	case VT_EVENT_TITLE:
+		if (event_data)
+			strncpy(c->title, event_data, sizeof(c->title) - 1);
+		c->title[event_data ? sizeof(c->title) - 1 : 0] = '\0';
+		draw_border(c);
+		applycolorrules(c);
+		break;
+	}
 }
 
 static void
@@ -707,7 +707,7 @@ create(const char *args[]) {
 		strncpy(c->title, args[1], sizeof(c->title));
 	c->pid = vt_forkpty(c->term, "/bin/sh", pargs, env, &c->pty);
 	vt_set_data(c->term, c);
-	vt_set_handler(c->term, title_escape_seq_handler);
+	vt_set_event_handler(c->term, term_event_handler);
 	c->w = screen.w;
 	c->h = screen.h;
 	c->x = wax;
