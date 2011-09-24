@@ -131,7 +131,7 @@ struct Vt {
 	mbstate_t ps;
 	char rbuf[BUFSIZ];
 	char ebuf[BUFSIZ];
-	int rlen, elen;
+	unsigned int rlen, elen;
 
 	/* xterm style window title */
 	char title[256];
@@ -860,7 +860,7 @@ static void try_interpret_escape_seq(Vt *t)
 			cancel_escape_sequence(t);
 			return;
 		case VT_HANDLER_NOTYET:
-			if (t->elen + 1 >= (int)sizeof(t->ebuf))
+			if (t->elen + 1 >= sizeof(t->ebuf))
 				goto cancel;
 			return;
 		}
@@ -915,11 +915,11 @@ static void try_interpret_escape_seq(Vt *t)
 		goto cancel;
 	}
 
-	if (t->elen + 1 >= (int)sizeof(t->ebuf)) {
+	if (t->elen + 1 >= sizeof(t->ebuf)) {
 cancel:
 #ifndef NDEBUG
 		fprintf(stderr, "cancelled: \\033");
-		for (int i = 0; i < (int)t->elen; i++) {
+		for (unsigned int i = 0; i < t->elen; i++) {
 			if (isprint(t->ebuf[i])) {
 				fputc(t->ebuf[i], stderr);
 			} else {
@@ -1010,7 +1010,7 @@ static void put_wc(Vt *t, wchar_t wc)
 	}
 
 	if (t->escaped) {
-		if (t->elen + 1 < (int)sizeof(t->ebuf)) {
+		if (t->elen + 1 < sizeof(t->ebuf)) {
 			t->ebuf[t->elen] = wc;
 			t->ebuf[++t->elen] = '\0';
 			try_interpret_escape_seq(t);
@@ -1079,7 +1079,8 @@ static void put_wc(Vt *t, wchar_t wc)
 
 int vt_process(Vt *t)
 {
-	int res, pos = 0;
+	int res;
+	unsigned int pos = 0;
 
 	if (t->pty < 0) {
 		errno = EINVAL;
