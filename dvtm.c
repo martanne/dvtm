@@ -703,8 +703,10 @@ create(const char *args[]) {
 	c->window = newwin(wah, waw, way, wax);
 	c->term = vt_create(screen.h - 1, screen.w, screen.history);
 	c->cmd = cmd;
-	if (args && args[1])
-		strncpy(c->title, args[1], sizeof(c->title));
+	if (args && args[1]) {
+		strncpy(c->title, args[1], sizeof(c->title) - 1);
+		c->title[sizeof(c->title) - 1] = '\0';
+	}
 	c->pid = vt_forkpty(c->term, "/bin/sh", pargs, env, &c->pty);
 	vt_set_data(c->term, c);
 	vt_set_event_handler(c->term, term_event_handler);
