@@ -254,7 +254,7 @@ draw_border(Client *c) {
 	char t = '\0';
 	int x, y, maxlen;
 
-	if (sel == c) {
+	if (sel == c || (runinall && !c->minimized)) {
 		wattrset(c->window, SELECTED_ATTR);
 		wcolor_set(c->window, vt_color_get(SELECTED_FG, SELECTED_BG), NULL);
 	} else {
@@ -980,6 +980,7 @@ togglemouse(const char *args[]) {
 static void
 togglerunall(const char *args[]) {
 	runinall = !runinall;
+	draw_all(true);
 }
 
 static void
