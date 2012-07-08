@@ -55,6 +55,7 @@ install: dvtm
 uninstall:
 	@echo removing executable file from ${DESTDIR}${PREFIX}/bin
 	@rm -f ${DESTDIR}${PREFIX}/bin/dvtm
+	@rm -f ${DESTDIR}${PREFIX}/bin/dvtm-status
 	@echo removing manual page from ${DESTDIR}${MANPREFIX}/man1
 	@rm -f ${DESTDIR}${MANPREFIX}/man1/dvtm.1
 
