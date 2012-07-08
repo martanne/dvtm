@@ -80,6 +80,9 @@ typedef struct {
 } ColorRule;
 
 #define ALT(k)      ((k) + (161 - 'a'))
+#if defined CTRL && defined _AIX
+  #undef CTRL
+#endif
 #ifndef CTRL
   #define CTRL(k)   ((k) & 0x1F)
 #endif

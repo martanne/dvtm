@@ -8,7 +8,8 @@ MANPREFIX = ${PREFIX}/share/man
 
 INCS = -I. -I/usr/include -I/usr/local/include 
 LIBS = -lc -lutil -lncursesw
-#LIBS = -lc -lutil -lncurses
+# For AIX, remove -lutil
+#LIBS = -lc -lncursesw
 
 CFLAGS += -std=c99 -Os ${INCS} -DVERSION=\"${VERSION}\" -DNDEBUG
 LDFLAGS += -L/usr/lib -L/usr/local/lib ${LIBS}
