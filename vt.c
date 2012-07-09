@@ -871,6 +871,12 @@ static void try_interpret_escape_seq(Vt *t)
 	}
 
 	switch (*t->ebuf) {
+	case '#': /* ignore DECDHL, DECSWL, DECDWL, DECHCP, DECALN, DECFPP */
+		if (t->elen == 2) {
+			cancel_escape_sequence(t);
+			return;
+		}
+		break;
 	case '(':
 	case ')':
 		if (t->elen == 2) {
