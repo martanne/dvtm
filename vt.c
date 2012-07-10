@@ -309,7 +309,7 @@ static void fill_scroll_buf(Vt *t, int s)
 
 	if (s > 0 && t->scroll_buf_sz) {
 		for (int i = 0; i < s; i++) {
-			struct Row tmp = t->scroll_top[i];
+			Row tmp = t->scroll_top[i];
 			t->scroll_top[i] = t->scroll_buf[t->scroll_buf_ptr];
 			t->scroll_buf[t->scroll_buf_ptr] = tmp;
 
@@ -325,7 +325,7 @@ static void fill_scroll_buf(Vt *t, int s)
 			if (t->scroll_buf_ptr == -1)
 				t->scroll_buf_ptr = t->scroll_buf_sz - 1;
 
-			struct Row tmp = t->scroll_top[i];
+			Row tmp = t->scroll_top[i];
 			t->scroll_top[i] = t->scroll_buf[t->scroll_buf_ptr];
 			t->scroll_buf[t->scroll_buf_ptr] = tmp;
 			t->scroll_top[i].dirty = true;
@@ -481,14 +481,16 @@ static void interpret_csi_ED(Vt *t, int param[], int pcount)
 /* interprets a 'move cursor' (CUP) escape sequence */
 static void interpret_csi_CUP(Vt *t, int param[], int pcount)
 {
+	Row *lines = t->relposmode ? t->scroll_top : t->lines;
+
 	if (pcount == 0) {
-		t->curs_row = (t->relposmode ? t->scroll_top : t->lines);
+		t->curs_row = lines;
 		t->curs_col = 0;
 	} else if (pcount == 1) {
-		t->curs_row = (t->relposmode ? t->scroll_top : t->lines) + param[0] - 1;
+		t->curs_row = lines + param[0] - 1;
 		t->curs_col = 0;
 	} else {
-		t->curs_row = (t->relposmode ? t->scroll_top : t->lines) + param[0] - 1;
+		t->curs_row = lines + param[0] - 1;
 		t->curs_col = param[1] - 1;
 	}
 
