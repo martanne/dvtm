@@ -248,10 +248,13 @@ static void row_roll(Row *start, Row *end, int count)
 
 static void clamp_cursor_to_bounds(Vt *t)
 {
-	if (t->curs_row < t->lines)
-		t->curs_row = t->lines;
-	if (t->curs_row >= t->lines + t->rows)
-		t->curs_row = t->lines + t->rows - 1;
+	Row *lines = t->relposmode ? t->scroll_top : t->lines;
+	int rows = t->relposmode ? t->scroll_bot - t->scroll_top : t->rows;
+
+	if (t->curs_row < lines)
+		t->curs_row = lines;
+	if (t->curs_row >= lines + rows)
+		t->curs_row = lines + rows - 1;
 	if (t->curs_col < 0)
 		t->curs_col = 0;
 	if (t->curs_col >= t->cols)
