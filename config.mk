@@ -6,10 +6,14 @@ VERSION = 0.7
 PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 
-INCS = -I. -I/usr/include -I/usr/local/include 
+INCS = -I. -I/usr/include -I/usr/local/include
 LIBS = -lc -lutil -lncursesw
-# For AIX, remove -lutil
+# NetBSD
+#LIBS = -lc -lutil -lcurses
+# AIX
 #LIBS = -lc -lncursesw
+# Cygwin
+#INCS += -I/usr/include/ncurses
 
 CFLAGS += -std=c99 -Os ${INCS} -DVERSION=\"${VERSION}\" -DNDEBUG
 LDFLAGS += -L/usr/lib -L/usr/local/lib ${LIBS}
