@@ -627,7 +627,7 @@ static void interpret_csi_ECH(Vt *t, int param[], int pcount)
 {
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
-	if (t->curs_col + n < t->cols)
+	if (t->curs_col + n > t->cols)
 		n = t->cols - t->curs_col;
 
 	row_set(t->curs_row, t->curs_col, n, t);
