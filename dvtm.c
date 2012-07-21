@@ -39,6 +39,10 @@
 int ESCDELAY;
 #endif
 
+#ifndef NCURSES_REENTRANT
+# define set_escdelay(d) (ESCDELAY = (d))
+#endif
+
 typedef struct {
 	double mfact;
 	int history;
@@ -1220,7 +1224,7 @@ parse_args(int argc, char *argv[]) {
 	bool init = false;
 
 	if (!getenv("ESCDELAY"))
-		ESCDELAY = 100;
+		set_escdelay(100);
 	for (arg = 1; arg < argc; arg++) {
 		if (argv[arg][0] != '-') {
 			const char *args[] = { argv[arg], NULL };
@@ -1246,11 +1250,11 @@ parse_args(int argc, char *argv[]) {
 				break;
 			}
 			case 'd':
-				ESCDELAY = atoi(argv[++arg]);
+				set_escdelay(atoi(argv[++arg]));
 				if (ESCDELAY < 50)
-					ESCDELAY = 50;
+					set_escdelay(50);
 				else if (ESCDELAY > 1000)
-					ESCDELAY = 1000;
+					set_escdelay(1000);
 				break;
 			case 'h':
 				screen.history = atoi(argv[++arg]);

@@ -29,7 +29,7 @@
 #include <sys/types.h>
 #include <termios.h>
 #include <wchar.h>
-#ifdef __linux__
+#if defined(__linux__) || defined(__CYGWIN__)
 # include <pty.h>
 #elif defined(__FreeBSD__)
 # include <libutil.h>
