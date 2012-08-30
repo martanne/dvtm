@@ -55,6 +55,7 @@ typedef int (*vt_escseq_handler_t)(Vt *, char *es);
 
 enum {
 	VT_EVENT_TITLE,
+	VT_EVENT_COPY_TEXT,
 };
 
 typedef void (*vt_event_handler_t)(Vt *, int event, void *data);
@@ -88,5 +89,10 @@ void vt_noscroll(Vt *);
 
 void vt_bell(Vt *, bool bell);
 void vt_togglebell(Vt *);
+
+void vt_copymode_enter(Vt *t);
+void vt_copymode_leave(Vt *t);
+unsigned vt_copymode(Vt *t);
+void vt_copymode_keypress(Vt *t, int keycode);
 
 #endif /* VT_VT_H */

@@ -143,6 +143,7 @@ typedef struct {
 
 /* commands for use by keybindings */
 static void create(const char *args[]);
+static void copymode(const char *args[]);
 static void escapekey(const char *args[]);
 static void focusn(const char *args[]);
 static void focusnext(const char *args[]);
@@ -151,6 +152,7 @@ static void focusprev(const char *args[]);
 static void focusprevnm(const char *args[]);
 static void killclient(const char *args[]);
 static void lock(const char *key[]);
+static void paste(const char *args[]);
 static void quit(const char *args[]);
 static void redraw(const char *args[]);
 static void scrollback(const char *args[]);
@@ -188,6 +190,7 @@ static Layout *layout = layouts;
 static StatusBar bar = { -1, BAR_POS, 1 };
 static CmdFifo cmdfifo = { -1 };
 static const char *shell;
+static char *copybuf;
 static bool running = true;
 static bool runinall = false;
 
@@ -419,6 +422,12 @@ term_event_handler(Vt *term, int event, void *event_data) {
 		c->title[event_data ? sizeof(c->title) - 1 : 0] = '\0';
 		draw_border(c);
 		applycolorrules(c);
+		break;
+	case VT_EVENT_COPY_TEXT:
+		if (event_data) {
+			free(copybuf);
+			copybuf = event_data;
+		}
 		break;
 	}
 }
@@ -671,6 +680,7 @@ cleanup() {
 		destroy(clients);
 	vt_shutdown();
 	endwin();
+	free(copybuf);
 	if (bar.fd > 0)
 		close(bar.fd);
 	if (bar.file)
@@ -718,6 +728,13 @@ create(const char *args[]) {
 	attach(c);
 	focus(c);
 	arrange();
+}
+
+static void
+copymode(const char *args[]) {
+	if (!sel)
+		return;
+	vt_copymode_enter(sel->term);
 }
 
 static void
@@ -837,6 +854,12 @@ lock(const char *args[]) {
 	}
 
 	arrange();
+}
+
+static void
+paste(const char *args[]) {
+	if (sel && copybuf)
+		vt_write(sel->term, copybuf, strlen(copybuf));
 }
 
 static void
@@ -1339,6 +1362,9 @@ main(int argc, char *argv[]) {
 					}
 				} else if ((key = keybinding(0, code))) {
 					key->action.cmd(key->action.args);
+				} else if (sel && vt_copymode(sel->term)) {
+					vt_copymode_keypress(sel->term, code);
+					draw(sel);
 				} else {
 					keypress(code);
 				}
@@ -1354,7 +1380,7 @@ main(int argc, char *argv[]) {
 			handle_statusbar();
 
 		for (c = clients; c; ) {
-			if (FD_ISSET(c->pty, &rd)) {
+			if (FD_ISSET(c->pty, &rd) && !vt_copymode(c->term)) {
 				if (vt_process(c->term) < 0 && errno == EIO) {
 					/* client probably terminated */
 					t = c->next;

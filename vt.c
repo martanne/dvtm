@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <langinfo.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,6 +75,7 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define sstrlen(str) (sizeof(str) - 1)
 
+#define COPYMODE_ATTR A_REVERSE
 static bool is_utf8, has_default_colors;
 static short color_pairs_reserved, color_pairs_max, color_pair_current;
 static short *color2palette, default_fg, default_bg;
@@ -149,12 +151,22 @@ struct Vt {
 	unsigned escaped:1;
 	unsigned curshid:1;
 	unsigned curskeymode:1;
+	unsigned copymode:1;
+	unsigned copymode_selecting:1;
 	unsigned bell:1;
 	unsigned relposmode:1;
 	unsigned mousetrack:1;
 	unsigned graphmode:1;
 	bool charsets[2];
-
+	char copymode_searching;
+	/* copymode */
+	int copymode_curs_srow, copymode_curs_scol;
+	Row *copymode_sel_start_row;
+	int copymode_sel_start_col;
+	wchar_t *searchbuf;
+	mbstate_t searchbuf_ps;
+	int searchbuf_curs, searchbuf_size;
+	int copymode_cmd_multiplier;
 	/* buffers and parsing state */
 	mbstate_t ps;
 	char rbuf[BUFSIZ];
@@ -1214,6 +1226,7 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 		return NULL;
 	}
 	t->buffer = &t->buffer_normal;
+	t->copymode_cmd_multiplier = 1;
 	return t;
 }
 
@@ -1291,6 +1304,8 @@ void vt_resize(Vt *t, int rows, int cols)
 		return;
 
 	vt_noscroll(t);
+	if (t->copymode)
+		vt_copymode_leave(t);
 	buffer_resize(&t->buffer_normal, rows, cols);
 	buffer_resize(&t->buffer_alternate, rows, cols);
 	clamp_cursor_to_bounds(t);
@@ -1304,6 +1319,7 @@ void vt_destroy(Vt *t)
 		return;
 	buffer_free(&t->buffer_normal);
 	buffer_free(&t->buffer_alternate);
+	free(t->searchbuf);
 	free(t);
 }
 
@@ -1314,10 +1330,67 @@ void vt_dirty(Vt *vt)
 		row->dirty = true;
 }
 
+static void copymode_get_selection_boundry(Vt *vt, Row **start_row, int *start_col, Row **end_row, int *end_col, bool clip) {
+	Buffer *t = vt->buffer;
+	if (vt->copymode_sel_start_row >= t->lines && vt->copymode_sel_start_row < t->lines + t->rows) {
+		/* within the current page */
+		if (t->curs_row >= vt->copymode_sel_start_row) {
+			*start_row = vt->copymode_sel_start_row;
+			*end_row = t->curs_row;
+			*start_col = vt->copymode_sel_start_col;
+			*end_col = t->curs_col;
+		} else {
+			*start_row = t->curs_row;
+			*end_row = vt->copymode_sel_start_row;
+			*start_col = t->curs_col;
+			*end_col = vt->copymode_sel_start_col;
+		}
+		if (t->curs_col < *start_col && *start_row == *end_row) {
+			*start_col = t->curs_col;
+			*end_col = vt->copymode_sel_start_col;
+		}
+	} else {
+		/* part of the scrollback buffer is also selected */
+		if (vt->copymode_sel_start_row < t->lines) {
+			/* above the current page */
+			if (clip) {
+				*start_row = t->lines;
+				*start_col = 0;
+			} else {
+				int copied_lines = t->lines - vt->copymode_sel_start_row;
+				*start_row = &t->scroll_buf
+					[(t->scroll_buf_ptr - copied_lines + t->scroll_buf_sz) % t->scroll_buf_sz];
+				*start_col = vt->copymode_sel_start_col;
+			}
+			*end_row = t->curs_row;
+			*end_col = t->curs_col;
+		} else {
+			/* below the current page */
+			*start_row = t->curs_row;
+			*start_col = t->curs_col;
+			if (clip) {
+				*end_row = t->lines + t->rows;
+				*end_col = t->cols - 1;
+			} else {
+				int copied_lines = vt->copymode_sel_start_row -(t->lines + t->rows);
+				*end_row = &t->scroll_buf
+					[(t->scroll_buf_ptr + copied_lines) % t->scroll_buf_sz];
+				*end_col = vt->copymode_sel_start_col;
+			}
+		}
+	}
+}
+
 void vt_draw(Vt *vt, WINDOW * win, int srow, int scol)
 {
 	Buffer *t = vt->buffer;
+	bool sel = false;
+	Row *sel_row_start, *sel_row_end;
+	int sel_col_start, sel_col_end;
+
+	copymode_get_selection_boundry(vt, &sel_row_start, &sel_col_start, &sel_row_end, &sel_col_end, true);
 	curs_set(0);
+
 	for (int i = 0; i < t->rows; i++) {
 		Row *row = t->lines + i;
 
@@ -1341,6 +1414,18 @@ void vt_draw(Vt *vt, WINDOW * win, int srow, int scol)
 				wattrset(win, (attr_t) cell->attr << NCURSES_ATTR_SHIFT);
 				wcolor_set(win, vt_color_get(vt, cell->fg, cell->bg), NULL);
 			}
+
+			if (vt->copymode_selecting && ((row > sel_row_start && row < sel_row_end) ||
+			    (row == sel_row_start && j >= sel_col_start && (row != sel_row_end || j <= sel_col_end)) ||
+			    (row == sel_row_end && j <= sel_col_end && (row != sel_row_start || j >= sel_col_start)))) {
+				wattrset(win, (attr_t) ((cell->attr << NCURSES_ATTR_SHIFT)|COPYMODE_ATTR));
+				sel = true;
+			} else if (sel) {
+				wattrset(win, (attr_t) cell->attr << NCURSES_ATTR_SHIFT);
+				wcolor_set(win, vt_color_get(vt, cell->fg, cell->bg), NULL);
+				sel = false;
+			}
+
 			if (is_utf8 && cell->text >= 128) {
 				char buf[MB_CUR_MAX + 1];
 				int len = wcrtomb(buf, cell->text, NULL);
@@ -1355,12 +1440,22 @@ void vt_draw(Vt *vt, WINDOW * win, int srow, int scol)
 	}
 
 	wmove(win, srow + t->curs_row - t->lines, scol + t->curs_col);
+
+	if (vt->copymode_searching) {
+		wattrset(win, vt->defattrs << NCURSES_ATTR_SHIFT);
+		mvwaddch(win, srow + t->rows - 1, 0, vt->copymode_searching == 1 ? '/' : '?');
+		int len = waddnwstr(win, vt->searchbuf, t->cols - 1);
+		whline(win, ' ', t->cols - len - 1);
+	}
+
 	curs_set(vt_cursor(vt));
 }
 
 void vt_scroll(Vt *vt, int rows)
 {
 	Buffer *t = vt->buffer;
+	if (!t->scroll_buf_sz)
+		return;
 	if (rows < 0) { /* scroll back */
 		if (rows < -t->scroll_buf_len)
 			rows = -t->scroll_buf_len;
@@ -1370,6 +1465,8 @@ void vt_scroll(Vt *vt, int rows)
 	}
 	fill_scroll_buf(t, rows);
 	t->scroll_amount -= rows;
+	if (vt->copymode_selecting)
+		vt->copymode_sel_start_row -= rows;
 }
 
 void vt_noscroll(Vt *t)
@@ -1478,6 +1575,425 @@ void vt_keypress(Vt *t, int keycode)
 	} else {
 		vt_write(t, &c, 1);
 	}
+}
+
+static int copymode_search_range(Vt *vt, Row *start_row, Row *end_row, int start_col, int direction)
+{
+	Buffer *t = vt->buffer;
+	int matched_row_offset = 0, matched_col = 0;
+	int s_start = direction > 0 ? 0 : vt->searchbuf_curs - 1;
+	int s_end = direction > 0 ? vt->searchbuf_curs - 1 : 0;
+	int s = s_start;
+	int end_col = direction > 0 ? t->cols - 1 : 0;
+	Row *row = start_row;
+
+	for (int offset = 0; ; offset++) {
+		int col = direction > 0 ? 0 : t->cols - 1;
+		if (row == start_row)
+			col = start_col;
+		for (;;) {
+			if (vt->searchbuf[s] == row->cells[col].text) {
+				if (s == s_start) {
+					matched_row_offset = offset;
+					matched_col = col;
+				}
+				if (s == s_end) {
+					t->curs_col = matched_col;
+					return matched_row_offset;
+				}
+				s += direction;
+			} else
+				s = s_start;
+
+			if (col == end_col)
+				break;
+			col += direction;
+		}
+
+		if (row == end_row)
+			break;
+
+		if (direction > 0 && row == &t->scroll_buf[t->scroll_buf_sz - 1])
+			row = t->scroll_buf;
+		else if (direction < 0 && row == t->scroll_buf) {
+			int index = t->scroll_buf_len;
+			if (t->scroll_amount)
+				index += t->scroll_amount - 1;
+			if (index >= t->scroll_buf_sz)
+				index = t->scroll_buf_sz - 1;
+			row = &t->scroll_buf[index];
+		} else
+			row += direction;
+	}
+
+	return INT_MAX;
+}
+
+static void copymode_search(Vt *vt, int direction)
+{
+	if (!vt->searchbuf || vt->searchbuf[0] == '\0')
+		return;
+
+	int match_offset;
+	Buffer *t = vt->buffer;
+	Row *start_row = t->curs_row;
+	Row *end_row = direction > 0 ? t->lines + t->rows - 1 : t->lines;
+
+	/* avoid match at current cursor position */
+	int start_col = t->curs_col + direction;
+	if (start_col >= t->cols) {
+		start_col = 0;
+		start_row++;
+	} else if (start_col < 0) {
+		start_col = t->cols - 1;
+		start_row--;
+	}
+
+	if (start_row >= t->lines && start_row < t->lines + t->rows &&
+	    end_row >= t->lines && end_row < t->lines + t->rows) {
+		match_offset = copymode_search_range(vt, start_row, end_row, start_col, direction);
+		if (match_offset != INT_MAX) {
+			t->curs_row = start_row + (direction > 0 ? match_offset : -match_offset);
+			return;
+		}
+	}
+
+	Row *before_start_row, *before_end_row, *after_start_row, *after_end_row;
+
+	if (t->scroll_buf_sz) {
+		before_start_row = &t->scroll_buf
+			[(t->scroll_buf_ptr - 1 + t->scroll_buf_sz) % t->scroll_buf_sz];
+		before_end_row = &t->scroll_buf
+			[(t->scroll_buf_ptr - t->scroll_buf_len + t->scroll_buf_sz) % t->scroll_buf_sz];
+		after_start_row = &t->scroll_buf[t->scroll_buf_ptr];
+		after_end_row = &t->scroll_buf
+			[(t->scroll_buf_ptr + t->scroll_amount - 1) % t->scroll_buf_sz];
+	}
+
+	if (direction > 0) {
+		if (t->scroll_buf_sz && t->scroll_amount) { /* end of page => end of scrollbuffer */
+			match_offset = copymode_search_range(vt, after_start_row, after_end_row, 0, 1);
+			if (match_offset != INT_MAX) {
+				vt_scroll(vt, match_offset + 1);
+				t->curs_row = t->lines + t->rows - 1;
+				return;
+			}
+		}
+
+		if (t->scroll_buf_sz && t->scroll_buf_len) { /* begin of scrollbuffer => begin of page */
+			match_offset = copymode_search_range(vt, before_end_row, before_start_row, 0, 1);
+			if (match_offset != INT_MAX) {
+				vt_scroll(vt, -(t->scroll_buf_len - match_offset));
+				t->curs_row = t->lines;
+				return;
+			}
+		}
+
+		/* begin of page => cursor position */
+		end_row = t->curs_row + (t->curs_row == t->lines + t->rows - 1 ? 0 : 1);
+		match_offset = copymode_search_range(vt, t->lines, end_row, 0, 1);
+		if (match_offset != INT_MAX)
+			t->curs_row = t->lines + match_offset;
+	} else {
+		if (t->scroll_buf_sz && t->scroll_buf_len) { /* begin of page => begin of scrollbuffer */
+			match_offset = copymode_search_range(vt, before_start_row, before_end_row, t->cols - 1, -1);
+			if (match_offset != INT_MAX) {
+				vt_scroll(vt, -(match_offset + 1));
+				t->curs_row = t->lines;
+				return;
+			}
+		}
+
+		if (t->scroll_buf_sz && t->scroll_amount) { /* end of scrollbuffer => end of page */
+			match_offset = copymode_search_range(vt, after_end_row, after_start_row, t->cols - 1, -1);
+			if (match_offset != INT_MAX) {
+				vt_scroll(vt, t->scroll_amount - match_offset);
+				t->curs_row = t->lines + t->rows - 1;
+				return;
+			}
+		}
+		/* end of page => cursor position */
+		end_row = t->curs_row - (t->curs_row == t->lines ? 0 : 1);
+		match_offset = copymode_search_range(vt, t->lines + t->rows - 1, end_row, t->cols - 1, -1);
+		if (match_offset != INT_MAX)
+			t->curs_row = t->lines + t->rows - 1 - match_offset;
+	}
+}
+
+void vt_copymode_keypress(Vt *vt, int keycode)
+{
+	Buffer *t = vt->buffer;
+	Row *start_row, *end_row;
+	int direction, col, start_col, end_col, delta, scroll_page = t->rows / 2;
+	char *copybuf, keychar = (char)keycode;
+	wchar_t wc;
+	ssize_t len;
+	bool found;
+
+	if (!vt->copymode)
+		return;
+
+	if (vt->copymode_searching) {
+		switch (keycode) {
+		case KEY_BACKSPACE:
+			if (--vt->searchbuf_curs < 0)
+				vt->searchbuf_curs = 0;
+			vt->searchbuf[vt->searchbuf_curs] = '\0';
+			break;
+		case '\n':
+			copymode_search(vt, vt->copymode_searching);
+		case '\e':
+			vt->copymode_searching = 0;
+			t->lines[t->rows - 1].dirty = true;
+			break;
+		default:
+			len = (ssize_t)mbrtowc(&wc, &keychar, 1, &vt->searchbuf_ps);
+
+			if (len == -2)
+				return;
+			if (len == -1)
+				wc = keycode;
+			if (vt->searchbuf_curs >= vt->searchbuf_size - 2) {
+				vt->searchbuf_size *= 2;
+				wchar_t *buf = realloc(vt->searchbuf, vt->searchbuf_size * sizeof(wchar_t));
+				if (!buf)
+					return;
+				vt->searchbuf = buf;
+			}
+			vt->searchbuf[vt->searchbuf_curs++] = wc;
+			vt->searchbuf[vt->searchbuf_curs] = '\0';
+			break;
+		}
+	} else {
+		switch (keycode) {
+		case '1' ... '9':
+			vt->copymode_cmd_multiplier = (keychar - '0');
+			return;
+		case KEY_PPAGE:
+			delta = t->curs_row - t->lines;
+			if (delta > scroll_page)
+				t->curs_row -= scroll_page;
+			else {
+				t->curs_row = t->lines;
+				vt_scroll(vt, delta - scroll_page);
+			}
+			break;
+		case KEY_NPAGE:
+			delta = t->rows - (t->curs_row - t->lines);
+			if (delta > scroll_page)
+				t->curs_row += scroll_page;
+			else {
+				t->curs_row = t->lines + t->rows - 1;
+				vt_scroll(vt, scroll_page - delta);
+			}
+			break;
+		case 'g':
+			if (t->scroll_buf_len)
+				vt_scroll(vt, -t->scroll_buf_len);
+			/* fall through */
+		case 'H':
+			t->curs_row = t->lines;
+			break;
+		case 'M':
+			t->curs_row = t->lines + (t->rows / 2);
+			break;
+		case 'G':
+			vt_noscroll(vt);
+			/* fall through */
+		case 'L':
+			t->curs_row = t->lines + t->rows - 1;
+			break;
+		case KEY_HOME:
+		case '^':
+		case '0':
+			t->curs_col = 0;
+			break;
+		case KEY_END:
+		case '$':
+			start_col = t->cols - 1;
+			for (int i = 0; i < t->cols; i++)
+				if (t->curs_row->cells[i].text)
+					start_col = i;
+			t->curs_col = start_col;
+			break;
+		case '/':
+		case '?':
+			memset(&vt->searchbuf_ps, 0, sizeof(mbstate_t));
+			if (!vt->searchbuf) {
+				vt->searchbuf_size = t->cols+1;
+				vt->searchbuf = malloc(vt->searchbuf_size * sizeof(wchar_t));
+			}
+			if (!vt->searchbuf)
+				return;
+			vt->searchbuf[0] = L'\0';
+			vt->searchbuf_curs = 0;
+			vt->copymode_searching = keycode == '/' ? 1 : -1;
+			break;
+		case 'n':
+		case 'N':
+			copymode_search(vt, keycode == 'n' ? 1 : -1);
+			break;
+		case 'v':
+			vt->copymode_selecting = true;
+			vt->copymode_sel_start_row = t->curs_row;
+			vt->copymode_sel_start_col = t->curs_col;
+			break;
+		case 'y':
+			if (!vt->copymode_selecting) {
+				t->curs_col = 0;
+				vt->copymode_sel_start_row = t->curs_row + vt->copymode_cmd_multiplier - 1;
+				if (vt->copymode_sel_start_row >= t->lines + t->rows)
+					vt->copymode_sel_start_row = t->lines + t->rows - 1;
+				vt->copymode_sel_start_col = t->cols - 1;
+			}
+
+			copymode_get_selection_boundry(vt, &start_row, &start_col, &end_row, &end_col, false);
+			int line_count = vt->copymode_sel_start_row > t->curs_row ?
+				vt->copymode_sel_start_row - t->curs_row :
+				t->curs_row - vt->copymode_sel_start_row;
+			copybuf = calloc(1, (line_count + 1) * t->cols * MB_CUR_MAX + 1);
+
+			if (copybuf) {
+				char *s = copybuf, *last_non_space = s;
+				mbstate_t ps;
+				memset(&ps, 0, sizeof(mbstate_t));
+				Row *row = start_row;
+				Row *scroll_data_end = &t->scroll_buf
+					[(t->scroll_buf_ptr - 1 + t->scroll_buf_sz) % t->scroll_buf_sz];
+				for (;;) {
+					int j = (row == start_row) ? start_col : 0;
+					int col = (row == end_row) ? end_col : t->cols - 1;
+					while (j <= col) {
+						if (row->cells[j].text) {
+							size_t len = wcrtomb(s, row->cells[j].text, &ps);
+							if (len > 0)
+								s += len;
+							last_non_space = s;
+						} else
+							*s++ = ' ';
+						j++;
+					}
+
+					s = last_non_space;
+
+					if (row == end_row)
+						break;
+					else
+						*s++ = '\n';
+
+					if (t->scroll_buf_len && row == &t->scroll_buf[t->scroll_buf_sz - 1])
+						row = t->scroll_buf;
+					else if (t->scroll_buf_len && row == scroll_data_end)
+						row = t->lines;
+					else if (row == t->lines + t->rows - 1)
+						row = &t->scroll_buf[t->scroll_buf_ptr];
+					else
+						row++;
+				}
+				*s = '\0';
+				if (vt->event_handler)
+					vt->event_handler(vt, VT_EVENT_COPY_TEXT, copybuf);
+			}
+			/* fall through */
+		case '\e':
+		case 'q':
+			vt_copymode_leave(vt);
+			return;
+		default:
+			for (int count = 0; count < vt->copymode_cmd_multiplier; count++) {
+				switch (keycode) {
+				case 'w':
+				case 'W':
+				case 'b':
+				case 'B':
+					direction = (keycode == 'w' || keycode == 'W') ? 1 : -1;
+					start_col = (direction > 0) ? 0 : t->cols - 1;
+					end_col = (direction > 0) ? t->cols - 1 : 0;
+					col = t->curs_col;
+					found = false;
+					do {
+						for (;;) {
+							if (t->curs_row->cells[col].text == ' ') {
+								found = true;
+								break;
+							}
+
+							if (col == end_col)
+								break;
+							col += direction;
+						}
+
+						if (found) {
+							while (t->curs_row->cells[col].text == ' ') {
+								if (col == end_col) {
+									t->curs_row += direction;
+									break;
+								}
+								col += direction;
+							}
+						} else {
+							col = start_col;
+							t->curs_row += direction;
+						}
+
+						if (t->curs_row < t->lines) {
+							t->curs_row = t->lines;
+							if (t->scroll_buf_len)
+								vt_scroll(vt, -1);
+							else
+								break;
+						}
+
+						if (t->curs_row >= t->lines + t->rows) {
+							t->curs_row = t->lines + t->rows - 1;
+							if (t->scroll_amount)
+								vt_scroll(vt, 1);
+							else
+								break;
+						}
+					} while (!found);
+
+					if (found)
+						t->curs_col = col;
+					break;
+				case KEY_UP:
+				case 'k':
+					if (t->curs_row == t->lines)
+						vt_scroll(vt, -1);
+					else
+						t->curs_row--;
+					break;
+				case KEY_DOWN:
+				case 'j':
+					if (t->curs_row == t->lines + t->rows - 1)
+						vt_scroll(vt, 1);
+					else
+						t->curs_row++;
+					break;
+				case KEY_RIGHT:
+				case 'l':
+					t->curs_col++;
+					if (t->curs_col >= t->cols) {
+						t->curs_col = t->cols - 1;
+						vt->copymode_cmd_multiplier = 1;
+					}
+					break;
+				case KEY_LEFT:
+				case 'h':
+					t->curs_col--;
+					if (t->curs_col < 0) {
+						t->curs_col = 0;
+						vt->copymode_cmd_multiplier = 1;
+					}
+					break;
+				}
+			}
+			break;
+		}
+	}
+	if (vt->copymode_selecting)
+		vt_dirty(vt);
+	vt->copymode_cmd_multiplier = 1;
 }
 
 void vt_mouse(Vt *t, int x, int y, mmask_t mask)
@@ -1631,5 +2147,37 @@ void *vt_get_data(Vt *t)
 
 unsigned vt_cursor(Vt *t)
 {
+	if (t->copymode)
+		return 1;
 	return t->buffer->scroll_amount ? 0 : !t->curshid;
+}
+
+unsigned vt_copymode(Vt *t)
+{
+	return t->copymode;
+}
+
+void vt_copymode_enter(Vt *vt)
+{
+	Buffer *t = vt->buffer;
+	if (!vt->copymode) {
+		vt->copymode_curs_srow = t->curs_row - t->lines;
+		vt->copymode_curs_scol = t->curs_col;
+	}
+	vt->copymode = true;
+}
+
+void vt_copymode_leave(Vt *vt)
+{
+	Buffer *t = vt->buffer;
+	vt->copymode = false;
+	vt->copymode_selecting = false;
+	vt->copymode_searching = false;
+	vt->copymode_sel_start_row = t->lines;
+	vt->copymode_sel_start_col = 0;
+	vt->copymode_cmd_multiplier = 1;
+	t->curs_row = t->lines + vt->copymode_curs_srow;
+	t->curs_col = vt->copymode_curs_scol;
+	vt_noscroll(vt);
+	vt_dirty(vt);
 }

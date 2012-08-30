@@ -113,6 +113,12 @@ Toggle bell (off by default).
 .B Mod\-M
 Toggle dvtm mouse grabbing.
 .TP
+.B Mod\-v
+Enter copy mode (see section below for navigation commands).
+.TP
+.B Mod\-p
+Paste last copied text from copy mode at current cursor position.
+.TP
 .B Mod\-q
 Quit dvtm.
 .SS Mouse commands
@@ -134,6 +140,32 @@ Zooms/cycles current window to/from master area.
 .TP
 .B Button3 click
 Toggle minimization of current window.
+
+.SS Copy mode
+.TP
+.B Entering
+Copy mode gives easy access to past output and can be entered with Mod\-v.
+.TP
+.B Navigation
+Once in, navigation works with vi style keybindings (h,j,k,l,^,$,g,G) as well as with the
+Arrows/Home/End/Page-Down/Page-Up keys.
+.TP
+.B Searching
+Search forward with / and backwards with ?. Jump forward to next match with n.
+Jump backwards to next match with N.
+.TP
+.B Selecting
+To start making a selection press v (similar to visual mode in vi).
+.TP
+.B Copying
+To copy the current selection use y.
+.TP
+.B Pasting
+The previously copied text can be pasted at the current cursor position with Mod\-p.
+.TP
+.B Leaving
+Copy mode is automatically left upon copying something. To manually exit at any
+time press ESC or q.
 
 .SH EXAMPLE
 .TP

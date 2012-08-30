@@ -81,6 +81,8 @@ Key keys[] = {
 	{ MOD, 'r',       { redraw,         { NULL }                    } },
 	{ MOD, 'X',       { lock,           { NULL }                    } },
 	{ MOD, 'B',       { togglebell,     { NULL }                    } },
+	{ MOD, 'v',       { copymode,       { NULL }                    } },
+	{ MOD, 'p',       { paste,          { NULL }                    } },
 	{ MOD, KEY_PPAGE, { scrollback,     { "-1" }                    } },
 	{ MOD, KEY_NPAGE, { scrollback,     { "1"  }                    } },
 	{ MOD, '?',       { create,         { "man dvtm", "dvtm help" } } },
