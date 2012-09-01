@@ -891,7 +891,8 @@ static void try_interpret_escape_seq(Vt *t)
 		}
 		break;
 	case ']': /* xterm thing */
-		if (lastchar == '\a') {
+		if (lastchar == '\a' ||
+		   (lastchar == '\\' && t->elen >= 2 && t->ebuf[t->elen - 2] == '\e')) {
 			interpret_esc_xterm(t);
 			cancel_escape_sequence(t);
 			return;
