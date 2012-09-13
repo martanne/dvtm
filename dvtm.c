@@ -403,12 +403,11 @@ focus(Client *c) {
 
 static void
 applycolorrules(Client *c) {
-	unsigned int i;
-	unsigned attrs = A_NORMAL;
-	short fg = -1, bg = -1;
-	const ColorRule *r;
+	const ColorRule *r = colorrules;
+	short fg = r->fg, bg = r->bg;
+	unsigned attrs = r->attrs;
 
-	for (i = 0; i < countof(colorrules); i++) {
+	for (unsigned int i = 1; i < countof(colorrules); i++) {
 		r = &colorrules[i];
 		if (strstr(c->title, r->title)) {
 			attrs = r->attrs;

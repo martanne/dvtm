@@ -95,8 +95,9 @@ Key keys[] = {
 };
 
 static const ColorRule colorrules[] = {
-	/* title attrs     fgcolor      bgcolor */
+	{ "", A_NORMAL, -1, -1 }, /* default */
 #if 0
+	/* title attrs     fgcolor      bgcolor */
 	{ "ssh", A_NORMAL, COLOR_BLACK, 224      },
 #endif
 };
