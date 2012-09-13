@@ -856,6 +856,8 @@ quit(const char *args[]) {
 
 static void
 redraw(const char *args[]) {
+	for (Client *c = clients; c; c = c->next)
+		vt_dirty(c->term);
 	wrefresh(curscr);
 	resize_screen();
 	draw_all(true);
