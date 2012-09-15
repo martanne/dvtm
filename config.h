@@ -82,10 +82,12 @@ Key keys[] = {
 	{ MOD, 'X',       { lock,           { NULL }                    } },
 	{ MOD, 'B',       { togglebell,     { NULL }                    } },
 	{ MOD, 'v',       { copymode,       { NULL }                    } },
+	{ MOD, '/',       { copymode,       { "/" }                     } },
+	{ MOD, '?',       { copymode,       { "?" }                     } },
 	{ MOD, 'p',       { paste,          { NULL }                    } },
 	{ MOD, KEY_PPAGE, { scrollback,     { "-1" }                    } },
 	{ MOD, KEY_NPAGE, { scrollback,     { "1"  }                    } },
-	{ MOD, '?',       { create,         { "man dvtm", "dvtm help" } } },
+	{ MOD, KEY_F(1),  { create,         { "man dvtm", "dvtm help" } } },
 };
 
 static const ColorRule colorrules[] = {
