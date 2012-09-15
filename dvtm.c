@@ -231,7 +231,7 @@ drawbar() {
 		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
-	wcolor_set(stdscr, vt_color_get(BAR_FG, BAR_BG), NULL);
+	wcolor_set(stdscr, vt_color_get(NULL, BAR_FG, BAR_BG), NULL);
 	mvaddch(bar.y, 0, '[');
 	if (mbstowcs(wbuf, bar.text, sizeof bar.text) == (size_t)-1)
 		return;
@@ -260,10 +260,10 @@ draw_border(Client *c) {
 
 	if (sel == c || (runinall && !c->minimized)) {
 		wattrset(c->window, SELECTED_ATTR);
-		wcolor_set(c->window, vt_color_get(SELECTED_FG, SELECTED_BG), NULL);
+		wcolor_set(c->window, vt_color_get(NULL, SELECTED_FG, SELECTED_BG), NULL);
 	} else {
 		wattrset(c->window, NORMAL_ATTR);
-		wcolor_set(c->window, vt_color_get(NORMAL_FG, NORMAL_BG), NULL);
+		wcolor_set(c->window, vt_color_get(NULL, NORMAL_FG, NORMAL_BG), NULL);
 	}
 	getyx(c->window, y, x);
 	curs_set(0);
@@ -333,7 +333,7 @@ static void
 arrange() {
 	clear_workspace();
 	attrset(NORMAL_ATTR);
-	color_set(vt_color_get(NORMAL_FG, NORMAL_BG), NULL);
+	color_set(vt_color_get(NULL, NORMAL_FG, NORMAL_BG), NULL);
 	layout->arrange();
 	wnoutrefresh(stdscr);
 	draw_all(true);
@@ -643,6 +643,9 @@ setup() {
 	mouse_setup();
 	raw();
 	vt_init();
+	vt_color_reserve(NORMAL_FG, NORMAL_BG);
+	vt_color_reserve(SELECTED_FG, SELECTED_BG);
+	vt_color_reserve(BAR_FG, BAR_BG);
 	getmaxyx(stdscr, screen.h, screen.w);
 	resize_screen();
 	signal(SIGWINCH, sigwinch_handler);
@@ -678,6 +681,7 @@ destroy(Client *c) {
 
 static void
 cleanup() {
+	vt_shutdown();
 	endwin();
 	if (bar.fd > 0)
 		close(bar.fd);

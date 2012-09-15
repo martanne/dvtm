@@ -58,14 +58,25 @@
 # endif
 #endif
 
+#ifdef NCURSES_VERSION
+# ifndef NCURSES_EXT_COLORS
+#  define NCURSES_EXT_COLORS 0
+# endif
+# if !NCURSES_EXT_COLORS
+#  define MAX_COLOR_PAIRS 256
+# endif
+#endif
+#ifndef MAX_COLOR_PAIRS
+# define MAX_COLOR_PAIRS COLOR_PAIRS
+#endif
+
 #define IS_CONTROL(ch) !((ch) & 0xffffff60UL)
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define COLOR_PALETTE_START 1
-#define COLOR_PALETTE_END (unsigned)(MIN(512, COLOR_PAIRS))
 #define sstrlen(str) (sizeof(str) - 1)
 
-static bool is_utf8, has_default_colors, use_color_palette;
-static short *color2palette;
+static bool is_utf8, has_default_colors;
+static short color_pairs_reserved, color_pairs_max, color_pair_current;
+static short *color2palette, default_fg, default_bg;
 
 enum {
 	C0_NUL = 0x00,
@@ -1341,13 +1352,11 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 				if (row->bg[j] == -1)
 					row->bg[j] = t->defbg;
 				wattrset(win, (attr_t) row->attr[j] << NCURSES_ATTR_SHIFT);
-				wcolor_set(win, vt_color_get(row->fg[j], row->bg[j]), NULL);
+				wcolor_set(win, vt_color_get(t, row->fg[j], row->bg[j]), NULL);
 			}
 			if (is_utf8 && row->text[j] >= 128) {
 				char buf[MB_CUR_MAX + 1];
-				int len;
-
-				len = wcrtomb(buf, row->text[j], NULL);
+				int len = wcrtomb(buf, row->text[j], NULL);
 				waddnstr(win, buf, len);
 				if (wcwidth(row->text[j]) > 1)
 					j++;
@@ -1418,7 +1427,7 @@ pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *env[], in
 			setenv(envp[0], envp[1], 1);
 			envp += 2;
 		}
-		setenv("TERM", use_color_palette ? "rxvt-256color" : "rxvt", 1);
+		setenv("TERM", COLORS >= 256 ? "rxvt-256color" : "rxvt", 1);
 		execv(p, (char *const *)argv);
 		fprintf(stderr, "\nexecv() failed.\nCommand: '%s'\n", argv[0]);
 		exit(1);
@@ -1520,79 +1529,91 @@ void vt_mouse(Vt *t, int x, int y, mmask_t mask)
 #endif /* NCURSES_MOUSE_VERSION */
 }
 
-static unsigned color_hash(short f, short b)
+static unsigned int color_hash(short fg, short bg)
 {
-	return ((f + 1) * COLORS) + b + 1;
+	if (fg == -1)
+		fg = COLORS;
+	if (bg == -1)
+		bg = COLORS + 1;
+	return fg * (COLORS + 2) + bg;
 }
 
-short vt_color_get(short fg, short bg)
+short vt_color_get(Vt *t, short fg, short bg)
 {
-	static unsigned palette_cur = COLOR_PALETTE_START;
+	if (fg >= COLORS)
+		fg = (t ? t->deffg : default_fg);
+	if (bg >= COLORS)
+		bg = (t ? t->defbg : default_bg);
 
-	if (use_color_palette) {
-		if (fg == -1 && bg == -1) {
-			return 0;
-		} else {
-			unsigned c = color_hash(fg, bg);
-			if (color2palette[c] == 0) {
-				short oldfg, oldbg;
-				pair_content(palette_cur, &oldfg, &oldbg);
-				color2palette[color_hash(oldfg, oldbg)] = 0;
-				init_pair(palette_cur, fg, bg);
-				color2palette[c] = palette_cur++;
-				if (palette_cur >= COLOR_PALETTE_END) {
-					palette_cur = COLOR_PALETTE_START;
-					/* possibly use mvwinch/mvchgat to update palette */
+	if (!has_default_colors) {
+		if (fg == -1)
+			fg = (t && t->deffg != -1 ? t->deffg : default_fg);
+		if (bg == -1)
+			bg = (t && t->defbg != -1 ? t->defbg : default_bg);
+	}
+
+	if (!color2palette || (fg == -1 && bg == -1))
+		return 0;
+	unsigned int index = color_hash(fg, bg);
+	if (color2palette[index] == 0) {
+		short oldfg, oldbg;
+		for (;;) {
+			if (++color_pair_current >= color_pairs_max)
+				color_pair_current = color_pairs_reserved + 1;
+			pair_content(color_pair_current, &oldfg, &oldbg);
+			unsigned int old_index = color_hash(oldfg, oldbg);
+			if (color2palette[old_index] >= 0) {
+				if (init_pair(color_pair_current, fg, bg) == OK) {
+					color2palette[old_index] = 0;
+					color2palette[index] = color_pair_current;
 				}
+				break;
 			}
-			return color2palette[c];
 		}
-	} else {
-		if (has_default_colors) {
-			if (fg == -1)
-				fg = COLOR_WHITE;
-			if (bg == -1)
-				bg = COLOR_BLACK;
-		}
-		return (7 - fg) * 8 + bg;
+	}
+
+	short color_pair = color2palette[index];
+	return color_pair >= 0 ? color_pair : -color_pair;
+}
+
+void vt_color_reserve(short fg, short bg)
+{
+	if (!color2palette || fg >= COLORS || bg >= COLORS || color_pairs_reserved > color_pairs_max / 2)
+		return;
+	if (!has_default_colors && fg == -1)
+		fg = default_fg;
+	if (!has_default_colors && bg == -1)
+		bg = default_bg;
+	if (fg == -1 && bg == -1)
+		return;
+	unsigned int index = color_hash(fg, bg);
+	if (color2palette[index] >= 0) {
+		if (init_pair(++color_pairs_reserved, fg, bg) == OK)
+			color2palette[index] = -color_pairs_reserved;
 	}
 }
 
 static void init_colors(void)
 {
+	pair_content(0, &default_fg, &default_bg);
+	if (default_fg == -1)
+		default_fg = COLOR_WHITE;
+	if (default_bg == -1)
+		default_bg = COLOR_BLACK;
 	has_default_colors = (use_default_colors() == OK);
-
-	if (COLORS >= 256 && COLOR_PAIRS >= 256) {
-		use_color_palette = true;
-		color2palette = calloc((COLORS + 1) * (COLORS + 1), sizeof(short));
-		int bg = 0, fg = 0;
-		for (unsigned int i = COLOR_PALETTE_START; i < COLOR_PALETTE_END; i++) {
-			init_pair(i, fg, bg);
-			color2palette[color_hash(fg, bg)] = i;
-			if (++fg == COLORS) {
-				fg = 0;
-				bg++;
-			}
-		}
-	} else {
-		for (int bg = 0; bg < 8; bg++) {
-			for (int fg = 0; fg < 8; fg++) {
-				if (has_default_colors) {
-					init_pair((7 - fg) * 8 + bg,
-						  fg == COLOR_WHITE ? -1 : fg,
-						  bg == COLOR_BLACK ? -1 : bg);
-				} else {
-					init_pair((7 - fg) * 8 + bg, fg, bg);
-				}
-			}
-		}
-	}
+	color_pairs_max = MIN(COLOR_PAIRS, MAX_COLOR_PAIRS);
+	color2palette = calloc((COLORS + 2) * (COLORS + 2), sizeof(short));
 }
 
 void vt_init(void)
 {
 	init_colors();
 	is_utf8_locale();
+}
+
+void vt_shutdown(void)
+{
+	free(color2palette);
 }
 
 void vt_set_escseq_handler(Vt *t, vt_escseq_handler_t handler)

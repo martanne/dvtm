@@ -60,6 +60,7 @@ enum {
 typedef void (*vt_event_handler_t)(Vt *, int event, void *data);
 
 void vt_init(void);
+void vt_shutdown(void);
 void vt_set_escseq_handler(Vt *, vt_escseq_handler_t);
 void vt_set_event_handler(Vt *, vt_event_handler_t);
 void vt_set_data(Vt *, void *);
@@ -79,7 +80,8 @@ int vt_write(Vt *t, const char *buf, int len);
 void vt_mouse(Vt *t, int x, int y, mmask_t mask);
 void vt_dirty(Vt *t);
 void vt_draw(Vt *, WINDOW *win, int startrow, int startcol);
-short vt_color_get(short fg, short bg);
+short vt_color_get(Vt *t, short fg, short bg);
+void vt_color_reserve(short fg, short bg);
 
 void vt_scroll(Vt *, int rows);
 void vt_noscroll(Vt *);
