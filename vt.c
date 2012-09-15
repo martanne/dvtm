@@ -1226,7 +1226,7 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 		return NULL;
 	}
 	t->buffer = &t->buffer_normal;
-	t->copymode_cmd_multiplier = 1;
+	t->copymode_cmd_multiplier = 0;
 	return t;
 }
 
@@ -1766,8 +1766,8 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 		}
 	} else {
 		switch (keycode) {
-		case '1' ... '9':
-			vt->copymode_cmd_multiplier = (keychar - '0');
+		case '0' ... '9':
+			vt->copymode_cmd_multiplier = (vt->copymode_cmd_multiplier * 10) + (keychar - '0');
 			return;
 		case KEY_PPAGE:
 			delta = t->curs_row - t->lines;
@@ -1805,7 +1805,6 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 			break;
 		case KEY_HOME:
 		case '^':
-		case '0':
 			t->curs_col = 0;
 			break;
 		case KEY_END:
@@ -1841,7 +1840,8 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 		case 'y':
 			if (!vt->copymode_selecting) {
 				t->curs_col = 0;
-				vt->copymode_sel_start_row = t->curs_row + vt->copymode_cmd_multiplier - 1;
+				vt->copymode_sel_start_row = t->curs_row +
+					(vt->copymode_cmd_multiplier ? vt->copymode_cmd_multiplier - 1 : 0);
 				if (vt->copymode_sel_start_row >= t->lines + t->rows)
 					vt->copymode_sel_start_row = t->lines + t->rows - 1;
 				vt->copymode_sel_start_col = t->cols - 1;
@@ -1900,7 +1900,7 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 			vt_copymode_leave(vt);
 			return;
 		default:
-			for (int count = 0; count < vt->copymode_cmd_multiplier; count++) {
+			for (int c = 0; c < (vt->copymode_cmd_multiplier ? vt->copymode_cmd_multiplier : 1); c++) {
 				switch (keycode) {
 				case 'w':
 				case 'W':
@@ -1975,7 +1975,7 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 					t->curs_col++;
 					if (t->curs_col >= t->cols) {
 						t->curs_col = t->cols - 1;
-						vt->copymode_cmd_multiplier = 1;
+						vt->copymode_cmd_multiplier = 0;
 					}
 					break;
 				case KEY_LEFT:
@@ -1983,7 +1983,7 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 					t->curs_col--;
 					if (t->curs_col < 0) {
 						t->curs_col = 0;
-						vt->copymode_cmd_multiplier = 1;
+						vt->copymode_cmd_multiplier = 0;
 					}
 					break;
 				}
@@ -1993,7 +1993,7 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 	}
 	if (vt->copymode_selecting)
 		vt_dirty(vt);
-	vt->copymode_cmd_multiplier = 1;
+	vt->copymode_cmd_multiplier = 0;
 }
 
 void vt_mouse(Vt *t, int x, int y, mmask_t mask)
@@ -2175,7 +2175,7 @@ void vt_copymode_leave(Vt *vt)
 	vt->copymode_searching = false;
 	vt->copymode_sel_start_row = t->lines;
 	vt->copymode_sel_start_col = 0;
-	vt->copymode_cmd_multiplier = 1;
+	vt->copymode_cmd_multiplier = 0;
 	t->curs_row = t->lines + vt->copymode_curs_srow;
 	t->curs_col = vt->copymode_curs_scol;
 	vt_noscroll(vt);
