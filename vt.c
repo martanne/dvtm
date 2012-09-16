@@ -1605,6 +1605,7 @@ static void init_colors(void)
 	has_default_colors = (use_default_colors() == OK);
 	color_pairs_max = MIN(COLOR_PAIRS, MAX_COLOR_PAIRS);
 	color2palette = calloc((COLORS + 2) * (COLORS + 2), sizeof(short));
+	vt_color_reserve(COLOR_WHITE, COLOR_BLACK);
 }
 
 void vt_init(void)
