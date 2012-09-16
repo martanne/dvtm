@@ -1,4 +1,3 @@
-/* curses attributes for the currently focused window */
 /* valid curses attributes are listed below they can be ORed
  *
  * A_NORMAL        Normal display (no highlight)
@@ -10,23 +9,16 @@
  * A_BOLD          Extra bright or bold
  * A_PROTECT       Protected mode
  * A_INVIS         Invisible or blank mode
- *
  */
 #define BLUE            (COLORS==256 ? 68 : COLOR_BLUE)
-
-#define SELECTED_ATTR   A_NORMAL
-#define SELECTED_FG     BLUE
-#define SELECTED_BG     -1
+/* curses attributes for the currently focused window */
+#define SELECTED_ATTR   COLOR(BLUE, -1) | A_NORMAL
 /* curses attributes for normal (not selected) windows */
-#define NORMAL_ATTR     A_NORMAL
-#define NORMAL_FG       -1
-#define NORMAL_BG       -1
+#define NORMAL_ATTR     COLOR(-1, -1) | A_NORMAL
+/* curses attributes for the status bar */
+#define BAR_ATTR        COLOR(BLUE, -1) | A_NORMAL
 /* status bar (command line option -s) position */
 #define BAR_POS		BAR_TOP /* BAR_BOTTOM, BAR_OFF */
-/* curses attributes for the status bar */
-#define BAR_ATTR        A_NORMAL
-#define BAR_FG          BLUE
-#define BAR_BG          -1
 /* determines whether the statusbar text should be right or left aligned */
 #define BAR_ALIGN       ALIGN_RIGHT
 /* separator between window title and window number */

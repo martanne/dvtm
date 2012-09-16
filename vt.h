@@ -81,7 +81,7 @@ void vt_mouse(Vt *t, int x, int y, mmask_t mask);
 void vt_dirty(Vt *t);
 void vt_draw(Vt *, WINDOW *win, int startrow, int startcol);
 short vt_color_get(Vt *t, short fg, short bg);
-void vt_color_reserve(short fg, short bg);
+short vt_color_reserve(short fg, short bg);
 
 void vt_scroll(Vt *, int rows);
 void vt_noscroll(Vt *);

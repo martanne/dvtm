@@ -1576,21 +1576,23 @@ short vt_color_get(Vt *t, short fg, short bg)
 	return color_pair >= 0 ? color_pair : -color_pair;
 }
 
-void vt_color_reserve(short fg, short bg)
+short vt_color_reserve(short fg, short bg)
 {
-	if (!color2palette || fg >= COLORS || bg >= COLORS || color_pairs_reserved > color_pairs_max / 2)
-		return;
+	if (!color2palette || fg >= COLORS || bg >= COLORS)
+		return 0;
 	if (!has_default_colors && fg == -1)
 		fg = default_fg;
 	if (!has_default_colors && bg == -1)
 		bg = default_bg;
 	if (fg == -1 && bg == -1)
-		return;
+		return 0;
 	unsigned int index = color_hash(fg, bg);
 	if (color2palette[index] >= 0) {
 		if (init_pair(++color_pairs_reserved, fg, bg) == OK)
 			color2palette[index] = -color_pairs_reserved;
 	}
+	short color_pair = color2palette[index];
+	return color_pair >= 0 ? color_pair : -color_pair;
 }
 
 static void init_colors(void)

@@ -179,6 +179,7 @@ static void resize(Client *c, int x, int y, int w, int h);
 extern Screen screen;
 static unsigned int waw, wah, wax, way;
 static Client *clients = NULL;
+#define COLOR(fg, bg) COLOR_PAIR(vt_color_reserve(fg, bg))
 
 #include "config.h"
 
@@ -231,7 +232,6 @@ drawbar() {
 		return;
 	curs_set(0);
 	attrset(BAR_ATTR);
-	wcolor_set(stdscr, vt_color_get(NULL, BAR_FG, BAR_BG), NULL);
 	mvaddch(bar.y, 0, '[');
 	if (mbstowcs(wbuf, bar.text, sizeof bar.text) == (size_t)-1)
 		return;
@@ -258,13 +258,7 @@ draw_border(Client *c) {
 	char t = '\0';
 	int x, y, maxlen;
 
-	if (sel == c || (runinall && !c->minimized)) {
-		wattrset(c->window, SELECTED_ATTR);
-		wcolor_set(c->window, vt_color_get(NULL, SELECTED_FG, SELECTED_BG), NULL);
-	} else {
-		wattrset(c->window, NORMAL_ATTR);
-		wcolor_set(c->window, vt_color_get(NULL, NORMAL_FG, NORMAL_BG), NULL);
-	}
+	wattrset(c->window, (sel == c || (runinall && !c->minimized)) ? SELECTED_ATTR : NORMAL_ATTR);
 	getyx(c->window, y, x);
 	curs_set(0);
 	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
@@ -333,7 +327,6 @@ static void
 arrange() {
 	clear_workspace();
 	attrset(NORMAL_ATTR);
-	color_set(vt_color_get(NULL, NORMAL_FG, NORMAL_BG), NULL);
 	layout->arrange();
 	wnoutrefresh(stdscr);
 	draw_all(true);
@@ -643,9 +636,6 @@ setup() {
 	mouse_setup();
 	raw();
 	vt_init();
-	vt_color_reserve(NORMAL_FG, NORMAL_BG);
-	vt_color_reserve(SELECTED_FG, SELECTED_BG);
-	vt_color_reserve(BAR_FG, BAR_BG);
 	getmaxyx(stdscr, screen.h, screen.w);
 	resize_screen();
 	signal(SIGWINCH, sigwinch_handler);
