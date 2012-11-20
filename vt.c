@@ -1079,14 +1079,12 @@ static void put_wc(Vt *t, wchar_t wc)
 		tmp->dirty = true;
 
 		if (t->insert) {
-			wmemmove(tmp->text + t->curs_col + width, tmp->text + t->curs_col,
-				 (t->cols - t->curs_col - width));
-			memmove(tmp->attr + t->curs_col + width, tmp->attr + t->curs_col,
-				(t->cols - t->curs_col - width) * sizeof(tmp->attr[0]));
-			memmove(tmp->fg + t->curs_col + width, tmp->fg + t->curs_col,
-				(t->cols - t->curs_col - width) * sizeof(tmp->fg[0]));
-			memmove(tmp->bg + t->curs_col + width, tmp->bg + t->curs_col,
-				(t->cols - t->curs_col - width) * sizeof(tmp->bg[0]));
+			int offset = t->curs_col + width;
+			size_t len = t->cols - t->curs_col - width;
+			wmemmove(tmp->text + offset, tmp->text + t->curs_col, len);
+			memmove(tmp->attr + offset, tmp->attr + t->curs_col, len * sizeof(tmp->attr[0]));
+			memmove(tmp->fg + offset, tmp->fg + t->curs_col, len * sizeof(tmp->fg[0]));
+			memmove(tmp->bg + offset, tmp->bg + t->curs_col, len * sizeof(tmp->bg[0]));
 		}
 
 		tmp->text[t->curs_col] = wc;
