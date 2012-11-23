@@ -1056,8 +1056,8 @@ static void put_wc(Vt *t, wchar_t wc)
 					wc = gc;
 			}
 			width = 1;
-		} else {
-			width = wcwidth(wc) ? : 1;
+		} else if ((width = wcwidth(wc)) < 1) {
+			width = 1;
 		}
 
 		if (width == 2 && t->curs_col == t->cols - 1) {
