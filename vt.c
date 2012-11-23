@@ -113,12 +113,32 @@ typedef struct {
 	short bg;
 } Cell;
 
-typedef struct Row {
+typedef struct {
 	Cell *cells;
 	unsigned dirty:1;
 } Row;
 
+typedef struct {
+	Row *lines;
+	Row *curs_row;
+	Row *scroll_buf;
+	Row *scroll_top;
+	Row *scroll_bot;
+	int scroll_buf_sz;
+	int scroll_buf_ptr;
+	int scroll_buf_len;
+	int scroll_amount;
+	int rows, cols, maxcols;
+	unsigned curattrs, savattrs;
+	int curs_col, curs_srow, curs_scol;
+	short curfg, curbg, savfg, savbg;
+} Buffer;
+
 struct Vt {
+	Buffer buffer_normal;
+	Buffer *buffer;
+	unsigned defattrs;
+	short deffg, defbg;
 	int pty;
 	pid_t childpid;
 
@@ -133,26 +153,6 @@ struct Vt {
 	unsigned mousetrack:1;
 	unsigned graphmode:1;
 	bool charsets[2];
-
-	/* geometry */
-	int rows, cols, maxcols;
-	unsigned curattrs, savattrs, defattrs;
-	short curfg, curbg, savfg, savbg, deffg, defbg;
-
-	/* scrollback buffer */
-	struct Row *scroll_buf;
-	int scroll_buf_sz;
-	int scroll_buf_ptr;
-	int scroll_buf_len;
-	int scroll_amount;
-
-	struct Row *lines;
-	struct Row *scroll_top;
-	struct Row *scroll_bot;
-
-	/* cursor */
-	struct Row *curs_row;
-	int curs_col, curs_srow, curs_scol;
 
 	/* buffers and parsing state */
 	mbstate_t ps;
@@ -228,7 +228,7 @@ static uint16_t build_attrs(unsigned curattrs)
 	    >> NCURSES_ATTR_SHIFT;
 }
 
-static void row_set(Row *row, int start, int len, Vt *t)
+static void row_set(Row *row, int start, int len, Buffer *t)
 {
 	Cell cell = {
 		.text = L'\0',
@@ -261,10 +261,11 @@ static void row_roll(Row *start, Row *end, int count)
 	}
 }
 
-static void clamp_cursor_to_bounds(Vt *t)
+static void clamp_cursor_to_bounds(Vt *vt)
 {
-	Row *lines = t->relposmode ? t->scroll_top : t->lines;
-	int rows = t->relposmode ? t->scroll_bot - t->scroll_top : t->rows;
+	Buffer *t = vt->buffer;
+	Row *lines = vt->relposmode ? t->scroll_top : t->lines;
+	int rows = vt->relposmode ? t->scroll_bot - t->scroll_top : t->rows;
 
 	if (t->curs_row < lines)
 		t->curs_row = lines;
@@ -276,34 +277,38 @@ static void clamp_cursor_to_bounds(Vt *t)
 		t->curs_col = t->cols - 1;
 }
 
-static void save_curs(Vt *t)
+static void save_curs(Vt *vt)
 {
+	Buffer *t = vt->buffer;
 	t->curs_srow = t->curs_row - t->lines;
 	t->curs_scol = t->curs_col;
 }
 
-static void restore_curs(Vt *t)
+static void restore_curs(Vt *vt)
 {
+	Buffer *t = vt->buffer;
 	t->curs_row = t->lines + t->curs_srow;
 	t->curs_col = t->curs_scol;
-	clamp_cursor_to_bounds(t);
+	clamp_cursor_to_bounds(vt);
 }
 
-static void save_attrs(Vt *t)
+static void save_attrs(Vt *vt)
 {
+	Buffer *t = vt->buffer;
 	t->savattrs = t->curattrs;
 	t->savfg = t->curfg;
 	t->savbg = t->curbg;
 }
 
-static void restore_attrs(Vt *t)
+static void restore_attrs(Vt *vt)
 {
+	Buffer *t = vt->buffer;
 	t->curattrs = t->savattrs;
 	t->curfg = t->savfg;
 	t->curbg = t->savbg;
 }
 
-static void fill_scroll_buf(Vt *t, int s)
+static void fill_scroll_buf(Buffer *t, int s)
 {
 	/* work in screenfuls */
 	int ssz = t->scroll_bot - t->scroll_top;
@@ -348,14 +353,15 @@ static void fill_scroll_buf(Vt *t, int s)
 	}
 }
 
-static void cursor_line_down(Vt *t)
+static void cursor_line_down(Vt *vt)
 {
+	Buffer *t = vt->buffer;
 	row_set(t->curs_row, t->cols, t->maxcols - t->cols, 0);
 	t->curs_row++;
 	if (t->curs_row < t->scroll_bot)
 		return;
 
-	vt_noscroll(t);
+	vt_noscroll(vt);
 
 	t->curs_row = t->scroll_bot - 1;
 	fill_scroll_buf(t, 1);
@@ -384,8 +390,9 @@ static bool is_valid_csi_ender(int c)
 }
 
 /* interprets a 'set attribute' (SGR) CSI escape sequence */
-static void interpret_csi_SGR(Vt *t, int param[], int pcount)
+static void interpret_csi_SGR(Vt *vt, int param[], int pcount)
 {
+	Buffer *t = vt->buffer;
 	if (pcount == 0) {
 		/* special case: reset attributes */
 		t->curattrs = A_NORMAL;
@@ -466,11 +473,12 @@ static void interpret_csi_SGR(Vt *t, int param[], int pcount)
 }
 
 /* interprets an 'erase display' (ED) escape sequence */
-static void interpret_csi_ED(Vt *t, int param[], int pcount)
+static void interpret_csi_ED(Vt *vt, int param[], int pcount)
 {
 	Row *row, *start, *end;
+	Buffer *t = vt->buffer;
 
-	save_attrs(t);
+	save_attrs(vt);
 	t->curattrs = A_NORMAL;
 	t->curfg = t->curbg = -1;
 
@@ -490,13 +498,14 @@ static void interpret_csi_ED(Vt *t, int param[], int pcount)
 	for (row = start; row < end; row++)
 		row_set(row, 0, t->cols, t);
 
-	restore_attrs(t);
+	restore_attrs(vt);
 }
 
 /* interprets a 'move cursor' (CUP) escape sequence */
-static void interpret_csi_CUP(Vt *t, int param[], int pcount)
+static void interpret_csi_CUP(Vt *vt, int param[], int pcount)
 {
-	Row *lines = t->relposmode ? t->scroll_top : t->lines;
+	Buffer *t = vt->buffer;
+	Row *lines = vt->relposmode ? t->scroll_top : t->lines;
 
 	if (pcount == 0) {
 		t->curs_row = lines;
@@ -509,13 +518,14 @@ static void interpret_csi_CUP(Vt *t, int param[], int pcount)
 		t->curs_col = param[1] - 1;
 	}
 
-	clamp_cursor_to_bounds(t);
+	clamp_cursor_to_bounds(vt);
 }
 
 /* Interpret the 'relative mode' sequences: CUU, CUD, CUF, CUB, CNL,
  * CPL, CHA, HPR, VPA, VPR, HPA */
-static void interpret_csi_C(Vt *t, char verb, int param[], int pcount)
+static void interpret_csi_C(Vt *vt, char verb, int param[], int pcount)
 {
+	Buffer *t = vt->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	switch (verb) {
@@ -550,12 +560,13 @@ static void interpret_csi_C(Vt *t, char verb, int param[], int pcount)
 		break;
 	}
 
-	clamp_cursor_to_bounds(t);
+	clamp_cursor_to_bounds(vt);
 }
 
 /* Interpret the 'erase line' escape sequence */
-static void interpret_csi_EL(Vt *t, int param[], int pcount)
+static void interpret_csi_EL(Vt *vt, int param[], int pcount)
 {
+	Buffer *t = vt->buffer;
 	switch (pcount ? param[0] : 0) {
 	case 1:
 		row_set(t->curs_row, 0, t->curs_col + 1, t);
@@ -570,8 +581,9 @@ static void interpret_csi_EL(Vt *t, int param[], int pcount)
 }
 
 /* Interpret the 'insert blanks' sequence (ICH) */
-static void interpret_csi_ICH(Vt *t, int param[], int pcount)
+static void interpret_csi_ICH(Vt *vt, int param[], int pcount)
 {
+	Buffer *t = vt->buffer;
 	Row *row = t->curs_row;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
@@ -585,8 +597,9 @@ static void interpret_csi_ICH(Vt *t, int param[], int pcount)
 }
 
 /* Interpret the 'delete chars' sequence (DCH) */
-static void interpret_csi_DCH(Vt *t, int param[], int pcount)
+static void interpret_csi_DCH(Vt *vt, int param[], int pcount)
 {
+	Buffer *t = vt->buffer;
 	Row *row = t->curs_row;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
@@ -600,8 +613,9 @@ static void interpret_csi_DCH(Vt *t, int param[], int pcount)
 }
 
 /* Interpret an 'insert line' sequence (IL) */
-static void interpret_csi_IL(Vt *t, int param[], int pcount)
+static void interpret_csi_IL(Vt *vt, int param[], int pcount)
 {
+	Buffer *t = vt->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	if (t->curs_row + n >= t->scroll_bot) {
@@ -615,8 +629,9 @@ static void interpret_csi_IL(Vt *t, int param[], int pcount)
 }
 
 /* Interpret a 'delete line' sequence (DL) */
-static void interpret_csi_DL(Vt *t, int param[], int pcount)
+static void interpret_csi_DL(Vt *vt, int param[], int pcount)
 {
+	Buffer *t = vt->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	if (t->curs_row + n >= t->scroll_bot) {
@@ -630,8 +645,9 @@ static void interpret_csi_DL(Vt *t, int param[], int pcount)
 }
 
 /* Interpret an 'erase characters' (ECH) sequence */
-static void interpret_csi_ECH(Vt *t, int param[], int pcount)
+static void interpret_csi_ECH(Vt *vt, int param[], int pcount)
 {
+	Buffer *t = vt->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	if (t->curs_col + n > t->cols)
@@ -641,8 +657,9 @@ static void interpret_csi_ECH(Vt *t, int param[], int pcount)
 }
 
 /* Interpret a 'set scrolling region' (DECSTBM) sequence */
-static void interpret_csi_DECSTBM(Vt *t, int param[], int pcount)
+static void interpret_csi_DECSTBM(Vt *vt, int param[], int pcount)
 {
+	Buffer *t = vt->buffer;
 	int new_top, new_bot;
 
 	switch (pcount) {
@@ -711,8 +728,8 @@ static void es_interpret_csi(Vt *t)
 				t->curshid = false;
 				break;
 			case 47: /* use alternate screen buffer */
-				t->curattrs = A_NORMAL;
-				t->curfg = t->curbg = -1;
+				t->buffer->curattrs = A_NORMAL;
+				t->buffer->curfg = t->buffer->curbg = -1;
 				break;
 			case 1000: /* enable normal mouse tracking */
 				t->mousetrack = true;
@@ -730,8 +747,8 @@ static void es_interpret_csi(Vt *t)
 				t->curshid = true;
 				break;
 			case 47: /* use normal screen buffer */
-				t->curattrs = A_NORMAL;
-				t->curfg = t->curbg = -1;
+				t->buffer->curattrs = A_NORMAL;
+				t->buffer->curfg = t->buffer->curbg = -1;
 				break;
 			case 1000: /* disable normal mouse tracking */
 				t->mousetrack = false;
@@ -811,15 +828,17 @@ static void es_interpret_csi(Vt *t)
 }
 
 /* Interpret an 'index' (IND) sequence */
-static void interpret_esc_IND(Vt *t)
+static void interpret_esc_IND(Vt *vt)
 {
+	Buffer *t = vt->buffer;
 	if (t->curs_row < t->lines + t->rows - 1)
 		t->curs_row++;
 }
 
 /* Interpret a 'reverse index' (RI) sequence */
-static void interpret_esc_RI(Vt *t)
+static void interpret_esc_RI(Vt *vt)
 {
+	Buffer *t = vt->buffer;
 	if (t->curs_row > t->lines)
 		t->curs_row--;
 	else {
@@ -829,8 +848,9 @@ static void interpret_esc_RI(Vt *t)
 }
 
 /* Interpret a 'next line' (NEL) sequence */
-static void interpret_esc_NEL(Vt *t)
+static void interpret_esc_NEL(Vt *vt)
 {
+	Buffer *t = vt->buffer;
 	if (t->curs_row < t->lines + t->rows - 1) {
 		t->curs_row++;
 		t->curs_col = 0;
@@ -955,14 +975,15 @@ cancel:
 	}
 }
 
-static void process_nonprinting(Vt *t, wchar_t wc)
+static void process_nonprinting(Vt *vt, wchar_t wc)
 {
+	Buffer *t = vt->buffer;
 	switch (wc) {
 	case C0_ESC:
-		new_escape_sequence(t);
+		new_escape_sequence(vt);
 		break;
 	case C0_BEL:
-		if (t->bell)
+		if (vt->bell)
 			beep();
 		break;
 	case C0_BS:
@@ -980,13 +1001,13 @@ static void process_nonprinting(Vt *t, wchar_t wc)
 	case C0_VT:
 	case C0_FF:
 	case C0_LF:
-		cursor_line_down(t);
+		cursor_line_down(vt);
 		break;
 	case C0_SO: /* shift out, invoke the G1 character set */
-		t->graphmode = t->charsets[1];
+		vt->graphmode = vt->charsets[1];
 		break;
 	case C0_SI: /* shift in, invoke the G0 character set */
-		t->graphmode = t->charsets[0];
+		vt->graphmode = vt->charsets[0];
 		break;
 	}
 }
@@ -1053,29 +1074,30 @@ static void put_wc(Vt *t, wchar_t wc)
 		} else if ((width = wcwidth(wc)) < 1) {
 			width = 1;
 		}
-		Cell blank_cell = { L'\0', build_attrs(t->curattrs), t->curfg, t->curbg };
-		if (width == 2 && t->curs_col == t->cols - 1) {
-			t->curs_row->cells[t->curs_col++] = blank_cell;
-			t->curs_row->dirty = true;
+		Buffer *b = t->buffer;
+		Cell blank_cell = { L'\0', build_attrs(b->curattrs), b->curfg, b->curbg };
+		if (width == 2 && b->curs_col == b->cols - 1) {
+			b->curs_row->cells[b->curs_col++] = blank_cell;
+			b->curs_row->dirty = true;
 		}
 
-		if (t->curs_col >= t->cols) {
-			t->curs_col = 0;
+		if (b->curs_col >= b->cols) {
+			b->curs_col = 0;
 			cursor_line_down(t);
 		}
 
 		if (t->insert) {
-			Cell *src = t->curs_row->cells + t->curs_col;
+			Cell *src = b->curs_row->cells + b->curs_col;
 			Cell *dest = src + width;
-			size_t len = t->cols - t->curs_col - width;
+			size_t len = b->cols - b->curs_col - width;
 			memmove(dest, src, len);
 		}
 
-		t->curs_row->cells[t->curs_col] = blank_cell;
-		t->curs_row->cells[t->curs_col++].text = wc;
-		t->curs_row->dirty = true;
+		b->curs_row->cells[b->curs_col] = blank_cell;
+		b->curs_row->cells[b->curs_col++].text = wc;
+		b->curs_row->dirty = true;
 		if (width == 2)
-			t->curs_row->cells[t->curs_col++] = blank_cell;
+			b->curs_row->cells[b->curs_col++] = blank_cell;
 	}
 }
 
@@ -1126,10 +1148,32 @@ void vt_set_default_colors(Vt *t, unsigned attrs, short fg, short bg)
 	t->defbg = bg;
 }
 
+void buffer_init(Buffer *t, int rows, int cols, int scroll_buf_sz)
+{
+	Row *lines, *scroll_buf;
+	t->rows = rows;
+	t->maxcols = t->cols = cols;
+	t->curattrs = A_NORMAL;	/* white text over black background */
+	t->curfg = t->curbg = -1;
+	t->lines = lines =  calloc(t->rows, sizeof(Row));
+	for (Row *row = lines, *end = lines + rows; row < end; row++)
+		row->cells = calloc(cols, sizeof(Cell));
+	t->curs_row = lines;
+	t->curs_col = 0;
+	/* initial scrolling area is the whole window */
+	t->scroll_top = lines;
+	t->scroll_bot = lines + rows;
+	if (scroll_buf_sz < 0)
+		scroll_buf_sz = 0;
+	t->scroll_buf_sz = scroll_buf_sz;
+	t->scroll_buf = scroll_buf = calloc(scroll_buf_sz, sizeof(Row));
+	for (Row *row = scroll_buf, *end = scroll_buf + scroll_buf_sz; row < end; row++)
+		row->cells = calloc(cols, sizeof(Cell));
+}
+
 Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 {
 	Vt *t;
-	int i;
 
 	if (rows <= 0 || cols <= 0)
 		return NULL;
@@ -1138,58 +1182,16 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 	if (!t)
 		return NULL;
 
-	/* record dimensions */
-	t->rows = rows;
-	t->cols = cols;
-	t->maxcols = cols;
-
-	/* default mode is replace */
-	t->insert = false;
-
-	/* create the cell matrix */
-	t->lines = calloc(t->rows, sizeof(Row));
-	for (i = 0; i < t->rows; i++)
-		t->lines[i].cells  = calloc(t->cols, sizeof(Cell));
-
-	t->pty = -1;		/* no pty for now */
-
-	/* initialization of other public fields */
-	t->curs_row = t->lines;
-	t->curs_col = 0;
-	t->curattrs = A_NORMAL;	/* white text over black background */
-	t->curfg = t->curbg = t->deffg = t->defbg = -1;
-
-	/* initial scrolling area is the whole window */
-	t->scroll_top = t->lines;
-	t->scroll_bot = t->lines + t->rows;
-
-	/* scrollback buffer */
-	if (scroll_buf_sz < 0)
-		scroll_buf_sz = 0;
-	t->scroll_buf_sz = scroll_buf_sz;
-	t->scroll_buf = calloc(t->scroll_buf_sz, sizeof(Row));
-	for (i = 0; i < t->scroll_buf_sz; i++)
-		t->scroll_buf[i].cells = calloc(t->cols, sizeof(Cell));
-	t->scroll_buf_ptr = t->scroll_buf_len = 0;
-	t->scroll_amount = 0;
-
-	/* clear the screen */
-	row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
-	for (Row *row = t->curs_row + 1; row < t->lines + t->rows; row++)
-		row_set(row, 0, t->cols, t);
-
+	t->pty = -1;
+	t->deffg = t->defbg = -1;
+	buffer_init(&t->buffer_normal, rows, cols, scroll_buf_sz);
+	t->buffer = &t->buffer_normal;
 	return t;
 }
 
-void vt_resize(Vt *t, int rows, int cols)
+void buffer_resize(Buffer *t, int rows, int cols)
 {
-	struct winsize ws = {.ws_row = rows,.ws_col = cols };
 	Row *lines = t->lines;
-
-	if (rows <= 0 || cols <= 0)
-		return;
-
-	vt_noscroll(t);
 
 	if (t->rows != rows) {
 		if (t->curs_row > lines + rows) {
@@ -1245,40 +1247,56 @@ void vt_resize(Vt *t, int rows, int cols)
 	t->scroll_top = lines;
 	t->scroll_bot = lines + rows;
 	t->lines = lines;
-	clamp_cursor_to_bounds(t);
 
 	/* perform backfill */
 	if (deltarows > 0) {
 		fill_scroll_buf(t, -deltarows);
 		t->curs_row += deltarows;
 	}
+}
 
+void vt_resize(Vt *t, int rows, int cols)
+{
+	struct winsize ws = {.ws_row = rows,.ws_col = cols };
+
+	if (rows <= 0 || cols <= 0)
+		return;
+
+	vt_noscroll(t);
+	buffer_resize(t->buffer, rows, cols);
+	clamp_cursor_to_bounds(t);
 	ioctl(t->pty, TIOCSWINSZ, &ws);
 	kill(-t->childpid, SIGWINCH);
 }
 
-void vt_destroy(Vt *t)
+void buffer_free(Buffer *t)
 {
-	if (!t)
-		return;
-
 	for (int i = 0; i < t->rows; i++)
 		free(t->lines[i].cells);
 	free(t->lines);
 	for (int i = 0; i < t->scroll_buf_sz; i++)
 		free(t->scroll_buf[i].cells);
 	free(t->scroll_buf);
+}
+
+void vt_destroy(Vt *t)
+{
+	if (!t)
+		return;
+	buffer_free(&t->buffer_normal);
 	free(t);
 }
 
-void vt_dirty(Vt *t)
+void vt_dirty(Vt *vt)
 {
-	for (int i = 0; i < t->rows; i++)
-		t->lines[i].dirty = true;
+	Buffer *t = vt->buffer;
+	for (Row *row = t->lines, *end = row + t->rows; row < end; row++)
+		row->dirty = true;
 }
 
-void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
+void vt_draw(Vt *vt, WINDOW * win, int srow, int scol)
 {
+	Buffer *t = vt->buffer;
 	curs_set(0);
 	for (int i = 0; i < t->rows; i++) {
 		Row *row = t->lines + i;
@@ -1295,13 +1313,13 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 			    || cell->fg != prev_cell->fg
 			    || cell->bg != prev_cell->bg) {
 				if (cell->attr == A_NORMAL)
-					cell->attr = t->defattrs;
+					cell->attr = vt->defattrs;
 				if (cell->fg == -1)
-					cell->fg = t->deffg;
+					cell->fg = vt->deffg;
 				if (cell->bg == -1)
-					cell->bg = t->defbg;
+					cell->bg = vt->defbg;
 				wattrset(win, (attr_t) cell->attr << NCURSES_ATTR_SHIFT);
-				wcolor_set(win, vt_color_get(t, cell->fg, cell->bg), NULL);
+				wcolor_set(win, vt_color_get(vt, cell->fg, cell->bg), NULL);
 			}
 			if (is_utf8 && cell->text >= 128) {
 				char buf[MB_CUR_MAX + 1];
@@ -1317,11 +1335,12 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 	}
 
 	wmove(win, srow + t->curs_row - t->lines, scol + t->curs_col);
-	curs_set(vt_cursor(t));
+	curs_set(vt_cursor(vt));
 }
 
-void vt_scroll(Vt *t, int rows)
+void vt_scroll(Vt *vt, int rows)
 {
+	Buffer *t = vt->buffer;
 	if (rows < 0) { /* scroll back */
 		if (rows < -t->scroll_buf_len)
 			rows = -t->scroll_buf_len;
@@ -1335,8 +1354,9 @@ void vt_scroll(Vt *t, int rows)
 
 void vt_noscroll(Vt *t)
 {
-	if (t->scroll_amount)
-		vt_scroll(t, t->scroll_amount);
+	int scroll_amount = t->buffer->scroll_amount;
+	if (scroll_amount)
+		vt_scroll(t, scroll_amount);
 }
 
 void vt_bell(Vt *t, bool bell)
@@ -1356,8 +1376,8 @@ pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *env[], in
 	const char **envp = env;
 	int fd, maxfd;
 
-	ws.ws_row = t->rows;
-	ws.ws_col = t->cols;
+	ws.ws_row = t->buffer->rows;
+	ws.ws_col = t->buffer->cols;
 	ws.ws_xpixel = ws.ws_ypixel = 0;
 
 	pid = forkpty(&t->pty, NULL, NULL, &ws);
@@ -1408,11 +1428,12 @@ int vt_write(Vt *t, const char *buf, int len)
 	return ret;
 }
 
-static void send_curs(Vt *t)
+static void send_curs(Vt *vt)
 {
+	Buffer *t = vt->buffer;
 	char keyseq[16];
 	sprintf(keyseq, "\e[%d;%dR", (int)(t->curs_row - t->lines), t->curs_col);
-	vt_write(t, keyseq, strlen(keyseq));
+	vt_write(vt, keyseq, strlen(keyseq));
 }
 
 void vt_keypress(Vt *t, int keycode)
@@ -1590,5 +1611,5 @@ void *vt_get_data(Vt *t)
 
 unsigned vt_cursor(Vt *t)
 {
-	return t->scroll_amount ? 0 : !t->curshid;
+	return t->buffer->scroll_amount ? 0 : !t->curshid;
 }
