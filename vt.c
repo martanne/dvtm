@@ -106,6 +106,18 @@ enum {
 	CSI_78, CSI_79, CSI_7A, CSI_7B, CSI_7C, CSI_7D, CSI_7E, CSI_7F
 };
 
+typedef struct {
+	wchar_t text;
+	uint16_t attr;
+	short fg;
+	short bg;
+} Cell;
+
+typedef struct Row {
+	Cell *cells;
+	unsigned dirty:1;
+} Row;
+
 struct Vt {
 	int pty;
 	pid_t childpid;
@@ -157,14 +169,6 @@ struct Vt {
 	vt_escseq_handler_t escseq_handler;
 	void *data;
 };
-
-typedef struct Row {
-	wchar_t *text;
-	uint16_t *attr;
-	short *fg;
-	short *bg;
-	unsigned dirty:1;
-} Row;
 
 static char const * const keytable[KEY_MAX+1] = {
 	['\n']          = "\r",
@@ -226,16 +230,16 @@ static uint16_t build_attrs(unsigned curattrs)
 
 static void row_set(Row *row, int start, int len, Vt *t)
 {
+	Cell cell = {
+		.text = L'\0',
+		.attr = t ? build_attrs(t->curattrs) : 0,
+		.fg = t ? t->curfg : -1,
+		.bg = t ? t->curbg : -1,
+	};
+
+	for (int i = start; i < len + start; i++)
+		row->cells[i] = cell;
 	row->dirty = true;
-	wmemset(row->text + start, 0, len);
-	attr_t attr = t ? build_attrs(t->curattrs) : 0;
-	short fg = t ? t->curfg : -1;
-	short bg = t ? t->curbg : -1;
-	for (int i = start; i < len + start; i++) {
-		row->attr[i] = attr;
-		row->fg[i] = fg;
-		row->bg[i] = bg;
-	}
 }
 
 static void row_roll(Row *start, Row *end, int count)
@@ -574,12 +578,8 @@ static void interpret_csi_ICH(Vt *t, int param[], int pcount)
 	if (t->curs_col + n > t->cols)
 		n = t->cols - t->curs_col;
 
-	for (int i = t->cols - 1; i >= t->curs_col + n; i--) {
-		row->text[i] = row->text[i - n];
-		row->attr[i] = row->attr[i - n];
-		row->bg[i] = row->bg[i - n];
-		row->fg[i] = row->fg[i - n];
-	}
+	for (int i = t->cols - 1; i >= t->curs_col + n; i--)
+		row->cells[i] = row->cells[i - n];
 
 	row_set(row, t->curs_col, n, t);
 }
@@ -593,12 +593,8 @@ static void interpret_csi_DCH(Vt *t, int param[], int pcount)
 	if (t->curs_col + n > t->cols)
 		n = t->cols - t->curs_col;
 
-	for (int i = t->curs_col; i < t->cols - n; i++) {
-		row->text[i] = row->text[i + n];
-		row->attr[i] = row->attr[i + n];
-		row->bg[i] = row->bg[i + n];
-		row->fg[i] = row->fg[i + n];
-	}
+	for (int i = t->curs_col; i < t->cols - n; i++)
+		row->cells[i] = row->cells[i + n];
 
 	row_set(row, t->cols - n, n, t);
 }
@@ -1047,8 +1043,6 @@ static void put_wc(Vt *t, wchar_t wc)
 	} else if (IS_CONTROL(wc)) {
 		process_nonprinting(t, wc);
 	} else {
-		Row *tmp;
-
 		if (t->graphmode) {
 			if (wc >= 0x41 && wc <= 0x7e) {
 				wchar_t gc = get_vt100_graphic(wc);
@@ -1059,15 +1053,10 @@ static void put_wc(Vt *t, wchar_t wc)
 		} else if ((width = wcwidth(wc)) < 1) {
 			width = 1;
 		}
-
+		Cell blank_cell = { L'\0', build_attrs(t->curattrs), t->curfg, t->curbg };
 		if (width == 2 && t->curs_col == t->cols - 1) {
-			tmp = t->curs_row;
-			tmp->dirty = true;
-			tmp->text[t->curs_col] = 0;
-			tmp->attr[t->curs_col] = build_attrs(t->curattrs);
-			tmp->bg[t->curs_col] = t->curbg;
-			tmp->fg[t->curs_col] = t->curfg;
-			t->curs_col++;
+			t->curs_row->cells[t->curs_col++] = blank_cell;
+			t->curs_row->dirty = true;
 		}
 
 		if (t->curs_col >= t->cols) {
@@ -1075,30 +1064,18 @@ static void put_wc(Vt *t, wchar_t wc)
 			cursor_line_down(t);
 		}
 
-		tmp = t->curs_row;
-		tmp->dirty = true;
-
 		if (t->insert) {
-			int offset = t->curs_col + width;
+			Cell *src = t->curs_row->cells + t->curs_col;
+			Cell *dest = src + width;
 			size_t len = t->cols - t->curs_col - width;
-			wmemmove(tmp->text + offset, tmp->text + t->curs_col, len);
-			memmove(tmp->attr + offset, tmp->attr + t->curs_col, len * sizeof(tmp->attr[0]));
-			memmove(tmp->fg + offset, tmp->fg + t->curs_col, len * sizeof(tmp->fg[0]));
-			memmove(tmp->bg + offset, tmp->bg + t->curs_col, len * sizeof(tmp->bg[0]));
+			memmove(dest, src, len);
 		}
 
-		tmp->text[t->curs_col] = wc;
-		tmp->attr[t->curs_col] = build_attrs(t->curattrs);
-		tmp->bg[t->curs_col] = t->curbg;
-		tmp->fg[t->curs_col] = t->curfg;
-		t->curs_col++;
-		if (width == 2) {
-			tmp->text[t->curs_col] = 0;
-			tmp->attr[t->curs_col] = build_attrs(t->curattrs);
-			tmp->bg[t->curs_col] = t->curbg;
-			tmp->fg[t->curs_col] = t->curfg;
-			t->curs_col++;
-		}
+		t->curs_row->cells[t->curs_col] = blank_cell;
+		t->curs_row->cells[t->curs_col++].text = wc;
+		t->curs_row->dirty = true;
+		if (width == 2)
+			t->curs_row->cells[t->curs_col++] = blank_cell;
 	}
 }
 
@@ -1171,12 +1148,8 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 
 	/* create the cell matrix */
 	t->lines = calloc(t->rows, sizeof(Row));
-	for (i = 0; i < t->rows; i++) {
-		t->lines[i].text = calloc(t->cols, sizeof(wchar_t));
-		t->lines[i].attr = calloc(t->cols, sizeof(uint16_t));
-		t->lines[i].fg = calloc(t->cols, sizeof(short));
-		t->lines[i].bg = calloc(t->cols, sizeof(short));
-	}
+	for (i = 0; i < t->rows; i++)
+		t->lines[i].cells  = calloc(t->cols, sizeof(Cell));
 
 	t->pty = -1;		/* no pty for now */
 
@@ -1195,12 +1168,8 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 		scroll_buf_sz = 0;
 	t->scroll_buf_sz = scroll_buf_sz;
 	t->scroll_buf = calloc(t->scroll_buf_sz, sizeof(Row));
-	for (i = 0; i < t->scroll_buf_sz; i++) {
-		t->scroll_buf[i].text = calloc(t->cols, sizeof(wchar_t));
-		t->scroll_buf[i].attr = calloc(t->cols, sizeof(uint16_t));
-		t->scroll_buf[i].fg = calloc(t->cols, sizeof(short));
-		t->scroll_buf[i].bg = calloc(t->cols, sizeof(short));
-	}
+	for (i = 0; i < t->scroll_buf_sz; i++)
+		t->scroll_buf[i].cells = calloc(t->cols, sizeof(Cell));
 	t->scroll_buf_ptr = t->scroll_buf_len = 0;
 	t->scroll_amount = 0;
 
@@ -1228,10 +1197,7 @@ void vt_resize(Vt *t, int rows, int cols)
 			fill_scroll_buf(t, (t->curs_row - t->lines) - rows + 1);
 		}
 		while (t->rows > rows) {
-			free(lines[t->rows - 1].text);
-			free(lines[t->rows - 1].attr);
-			free(lines[t->rows - 1].fg);
-			free(lines[t->rows - 1].bg);
+			free(lines[t->rows - 1].cells);
 			t->rows--;
 		}
 
@@ -1240,20 +1206,14 @@ void vt_resize(Vt *t, int rows, int cols)
 
 	if (t->maxcols < cols) {
 		for (int row = 0; row < t->rows; row++) {
-			lines[row].text = realloc(lines[row].text, sizeof(wchar_t) * cols);
-			lines[row].attr = realloc(lines[row].attr, sizeof(uint16_t) * cols);
-			lines[row].fg = realloc(lines[row].fg, sizeof(short) * cols);
-			lines[row].bg = realloc(lines[row].bg, sizeof(short) * cols);
+			lines[row].cells = realloc(lines[row].cells, sizeof(Cell) * cols);
 			if (t->cols < cols)
 				row_set(lines + row, t->cols, cols - t->cols, 0);
 			lines[row].dirty = true;
 		}
 		Row *sbuf = t->scroll_buf;
 		for (int row = 0; row < t->scroll_buf_sz; row++) {
-			sbuf[row].text = realloc(sbuf[row].text, sizeof(wchar_t) * cols);
-			sbuf[row].attr = realloc(sbuf[row].attr, sizeof(uint16_t) * cols);
-			sbuf[row].fg = realloc(sbuf[row].fg, sizeof(short) * cols);
-			sbuf[row].bg = realloc(sbuf[row].bg, sizeof(short) * cols);
+			sbuf[row].cells = realloc(sbuf[row].cells, sizeof(Cell) * cols);
 			if (t->cols < cols)
 				row_set(sbuf + row, t->cols, cols - t->cols, 0);
 		}
@@ -1268,10 +1228,7 @@ void vt_resize(Vt *t, int rows, int cols)
 	int deltarows = 0;
 	if (t->rows < rows) {
 		while (t->rows < rows) {
-			lines[t->rows].text = calloc(t->maxcols, sizeof(wchar_t));
-			lines[t->rows].attr = calloc(t->maxcols, sizeof(uint16_t));
-			lines[t->rows].fg = calloc(t->maxcols, sizeof(short));
-			lines[t->rows].bg = calloc(t->maxcols, sizeof(short));
+			lines[t->rows].cells = calloc(t->maxcols, sizeof(Cell));
 			row_set(lines + t->rows, 0, t->maxcols, t);
 			t->rows++;
 		}
@@ -1302,23 +1259,14 @@ void vt_resize(Vt *t, int rows, int cols)
 
 void vt_destroy(Vt *t)
 {
-	int i;
 	if (!t)
 		return;
 
-	for (i = 0; i < t->rows; i++) {
-		free(t->lines[i].text);
-		free(t->lines[i].attr);
-		free(t->lines[i].fg);
-		free(t->lines[i].bg);
-	}
+	for (int i = 0; i < t->rows; i++)
+		free(t->lines[i].cells);
 	free(t->lines);
-	for (i = 0; i < t->scroll_buf_sz; i++) {
-		free(t->scroll_buf[i].text);
-		free(t->scroll_buf[i].attr);
-		free(t->scroll_buf[i].fg);
-		free(t->scroll_buf[i].bg);
-	}
+	for (int i = 0; i < t->scroll_buf_sz; i++)
+		free(t->scroll_buf[i].cells);
 	free(t->scroll_buf);
 	free(t);
 }
@@ -1339,27 +1287,30 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 			continue;
 
 		wmove(win, srow + i, scol);
+		Cell *cell = NULL;
 		for (int j = 0; j < t->cols; j++) {
-			if (!j || row->attr[j] != row->attr[j - 1]
-			    || row->fg[j] != row->fg[j - 1]
-			    || row->bg[j] != row->bg[j - 1]) {
-				if (row->attr[j] == A_NORMAL)
-					row->attr[j] = t->defattrs;
-				if (row->fg[j] == -1)
-					row->fg[j] = t->deffg;
-				if (row->bg[j] == -1)
-					row->bg[j] = t->defbg;
-				wattrset(win, (attr_t) row->attr[j] << NCURSES_ATTR_SHIFT);
-				wcolor_set(win, vt_color_get(t, row->fg[j], row->bg[j]), NULL);
+			Cell *prev_cell = cell;
+			cell = row->cells + j;
+			if (!prev_cell || cell->attr != prev_cell->attr
+			    || cell->fg != prev_cell->fg
+			    || cell->bg != prev_cell->bg) {
+				if (cell->attr == A_NORMAL)
+					cell->attr = t->defattrs;
+				if (cell->fg == -1)
+					cell->fg = t->deffg;
+				if (cell->bg == -1)
+					cell->bg = t->defbg;
+				wattrset(win, (attr_t) cell->attr << NCURSES_ATTR_SHIFT);
+				wcolor_set(win, vt_color_get(t, cell->fg, cell->bg), NULL);
 			}
-			if (is_utf8 && row->text[j] >= 128) {
+			if (is_utf8 && cell->text >= 128) {
 				char buf[MB_CUR_MAX + 1];
-				int len = wcrtomb(buf, row->text[j], NULL);
+				int len = wcrtomb(buf, cell->text, NULL);
 				waddnstr(win, buf, len);
-				if (wcwidth(row->text[j]) > 1)
+				if (wcwidth(cell->text) > 1)
 					j++;
 			} else {
-				waddch(win, row->text[j] > ' ' ? row->text[j] : ' ');
+				waddch(win, cell->text > ' ' ? cell->text : ' ');
 			}
 		}
 		row->dirty = false;
