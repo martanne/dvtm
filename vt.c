@@ -1151,29 +1151,47 @@ void vt_set_default_colors(Vt *t, unsigned attrs, short fg, short bg)
 	t->defbg = bg;
 }
 
-void buffer_init(Buffer *t, int rows, int cols, int scroll_buf_sz)
+bool buffer_init(Buffer *t, int rows, int cols, int scroll_buf_sz)
 {
 	Row *lines, *scroll_buf;
-	t->rows = rows;
-	t->maxcols = t->cols = cols;
+	t->lines = lines = calloc(rows, sizeof(Row));
+	if (!lines)
+		return false;
 	t->curattrs = A_NORMAL;	/* white text over black background */
 	t->curfg = t->curbg = -1;
-	t->lines = lines =  calloc(t->rows, sizeof(Row));
 	for (Row *row = lines, *end = lines + rows; row < end; row++) {
 		row->cells = malloc(cols * sizeof(Cell));
+		if (!row->cells) {
+			t->rows = row - lines;
+			goto fail;
+		}
 		row_set(row, 0, cols, NULL);
+	}
+	t->rows = rows;
+	if (scroll_buf_sz < 0)
+		scroll_buf_sz = 0;
+	t->scroll_buf = scroll_buf = calloc(scroll_buf_sz, sizeof(Row));
+	if (!scroll_buf)
+		goto fail;
+	for (Row *row = scroll_buf, *end = scroll_buf + scroll_buf_sz; row < end; row++) {
+		row->cells = calloc(cols, sizeof(Cell));
+		if (!row->cells) {
+			t->scroll_buf_sz = row - scroll_buf;
+			goto fail;
+		}
 	}
 	t->curs_row = lines;
 	t->curs_col = 0;
 	/* initial scrolling area is the whole window */
 	t->scroll_top = lines;
 	t->scroll_bot = lines + rows;
-	if (scroll_buf_sz < 0)
-		scroll_buf_sz = 0;
 	t->scroll_buf_sz = scroll_buf_sz;
-	t->scroll_buf = scroll_buf = calloc(scroll_buf_sz, sizeof(Row));
-	for (Row *row = scroll_buf, *end = scroll_buf + scroll_buf_sz; row < end; row++)
-		row->cells = calloc(cols, sizeof(Cell));
+	t->maxcols = t->cols = cols;
+	return true;
+
+fail:
+	buffer_free(t);
+	return false;
 }
 
 Vt *vt_create(int rows, int cols, int scroll_buf_sz)
@@ -1189,8 +1207,11 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 
 	t->pty = -1;
 	t->deffg = t->defbg = -1;
-	buffer_init(&t->buffer_normal, rows, cols, scroll_buf_sz);
-	buffer_init(&t->buffer_alternate, rows, cols, 0);
+	if (!buffer_init(&t->buffer_normal, rows, cols, scroll_buf_sz) ||
+	    !buffer_init(&t->buffer_alternate, rows, cols, 0)) {
+		free(t);
+		return NULL;
+	}
 	t->buffer = &t->buffer_normal;
 	return t;
 }
