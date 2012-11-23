@@ -136,6 +136,7 @@ typedef struct {
 
 struct Vt {
 	Buffer buffer_normal;
+	Buffer buffer_alternate;
 	Buffer *buffer;
 	unsigned defattrs;
 	short deffg, defbg;
@@ -728,8 +729,8 @@ static void es_interpret_csi(Vt *t)
 				t->curshid = false;
 				break;
 			case 47: /* use alternate screen buffer */
-				t->buffer->curattrs = A_NORMAL;
-				t->buffer->curfg = t->buffer->curbg = -1;
+				t->buffer = &t->buffer_alternate;
+				vt_dirty(t);
 				break;
 			case 1000: /* enable normal mouse tracking */
 				t->mousetrack = true;
@@ -747,8 +748,8 @@ static void es_interpret_csi(Vt *t)
 				t->curshid = true;
 				break;
 			case 47: /* use normal screen buffer */
-				t->buffer->curattrs = A_NORMAL;
-				t->buffer->curfg = t->buffer->curbg = -1;
+				t->buffer = &t->buffer_normal;
+				vt_dirty(t);
 				break;
 			case 1000: /* disable normal mouse tracking */
 				t->mousetrack = false;
@@ -1156,8 +1157,10 @@ void buffer_init(Buffer *t, int rows, int cols, int scroll_buf_sz)
 	t->curattrs = A_NORMAL;	/* white text over black background */
 	t->curfg = t->curbg = -1;
 	t->lines = lines =  calloc(t->rows, sizeof(Row));
-	for (Row *row = lines, *end = lines + rows; row < end; row++)
-		row->cells = calloc(cols, sizeof(Cell));
+	for (Row *row = lines, *end = lines + rows; row < end; row++) {
+		row->cells = malloc(cols * sizeof(Cell));
+		row_set(row, 0, cols, NULL);
+	}
 	t->curs_row = lines;
 	t->curs_col = 0;
 	/* initial scrolling area is the whole window */
@@ -1185,6 +1188,7 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 	t->pty = -1;
 	t->deffg = t->defbg = -1;
 	buffer_init(&t->buffer_normal, rows, cols, scroll_buf_sz);
+	buffer_init(&t->buffer_alternate, rows, cols, 0);
 	t->buffer = &t->buffer_normal;
 	return t;
 }
@@ -1263,7 +1267,8 @@ void vt_resize(Vt *t, int rows, int cols)
 		return;
 
 	vt_noscroll(t);
-	buffer_resize(t->buffer, rows, cols);
+	buffer_resize(&t->buffer_normal, rows, cols);
+	buffer_resize(&t->buffer_alternate, rows, cols);
 	clamp_cursor_to_bounds(t);
 	ioctl(t->pty, TIOCSWINSZ, &ws);
 	kill(-t->childpid, SIGWINCH);
@@ -1284,6 +1289,7 @@ void vt_destroy(Vt *t)
 	if (!t)
 		return;
 	buffer_free(&t->buffer_normal);
+	buffer_free(&t->buffer_alternate);
 	free(t);
 }
 
