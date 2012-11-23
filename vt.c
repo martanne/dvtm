@@ -357,7 +357,7 @@ static void fill_scroll_buf(Buffer *t, int s)
 static void cursor_line_down(Vt *vt)
 {
 	Buffer *t = vt->buffer;
-	row_set(t->curs_row, t->cols, t->maxcols - t->cols, 0);
+	row_set(t->curs_row, t->cols, t->maxcols - t->cols, NULL);
 	t->curs_row++;
 	if (t->curs_row < t->scroll_bot)
 		return;
@@ -862,7 +862,7 @@ static void interpret_esc_NEL(Vt *vt)
 static void interpret_esc_SCS(Vt *t)
 {
 	/* ESC ( sets G0, ESC ) sets G1 */
-	t->charsets[! !(t->ebuf[0] == ')')] = (t->ebuf[1] == '0');
+	t->charsets[!!(t->ebuf[0] == ')')] = (t->ebuf[1] == '0');
 	t->graphmode = t->charsets[0];
 }
 
@@ -1015,7 +1015,9 @@ static void process_nonprinting(Vt *vt, wchar_t wc)
 
 static void is_utf8_locale(void)
 {
-	const char *cset = nl_langinfo(CODESET) ? : "ANSI_X3.4-1968";
+	const char *cset = nl_langinfo(CODESET);
+	if (!cset)
+		cset = "ANSI_X3.4-1968";
 	is_utf8 = !strcmp(cset, "UTF-8");
 }
 
@@ -1214,14 +1216,14 @@ void buffer_resize(Buffer *t, int rows, int cols)
 		for (int row = 0; row < t->rows; row++) {
 			lines[row].cells = realloc(lines[row].cells, sizeof(Cell) * cols);
 			if (t->cols < cols)
-				row_set(lines + row, t->cols, cols - t->cols, 0);
+				row_set(lines + row, t->cols, cols - t->cols, NULL);
 			lines[row].dirty = true;
 		}
 		Row *sbuf = t->scroll_buf;
 		for (int row = 0; row < t->scroll_buf_sz; row++) {
 			sbuf[row].cells = realloc(sbuf[row].cells, sizeof(Cell) * cols);
 			if (t->cols < cols)
-				row_set(sbuf + row, t->cols, cols - t->cols, 0);
+				row_set(sbuf + row, t->cols, cols - t->cols, NULL);
 		}
 		t->maxcols = cols;
 		t->cols = cols;
@@ -1261,7 +1263,7 @@ void buffer_resize(Buffer *t, int rows, int cols)
 
 void vt_resize(Vt *t, int rows, int cols)
 {
-	struct winsize ws = {.ws_row = rows,.ws_col = cols };
+	struct winsize ws = { .ws_row = rows, .ws_col = cols };
 
 	if (rows <= 0 || cols <= 0)
 		return;
