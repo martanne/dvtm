@@ -741,6 +741,7 @@ static void interpret_csi(Vt *t)
 				t->curshid = false;
 				break;
 			case 47: /* use alternate screen buffer */
+				vt_copymode_leave(t);
 				t->buffer = &t->buffer_alternate;
 				vt_dirty(t);
 				break;
@@ -760,6 +761,7 @@ static void interpret_csi(Vt *t)
 				t->curshid = true;
 				break;
 			case 47: /* use normal screen buffer */
+				vt_copymode_leave(t);
 				t->buffer = &t->buffer_normal;
 				vt_dirty(t);
 				break;
@@ -2155,16 +2157,18 @@ unsigned vt_copymode(Vt *t)
 
 void vt_copymode_enter(Vt *vt)
 {
+	if (vt->copymode)
+		return;
 	Buffer *t = vt->buffer;
-	if (!vt->copymode) {
-		vt->copymode_curs_srow = t->curs_row - t->lines;
-		vt->copymode_curs_scol = t->curs_col;
-	}
+	vt->copymode_curs_srow = t->curs_row - t->lines;
+	vt->copymode_curs_scol = t->curs_col;
 	vt->copymode = true;
 }
 
 void vt_copymode_leave(Vt *vt)
 {
+	if (!vt->copymode)
+		return;
 	Buffer *t = vt->buffer;
 	vt->copymode = false;
 	vt->copymode_selecting = false;
