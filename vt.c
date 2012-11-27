@@ -1151,7 +1151,17 @@ void vt_set_default_colors(Vt *t, unsigned attrs, short fg, short bg)
 	t->defbg = bg;
 }
 
-bool buffer_init(Buffer *t, int rows, int cols, int scroll_buf_sz)
+static void buffer_free(Buffer *t)
+{
+	for (int i = 0; i < t->rows; i++)
+		free(t->lines[i].cells);
+	free(t->lines);
+	for (int i = 0; i < t->scroll_buf_sz; i++)
+		free(t->scroll_buf[i].cells);
+	free(t->scroll_buf);
+}
+
+static bool buffer_init(Buffer *t, int rows, int cols, int scroll_buf_sz)
 {
 	Row *lines, *scroll_buf;
 	t->lines = lines = calloc(rows, sizeof(Row));
@@ -1216,7 +1226,7 @@ Vt *vt_create(int rows, int cols, int scroll_buf_sz)
 	return t;
 }
 
-void buffer_resize(Buffer *t, int rows, int cols)
+static void buffer_resize(Buffer *t, int rows, int cols)
 {
 	Row *lines = t->lines;
 
@@ -1295,16 +1305,6 @@ void vt_resize(Vt *t, int rows, int cols)
 	clamp_cursor_to_bounds(t);
 	ioctl(t->pty, TIOCSWINSZ, &ws);
 	kill(-t->childpid, SIGWINCH);
-}
-
-void buffer_free(Buffer *t)
-{
-	for (int i = 0; i < t->rows; i++)
-		free(t->lines[i].cells);
-	free(t->lines);
-	for (int i = 0; i < t->scroll_buf_sz; i++)
-		free(t->scroll_buf[i].cells);
-	free(t->scroll_buf);
 }
 
 void vt_destroy(Vt *t)
