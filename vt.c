@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <langinfo.h>
-#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1579,7 +1578,7 @@ void vt_keypress(Vt *t, int keycode)
 	}
 }
 
-static Row *buffer_next_row(Buffer *t, Row *row, int direction, int *scroll_offset)
+static Row *buffer_next_row(Buffer *t, Row *row, int direction)
 {
 	bool has_scroll_buf = t->scroll_buf_sz > 0;
 	Row *before_start_row, *before_end_row, *after_start_row, *after_end_row;
@@ -1601,31 +1600,17 @@ static Row *buffer_next_row(Buffer *t, Row *row, int direction, int *scroll_offs
 			return ++row;
 		if (row == last_row) {
 			if (has_scroll_buf) {
-				if (t->scroll_amount) {
-					*scroll_offset = 1;
+				if (t->scroll_amount)
 					return after_start_row;
-				} else if (t->scroll_buf_len) {
-					*scroll_offset = -t->scroll_buf_len;
+				else if (t->scroll_buf_len)
 					return before_start_row;
-				}
 			}
-			*scroll_offset = 0;
 			return first_row;
 		}
-		if (row == before_end_row) {
-			*scroll_offset = 0;
+		if (row == before_end_row)
 			return first_row;
-		}
-		if (row == after_end_row) {
-			if (t->scroll_buf_len) {
-				*scroll_offset = -t->scroll_buf_len;
-				return before_start_row;
-			} else {
-				*scroll_offset = 0;
-				return first_row;
-			}
-		}
-		*scroll_offset += 1;
+		if (row == after_end_row)
+			return t->scroll_buf_len ? before_start_row : first_row;
 		if (row == &t->scroll_buf[t->scroll_buf_sz - 1])
 			return t->scroll_buf;
 		return ++row;
@@ -1634,34 +1619,56 @@ static Row *buffer_next_row(Buffer *t, Row *row, int direction, int *scroll_offs
 			return --row;
 		if (row == first_row) {
 			if (has_scroll_buf) {
-				if (t->scroll_buf_len) {
-					*scroll_offset = -1;
+				if (t->scroll_buf_len)
 					return before_end_row;
-				} else if (t->scroll_amount) {
-					*scroll_offset = t->scroll_amount;
+				else if (t->scroll_amount)
 					return after_end_row;
-				}
 			}
-			*scroll_offset = 0;
 			return last_row;
 		}
-		if (row == before_start_row) {
-			if (t->scroll_amount) {
-				*scroll_offset = t->scroll_amount;
-				return after_end_row;
-			} else {
-				*scroll_offset = 0;
-				return last_row;
-			}
-		}
-		if (row == after_start_row) {
-			*scroll_offset = 0;
+		if (row == before_start_row)
+			return t->scroll_amount ? after_end_row : last_row;
+		if (row == after_start_row)
 			return last_row;
-		}
-		*scroll_offset -= 1;
 		if (row == t->scroll_buf)
 			return &t->scroll_buf[t->scroll_buf_sz - 1];
 		return --row;
+	}
+}
+
+static void row_show(Vt *vt, Row *r)
+{
+	Buffer *t = vt->buffer;
+	int below = t->scroll_amount;
+	int above = t->scroll_buf_len;
+	int ptr = t->scroll_buf_ptr;
+	int size = t->scroll_buf_sz;
+	int row = r - t->scroll_buf;
+	int scroll = 0;
+
+	if (t->lines <= r && r < t->lines + t->rows) {
+		t->curs_row = r;
+		return;
+	}
+
+	if (!size)
+		return;
+
+	if (row < ptr) {
+		if (row - ptr + size < below)
+			scroll = row - ptr + size + 1;
+		else if (ptr - row <= above)
+			scroll = row - ptr;
+	} else {
+		if (row - ptr < below)
+			scroll = row - ptr + 1;
+		else if (ptr - row + size <= above)
+			scroll = row - ptr - size;
+	}
+
+	if (scroll) {
+		vt_scroll(vt, scroll);
+		t->curs_row = t->lines + (scroll > 0  ? t->rows - 1 : 0);
 	}
 }
 
@@ -1674,17 +1681,16 @@ static void copymode_search(Vt *vt, int direction)
 	/* avoid match at current cursor position */
 	Row *start_row = t->curs_row;
 	int start_col = t->curs_col + direction;
-	int scroll_offset = 0;
 	if (start_col >= t->cols) {
 		start_col = 0;
-		start_row = buffer_next_row(t, start_row, 1, &scroll_offset);
+		start_row = buffer_next_row(t, start_row, 1);
 	} else if (start_col < 0) {
 		start_col = t->cols - 1;
-		start_row = buffer_next_row(t, start_row, -1, &scroll_offset);
+		start_row = buffer_next_row(t, start_row, -1);
 	}
 
 	Row *row = start_row, *matched_row = NULL;
-	int matched_col = 0, matched_scroll_offset;
+	int matched_col = 0;
 	int end_col = direction > 0 ? t->cols - 1 : 0;
 	int s_start = direction > 0 ? 0 : vt->searchbuf_curs - 1;
 	int s_end = direction > 0 ? vt->searchbuf_curs - 1 : 0;
@@ -1699,17 +1705,11 @@ static void copymode_search(Vt *vt, int direction)
 				if (s == s_start) {
 					matched_row = row;
 					matched_col = col;
-					matched_scroll_offset = scroll_offset;
 				}
 				if (s == s_end) {
 					t->curs_col = matched_col;
-					if (matched_scroll_offset) {
-						vt_scroll(vt, matched_scroll_offset);
-						t->curs_row = matched_scroll_offset > 0
-							? t->lines + t->rows - 1 : t->lines;
-					} else {
-						t->curs_row = matched_row;
-					}
+					if (matched_row)
+						row_show(vt, matched_row);
 					return;
 				}
 				s += direction;
@@ -1721,7 +1721,7 @@ static void copymode_search(Vt *vt, int direction)
 			col += direction;
 		}
 
-		if ((row = buffer_next_row(t, row, direction, &scroll_offset)) == start_row)
+		if ((row = buffer_next_row(t, row, direction)) == start_row)
 			break;
 	}
 }
@@ -1885,8 +1885,7 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 					else
 						*s++ = '\n';
 
-					int unused;
-					row = buffer_next_row(t, row, 1, &unused);
+					row = buffer_next_row(t, row, 1);
 				}
 				*s = '\0';
 				if (vt->event_handler)
