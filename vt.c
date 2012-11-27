@@ -905,56 +905,46 @@ static void try_interpret_escape_seq(Vt *t)
 
 	switch (*t->ebuf) {
 	case '#': /* ignore DECDHL, DECSWL, DECDWL, DECHCP, DECALN, DECFPP */
-		if (t->elen == 2) {
-			cancel_escape_sequence(t);
-			return;
-		}
+		if (t->elen == 2)
+			goto cancel;
 		break;
 	case '(':
 	case ')':
 		if (t->elen == 2) {
 			interpret_esc_SCS(t);
-			cancel_escape_sequence(t);
-			return;
+			goto handled;
 		}
 		break;
 	case ']': /* xterm thing */
 		if (lastchar == '\a' ||
 		   (lastchar == '\\' && t->elen >= 2 && t->ebuf[t->elen - 2] == '\e')) {
 			interpret_esc_xterm(t);
-			cancel_escape_sequence(t);
-			return;
+			goto handled;
 		}
 		break;
 	case '[':
 		if (is_valid_csi_ender(lastchar)) {
 			es_interpret_csi(t);
-			cancel_escape_sequence(t);
-			return;
+			goto handled;
 		}
 		break;
 	case '7': /* DECSC: save cursor and attributes */
 		save_attrs(t);
 		save_curs(t);
-		cancel_escape_sequence(t);
-		return;
+		goto handled;
 	case '8': /* DECRC: restore cursor and attributes */
 		restore_attrs(t);
 		restore_curs(t);
-		cancel_escape_sequence(t);
-		return;
+		goto handled;
 	case 'D': /* IND: index */
 		interpret_esc_IND(t);
-		cancel_escape_sequence(t);
-		return;
+		goto handled;
 	case 'M': /* RI: reverse index */
 		interpret_esc_RI(t);
-		cancel_escape_sequence(t);
-		return;
+		goto handled;
 	case 'E': /* NEL: next line */
 		interpret_esc_NEL(t);
-		cancel_escape_sequence(t);
-		return;
+		goto handled;
 	default:
 		goto cancel;
 	}
@@ -972,6 +962,7 @@ cancel:
 		}
 		fputc('\n', stderr);
 #endif
+handled:
 		cancel_escape_sequence(t);
 	}
 }
