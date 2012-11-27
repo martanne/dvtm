@@ -391,7 +391,7 @@ static bool is_valid_csi_ender(int c)
 }
 
 /* interprets a 'set attribute' (SGR) CSI escape sequence */
-static void interpret_csi_SGR(Vt *vt, int param[], int pcount)
+static void interpret_csi_sgr(Vt *vt, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	if (pcount == 0) {
@@ -474,7 +474,7 @@ static void interpret_csi_SGR(Vt *vt, int param[], int pcount)
 }
 
 /* interprets an 'erase display' (ED) escape sequence */
-static void interpret_csi_ED(Vt *vt, int param[], int pcount)
+static void interpret_csi_ed(Vt *vt, int param[], int pcount)
 {
 	Row *row, *start, *end;
 	Buffer *t = vt->buffer;
@@ -503,7 +503,7 @@ static void interpret_csi_ED(Vt *vt, int param[], int pcount)
 }
 
 /* interprets a 'move cursor' (CUP) escape sequence */
-static void interpret_csi_CUP(Vt *vt, int param[], int pcount)
+static void interpret_csi_cup(Vt *vt, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	Row *lines = vt->relposmode ? t->scroll_top : t->lines;
@@ -524,7 +524,7 @@ static void interpret_csi_CUP(Vt *vt, int param[], int pcount)
 
 /* Interpret the 'relative mode' sequences: CUU, CUD, CUF, CUB, CNL,
  * CPL, CHA, HPR, VPA, VPR, HPA */
-static void interpret_csi_C(Vt *vt, char verb, int param[], int pcount)
+static void interpret_csi_c(Vt *vt, char verb, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
@@ -565,7 +565,7 @@ static void interpret_csi_C(Vt *vt, char verb, int param[], int pcount)
 }
 
 /* Interpret the 'erase line' escape sequence */
-static void interpret_csi_EL(Vt *vt, int param[], int pcount)
+static void interpret_csi_el(Vt *vt, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	switch (pcount ? param[0] : 0) {
@@ -582,7 +582,7 @@ static void interpret_csi_EL(Vt *vt, int param[], int pcount)
 }
 
 /* Interpret the 'insert blanks' sequence (ICH) */
-static void interpret_csi_ICH(Vt *vt, int param[], int pcount)
+static void interpret_csi_ich(Vt *vt, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	Row *row = t->curs_row;
@@ -598,7 +598,7 @@ static void interpret_csi_ICH(Vt *vt, int param[], int pcount)
 }
 
 /* Interpret the 'delete chars' sequence (DCH) */
-static void interpret_csi_DCH(Vt *vt, int param[], int pcount)
+static void interpret_csi_dch(Vt *vt, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	Row *row = t->curs_row;
@@ -614,7 +614,7 @@ static void interpret_csi_DCH(Vt *vt, int param[], int pcount)
 }
 
 /* Interpret an 'insert line' sequence (IL) */
-static void interpret_csi_IL(Vt *vt, int param[], int pcount)
+static void interpret_csi_il(Vt *vt, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
@@ -630,7 +630,7 @@ static void interpret_csi_IL(Vt *vt, int param[], int pcount)
 }
 
 /* Interpret a 'delete line' sequence (DL) */
-static void interpret_csi_DL(Vt *vt, int param[], int pcount)
+static void interpret_csi_dl(Vt *vt, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
@@ -646,7 +646,7 @@ static void interpret_csi_DL(Vt *vt, int param[], int pcount)
 }
 
 /* Interpret an 'erase characters' (ECH) sequence */
-static void interpret_csi_ECH(Vt *vt, int param[], int pcount)
+static void interpret_csi_ech(Vt *vt, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
@@ -658,7 +658,7 @@ static void interpret_csi_ECH(Vt *vt, int param[], int pcount)
 }
 
 /* Interpret a 'set scrolling region' (DECSTBM) sequence */
-static void interpret_csi_DECSTBM(Vt *vt, int param[], int pcount)
+static void interpret_csi_decstbm(Vt *vt, int param[], int pcount)
 {
 	Buffer *t = vt->buffer;
 	int new_top, new_bot;
@@ -693,7 +693,7 @@ static void interpret_csi_DECSTBM(Vt *vt, int param[], int pcount)
 	}
 }
 
-static void es_interpret_csi(Vt *t)
+static void interpret_csi(Vt *t)
 {
 	static int csiparam[BUFSIZ];
 	int param_count = 0;
@@ -769,14 +769,14 @@ static void es_interpret_csi(Vt *t)
 			t->insert = false;
 		break;
 	case 'm': /* it's a 'set attribute' sequence */
-		interpret_csi_SGR(t, csiparam, param_count);
+		interpret_csi_sgr(t, csiparam, param_count);
 		break;
 	case 'J': /* it's an 'erase display' sequence */
-		interpret_csi_ED(t, csiparam, param_count);
+		interpret_csi_ed(t, csiparam, param_count);
 		break;
 	case 'H':
 	case 'f': /* it's a 'move cursor' sequence */
-		interpret_csi_CUP(t, csiparam, param_count);
+		interpret_csi_cup(t, csiparam, param_count);
 		break;
 	case 'A':
 	case 'B':
@@ -790,28 +790,28 @@ static void es_interpret_csi(Vt *t)
 	case 'd':
 	case '`':
 		/* it is a 'relative move' */
-		interpret_csi_C(t, verb, csiparam, param_count);
+		interpret_csi_c(t, verb, csiparam, param_count);
 		break;
 	case 'K': /* erase line */
-		interpret_csi_EL(t, csiparam, param_count);
+		interpret_csi_el(t, csiparam, param_count);
 		break;
 	case '@': /* insert characters */
-		interpret_csi_ICH(t, csiparam, param_count);
+		interpret_csi_ich(t, csiparam, param_count);
 		break;
 	case 'P': /* delete characters */
-		interpret_csi_DCH(t, csiparam, param_count);
+		interpret_csi_dch(t, csiparam, param_count);
 		break;
 	case 'L': /* insert lines */
-		interpret_csi_IL(t, csiparam, param_count);
+		interpret_csi_il(t, csiparam, param_count);
 		break;
 	case 'M': /* delete lines */
-		interpret_csi_DL(t, csiparam, param_count);
+		interpret_csi_dl(t, csiparam, param_count);
 		break;
 	case 'X': /* erase chars */
-		interpret_csi_ECH(t, csiparam, param_count);
+		interpret_csi_ech(t, csiparam, param_count);
 		break;
 	case 'r': /* set scrolling region */
-		interpret_csi_DECSTBM(t, csiparam, param_count);
+		interpret_csi_decstbm(t, csiparam, param_count);
 		break;
 	case 's': /* save cursor location */
 		save_curs(t);
@@ -829,7 +829,7 @@ static void es_interpret_csi(Vt *t)
 }
 
 /* Interpret an 'index' (IND) sequence */
-static void interpret_esc_IND(Vt *vt)
+static void interpret_csi_ind(Vt *vt)
 {
 	Buffer *t = vt->buffer;
 	if (t->curs_row < t->lines + t->rows - 1)
@@ -837,7 +837,7 @@ static void interpret_esc_IND(Vt *vt)
 }
 
 /* Interpret a 'reverse index' (RI) sequence */
-static void interpret_esc_RI(Vt *vt)
+static void interpret_csi_ri(Vt *vt)
 {
 	Buffer *t = vt->buffer;
 	if (t->curs_row > t->lines)
@@ -849,7 +849,7 @@ static void interpret_esc_RI(Vt *vt)
 }
 
 /* Interpret a 'next line' (NEL) sequence */
-static void interpret_esc_NEL(Vt *vt)
+static void interpret_csi_nel(Vt *vt)
 {
 	Buffer *t = vt->buffer;
 	if (t->curs_row < t->lines + t->rows - 1) {
@@ -859,7 +859,7 @@ static void interpret_esc_NEL(Vt *vt)
 }
 
 /* Interpret a 'select character set' (SCS) sequence */
-static void interpret_esc_SCS(Vt *t)
+static void interpret_csi_scs(Vt *t)
 {
 	/* ESC ( sets G0, ESC ) sets G1 */
 	t->charsets[!!(t->ebuf[0] == ')')] = (t->ebuf[1] == '0');
@@ -911,7 +911,7 @@ static void try_interpret_escape_seq(Vt *t)
 	case '(':
 	case ')':
 		if (t->elen == 2) {
-			interpret_esc_SCS(t);
+			interpret_csi_scs(t);
 			goto handled;
 		}
 		break;
@@ -924,7 +924,7 @@ static void try_interpret_escape_seq(Vt *t)
 		break;
 	case '[':
 		if (is_valid_csi_ender(lastchar)) {
-			es_interpret_csi(t);
+			interpret_csi(t);
 			goto handled;
 		}
 		break;
@@ -937,13 +937,13 @@ static void try_interpret_escape_seq(Vt *t)
 		restore_curs(t);
 		goto handled;
 	case 'D': /* IND: index */
-		interpret_esc_IND(t);
+		interpret_csi_ind(t);
 		goto handled;
 	case 'M': /* RI: reverse index */
-		interpret_esc_RI(t);
+		interpret_csi_ri(t);
 		goto handled;
 	case 'E': /* NEL: next line */
-		interpret_esc_NEL(t);
+		interpret_csi_nel(t);
 		goto handled;
 	default:
 		goto cancel;
@@ -1468,10 +1468,10 @@ void vt_keypress(Vt *t, int keycode)
 		case KEY_DOWN:
 		case KEY_RIGHT:
 		case KEY_LEFT: {
-				char keyseq[3] = { '\e', (t->curskeymode ? 'O' : '['), keytable[keycode][0] };
-				vt_write(t, keyseq, sizeof keyseq);
-				break;
-			}
+			char keyseq[3] = { '\e', (t->curskeymode ? 'O' : '['), keytable[keycode][0] };
+			vt_write(t, keyseq, sizeof keyseq);
+			break;
+		}
 		default:
 			vt_write(t, keytable[keycode], strlen(keytable[keycode]));
 		}
