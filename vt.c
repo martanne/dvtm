@@ -273,51 +273,51 @@ static void row_roll(Row *start, Row *end, int count)
 	}
 }
 
-static void clamp_cursor_to_bounds(Vt *vt)
+static void clamp_cursor_to_bounds(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	Row *lines = vt->relposmode ? t->scroll_top : t->lines;
-	int rows = vt->relposmode ? t->scroll_bot - t->scroll_top : t->rows;
+	Buffer *b = t->buffer;
+	Row *lines = t->relposmode ? b->scroll_top : b->lines;
+	int rows = t->relposmode ? b->scroll_bot - b->scroll_top : b->rows;
 
-	if (t->curs_row < lines)
-		t->curs_row = lines;
-	if (t->curs_row >= lines + rows)
-		t->curs_row = lines + rows - 1;
-	if (t->curs_col < 0)
-		t->curs_col = 0;
-	if (t->curs_col >= t->cols)
-		t->curs_col = t->cols - 1;
+	if (b->curs_row < lines)
+		b->curs_row = lines;
+	if (b->curs_row >= lines + rows)
+		b->curs_row = lines + rows - 1;
+	if (b->curs_col < 0)
+		b->curs_col = 0;
+	if (b->curs_col >= b->cols)
+		b->curs_col = b->cols - 1;
 }
 
-static void save_curs(Vt *vt)
+static void save_curs(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	t->curs_srow = t->curs_row - t->lines;
-	t->curs_scol = t->curs_col;
+	Buffer *b = t->buffer;
+	b->curs_srow = b->curs_row - b->lines;
+	b->curs_scol = b->curs_col;
 }
 
-static void restore_curs(Vt *vt)
+static void restore_curs(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	t->curs_row = t->lines + t->curs_srow;
-	t->curs_col = t->curs_scol;
-	clamp_cursor_to_bounds(vt);
+	Buffer *b = t->buffer;
+	b->curs_row = b->lines + b->curs_srow;
+	b->curs_col = b->curs_scol;
+	clamp_cursor_to_bounds(t);
 }
 
-static void save_attrs(Vt *vt)
+static void save_attrs(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	t->savattrs = t->curattrs;
-	t->savfg = t->curfg;
-	t->savbg = t->curbg;
+	Buffer *b = t->buffer;
+	b->savattrs = b->curattrs;
+	b->savfg = b->curfg;
+	b->savbg = b->curbg;
 }
 
-static void restore_attrs(Vt *vt)
+static void restore_attrs(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	t->curattrs = t->savattrs;
-	t->curfg = t->savfg;
-	t->curbg = t->savbg;
+	Buffer *b = t->buffer;
+	b->curattrs = b->savattrs;
+	b->curfg = b->savfg;
+	b->curbg = b->savbg;
 }
 
 static void fill_scroll_buf(Buffer *t, int s)
@@ -365,19 +365,19 @@ static void fill_scroll_buf(Buffer *t, int s)
 	}
 }
 
-static void cursor_line_down(Vt *vt)
+static void cursor_line_down(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	row_set(t->curs_row, t->cols, t->maxcols - t->cols, NULL);
-	t->curs_row++;
-	if (t->curs_row < t->scroll_bot)
+	Buffer *b = t->buffer;
+	row_set(b->curs_row, b->cols, b->maxcols - b->cols, NULL);
+	b->curs_row++;
+	if (b->curs_row < b->scroll_bot)
 		return;
 
-	vt_noscroll(vt);
+	vt_noscroll(t);
 
-	t->curs_row = t->scroll_bot - 1;
-	fill_scroll_buf(t, 1);
-	row_set(t->curs_row, 0, t->cols, t);
+	b->curs_row = b->scroll_bot - 1;
+	fill_scroll_buf(b, 1);
+	row_set(b->curs_row, 0, b->cols, b);
 }
 
 static void new_escape_sequence(Vt *t)
@@ -402,81 +402,81 @@ static bool is_valid_csi_ender(int c)
 }
 
 /* interprets a 'set attribute' (SGR) CSI escape sequence */
-static void interpret_csi_sgr(Vt *vt, int param[], int pcount)
+static void interpret_csi_sgr(Vt *t, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	if (pcount == 0) {
 		/* special case: reset attributes */
-		t->curattrs = A_NORMAL;
-		t->curfg = t->curbg = -1;
+		b->curattrs = A_NORMAL;
+		b->curfg = b->curbg = -1;
 		return;
 	}
 
 	for (int i = 0; i < pcount; i++) {
 		switch (param[i]) {
 		case 0:
-			t->curattrs = A_NORMAL;
-			t->curfg = t->curbg = -1;
+			b->curattrs = A_NORMAL;
+			b->curfg = b->curbg = -1;
 			break;
 		case 1:
-			t->curattrs |= A_BOLD;
+			b->curattrs |= A_BOLD;
 			break;
 		case 4:
-			t->curattrs |= A_UNDERLINE;
+			b->curattrs |= A_UNDERLINE;
 			break;
 		case 5:
-			t->curattrs |= A_BLINK;
+			b->curattrs |= A_BLINK;
 			break;
 		case 7:
-			t->curattrs |= A_REVERSE;
+			b->curattrs |= A_REVERSE;
 			break;
 		case 8:
-			t->curattrs |= A_INVIS;
+			b->curattrs |= A_INVIS;
 			break;
 		case 22:
-			t->curattrs &= ~A_BOLD;
+			b->curattrs &= ~A_BOLD;
 			break;
 		case 24:
-			t->curattrs &= ~A_UNDERLINE;
+			b->curattrs &= ~A_UNDERLINE;
 			break;
 		case 25:
-			t->curattrs &= ~A_BLINK;
+			b->curattrs &= ~A_BLINK;
 			break;
 		case 27:
-			t->curattrs &= ~A_REVERSE;
+			b->curattrs &= ~A_REVERSE;
 			break;
 		case 28:
-			t->curattrs &= ~A_INVIS;
+			b->curattrs &= ~A_INVIS;
 			break;
 		case 30 ... 37:	/* fg */
-			t->curfg = param[i] - 30;
+			b->curfg = param[i] - 30;
 			break;
 		case 38:
 			if ((i + 2) < pcount && param[i + 1] == 5) {
-				t->curfg = param[i + 2];
+				b->curfg = param[i + 2];
 				i += 2;
 			}
 			break;
 		case 39:
-			t->curfg = -1;
+			b->curfg = -1;
 			break;
 		case 40 ... 47:	/* bg */
-			t->curbg = param[i] - 40;
+			b->curbg = param[i] - 40;
 			break;
 		case 48:
 			if ((i + 2) < pcount && param[i + 1] == 5) {
-				t->curbg = param[i + 2];
+				b->curbg = param[i + 2];
 				i += 2;
 			}
 			break;
 		case 49:
-			t->curbg = -1;
+			b->curbg = -1;
 			break;
 		case 90 ... 97:	/* hi fg */
-			t->curfg = param[i] - 82;
+			b->curfg = param[i] - 82;
 			break;
 		case 100 ... 107: /* hi bg */
-			t->curbg = param[i] - 92;
+			b->curbg = param[i] - 92;
 			break;
 		default:
 			break;
@@ -485,199 +485,199 @@ static void interpret_csi_sgr(Vt *vt, int param[], int pcount)
 }
 
 /* interprets an 'erase display' (ED) escape sequence */
-static void interpret_csi_ed(Vt *vt, int param[], int pcount)
+static void interpret_csi_ed(Vt *t, int param[], int pcount)
 {
 	Row *row, *start, *end;
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 
-	save_attrs(vt);
-	t->curattrs = A_NORMAL;
-	t->curfg = t->curbg = -1;
+	save_attrs(t);
+	b->curattrs = A_NORMAL;
+	b->curfg = b->curbg = -1;
 
 	if (pcount && param[0] == 2) {
-		start = t->lines;
-		end = t->lines + t->rows;
+		start = b->lines;
+		end = b->lines + b->rows;
 	} else if (pcount && param[0] == 1) {
-		start = t->lines;
-		end = t->curs_row;
-		row_set(t->curs_row, 0, t->curs_col + 1, t);
+		start = b->lines;
+		end = b->curs_row;
+		row_set(b->curs_row, 0, b->curs_col + 1, b);
 	} else {
-		row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
-		start = t->curs_row + 1;
-		end = t->lines + t->rows;
+		row_set(b->curs_row, b->curs_col, b->cols - b->curs_col, b);
+		start = b->curs_row + 1;
+		end = b->lines + b->rows;
 	}
 
 	for (row = start; row < end; row++)
-		row_set(row, 0, t->cols, t);
+		row_set(row, 0, b->cols, b);
 
-	restore_attrs(vt);
+	restore_attrs(t);
 }
 
 /* interprets a 'move cursor' (CUP) escape sequence */
-static void interpret_csi_cup(Vt *vt, int param[], int pcount)
+static void interpret_csi_cup(Vt *t, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
-	Row *lines = vt->relposmode ? t->scroll_top : t->lines;
+	Buffer *b = t->buffer;
+	Row *lines = t->relposmode ? b->scroll_top : b->lines;
 
 	if (pcount == 0) {
-		t->curs_row = lines;
-		t->curs_col = 0;
+		b->curs_row = lines;
+		b->curs_col = 0;
 	} else if (pcount == 1) {
-		t->curs_row = lines + param[0] - 1;
-		t->curs_col = 0;
+		b->curs_row = lines + param[0] - 1;
+		b->curs_col = 0;
 	} else {
-		t->curs_row = lines + param[0] - 1;
-		t->curs_col = param[1] - 1;
+		b->curs_row = lines + param[0] - 1;
+		b->curs_col = param[1] - 1;
 	}
 
-	clamp_cursor_to_bounds(vt);
+	clamp_cursor_to_bounds(t);
 }
 
 /* Interpret the 'relative mode' sequences: CUU, CUD, CUF, CUB, CNL,
  * CPL, CHA, HPR, VPA, VPR, HPA */
-static void interpret_csi_c(Vt *vt, char verb, int param[], int pcount)
+static void interpret_csi_c(Vt *t, char verb, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
 	switch (verb) {
 	case 'A':
-		t->curs_row -= n;
+		b->curs_row -= n;
 		break;
 	case 'B':
 	case 'e':
-		t->curs_row += n;
+		b->curs_row += n;
 		break;
 	case 'C':
 	case 'a':
-		t->curs_col += n;
+		b->curs_col += n;
 		break;
 	case 'D':
-		t->curs_col -= n;
+		b->curs_col -= n;
 		break;
 	case 'E':
-		t->curs_row += n;
-		t->curs_col = 0;
+		b->curs_row += n;
+		b->curs_col = 0;
 		break;
 	case 'F':
-		t->curs_row -= n;
-		t->curs_col = 0;
+		b->curs_row -= n;
+		b->curs_col = 0;
 		break;
 	case 'G':
 	case '`':
-		t->curs_col = param[0] - 1;
+		b->curs_col = param[0] - 1;
 		break;
 	case 'd':
-		t->curs_row = t->lines + param[0] - 1;
+		b->curs_row = b->lines + param[0] - 1;
 		break;
 	}
 
-	clamp_cursor_to_bounds(vt);
+	clamp_cursor_to_bounds(t);
 }
 
 /* Interpret the 'erase line' escape sequence */
-static void interpret_csi_el(Vt *vt, int param[], int pcount)
+static void interpret_csi_el(Vt *t, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	switch (pcount ? param[0] : 0) {
 	case 1:
-		row_set(t->curs_row, 0, t->curs_col + 1, t);
+		row_set(b->curs_row, 0, b->curs_col + 1, b);
 		break;
 	case 2:
-		row_set(t->curs_row, 0, t->cols, t);
+		row_set(b->curs_row, 0, b->cols, b);
 		break;
 	default:
-		row_set(t->curs_row, t->curs_col, t->cols - t->curs_col, t);
+		row_set(b->curs_row, b->curs_col, b->cols - b->curs_col, b);
 		break;
 	}
 }
 
 /* Interpret the 'insert blanks' sequence (ICH) */
-static void interpret_csi_ich(Vt *vt, int param[], int pcount)
+static void interpret_csi_ich(Vt *t, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
-	Row *row = t->curs_row;
+	Buffer *b = t->buffer;
+	Row *row = b->curs_row;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
-	if (t->curs_col + n > t->cols)
-		n = t->cols - t->curs_col;
+	if (b->curs_col + n > b->cols)
+		n = b->cols - b->curs_col;
 
-	for (int i = t->cols - 1; i >= t->curs_col + n; i--)
+	for (int i = b->cols - 1; i >= b->curs_col + n; i--)
 		row->cells[i] = row->cells[i - n];
 
-	row_set(row, t->curs_col, n, t);
+	row_set(row, b->curs_col, n, b);
 }
 
 /* Interpret the 'delete chars' sequence (DCH) */
-static void interpret_csi_dch(Vt *vt, int param[], int pcount)
+static void interpret_csi_dch(Vt *t, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
-	Row *row = t->curs_row;
+	Buffer *b = t->buffer;
+	Row *row = b->curs_row;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
-	if (t->curs_col + n > t->cols)
-		n = t->cols - t->curs_col;
+	if (b->curs_col + n > b->cols)
+		n = b->cols - b->curs_col;
 
-	for (int i = t->curs_col; i < t->cols - n; i++)
+	for (int i = b->curs_col; i < b->cols - n; i++)
 		row->cells[i] = row->cells[i + n];
 
-	row_set(row, t->cols - n, n, t);
+	row_set(row, b->cols - n, n, b);
 }
 
 /* Interpret an 'insert line' sequence (IL) */
-static void interpret_csi_il(Vt *vt, int param[], int pcount)
+static void interpret_csi_il(Vt *t, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
-	if (t->curs_row + n >= t->scroll_bot) {
-		for (Row *row = t->curs_row; row < t->scroll_bot; row++)
-			row_set(row, 0, t->cols, t);
+	if (b->curs_row + n >= b->scroll_bot) {
+		for (Row *row = b->curs_row; row < b->scroll_bot; row++)
+			row_set(row, 0, b->cols, b);
 	} else {
-		row_roll(t->curs_row, t->scroll_bot, -n);
-		for (Row *row = t->curs_row; row < t->curs_row + n; row++)
-			row_set(row, 0, t->cols, t);
+		row_roll(b->curs_row, b->scroll_bot, -n);
+		for (Row *row = b->curs_row; row < b->curs_row + n; row++)
+			row_set(row, 0, b->cols, b);
 	}
 }
 
 /* Interpret a 'delete line' sequence (DL) */
-static void interpret_csi_dl(Vt *vt, int param[], int pcount)
+static void interpret_csi_dl(Vt *t, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
-	if (t->curs_row + n >= t->scroll_bot) {
-		for (Row *row = t->curs_row; row < t->scroll_bot; row++)
-			row_set(row, 0, t->cols, t);
+	if (b->curs_row + n >= b->scroll_bot) {
+		for (Row *row = b->curs_row; row < b->scroll_bot; row++)
+			row_set(row, 0, b->cols, b);
 	} else {
-		row_roll(t->curs_row, t->scroll_bot, n);
-		for (Row *row = t->scroll_bot - n; row < t->scroll_bot; row++)
-			row_set(row, 0, t->cols, t);
+		row_roll(b->curs_row, b->scroll_bot, n);
+		for (Row *row = b->scroll_bot - n; row < b->scroll_bot; row++)
+			row_set(row, 0, b->cols, b);
 	}
 }
 
 /* Interpret an 'erase characters' (ECH) sequence */
-static void interpret_csi_ech(Vt *vt, int param[], int pcount)
+static void interpret_csi_ech(Vt *t, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	int n = (pcount && param[0] > 0) ? param[0] : 1;
 
-	if (t->curs_col + n > t->cols)
-		n = t->cols - t->curs_col;
+	if (b->curs_col + n > b->cols)
+		n = b->cols - b->curs_col;
 
-	row_set(t->curs_row, t->curs_col, n, t);
+	row_set(b->curs_row, b->curs_col, n, b);
 }
 
 /* Interpret a 'set scrolling region' (DECSTBM) sequence */
-static void interpret_csi_decstbm(Vt *vt, int param[], int pcount)
+static void interpret_csi_decstbm(Vt *t, int param[], int pcount)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	int new_top, new_bot;
 
 	switch (pcount) {
 	case 0:
-		t->scroll_top = t->lines;
-		t->scroll_bot = t->lines + t->rows;
+		b->scroll_top = b->lines;
+		b->scroll_bot = b->lines + b->rows;
 		break;
 	case 2:
 		new_top = param[0] - 1;
@@ -686,17 +686,17 @@ static void interpret_csi_decstbm(Vt *vt, int param[], int pcount)
 		/* clamp to bounds */
 		if (new_top < 0)
 			new_top = 0;
-		if (new_top >= t->rows)
-			new_top = t->rows - 1;
+		if (new_top >= b->rows)
+			new_top = b->rows - 1;
 		if (new_bot < 0)
 			new_bot = 0;
-		if (new_bot >= t->rows)
-			new_bot = t->rows;
+		if (new_bot >= b->rows)
+			new_bot = b->rows;
 
 		/* check for range validity */
 		if (new_top < new_bot) {
-			t->scroll_top = t->lines + new_top;
-			t->scroll_bot = t->lines + new_bot;
+			b->scroll_top = b->lines + new_top;
+			b->scroll_bot = b->lines + new_bot;
 		}
 		break;
 	default:
@@ -842,32 +842,32 @@ static void interpret_csi(Vt *t)
 }
 
 /* Interpret an 'index' (IND) sequence */
-static void interpret_csi_ind(Vt *vt)
+static void interpret_csi_ind(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	if (t->curs_row < t->lines + t->rows - 1)
-		t->curs_row++;
+	Buffer *b = t->buffer;
+	if (b->curs_row < b->lines + b->rows - 1)
+		b->curs_row++;
 }
 
 /* Interpret a 'reverse index' (RI) sequence */
-static void interpret_csi_ri(Vt *vt)
+static void interpret_csi_ri(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	if (t->curs_row > t->lines)
-		t->curs_row--;
+	Buffer *b = t->buffer;
+	if (b->curs_row > b->lines)
+		b->curs_row--;
 	else {
-		row_roll(t->scroll_top, t->scroll_bot, -1);
-		row_set(t->scroll_top, 0, t->cols, t);
+		row_roll(b->scroll_top, b->scroll_bot, -1);
+		row_set(b->scroll_top, 0, b->cols, b);
 	}
 }
 
 /* Interpret a 'next line' (NEL) sequence */
-static void interpret_csi_nel(Vt *vt)
+static void interpret_csi_nel(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	if (t->curs_row < t->lines + t->rows - 1) {
-		t->curs_row++;
-		t->curs_col = 0;
+	Buffer *b = t->buffer;
+	if (b->curs_row < b->lines + b->rows - 1) {
+		b->curs_row++;
+		b->curs_col = 0;
 	}
 }
 
@@ -980,39 +980,39 @@ handled:
 	}
 }
 
-static void process_nonprinting(Vt *vt, wchar_t wc)
+static void process_nonprinting(Vt *t, wchar_t wc)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	switch (wc) {
 	case C0_ESC:
-		new_escape_sequence(vt);
+		new_escape_sequence(t);
 		break;
 	case C0_BEL:
-		if (vt->bell)
+		if (t->bell)
 			beep();
 		break;
 	case C0_BS:
-		if (t->curs_col > 0)
-			t->curs_col--;
+		if (b->curs_col > 0)
+			b->curs_col--;
 		break;
 	case C0_HT: /* tab */
-		t->curs_col = (t->curs_col + 8) & ~7;
-		if (t->curs_col >= t->cols)
-			t->curs_col = t->cols - 1;
+		b->curs_col = (b->curs_col + 8) & ~7;
+		if (b->curs_col >= b->cols)
+			b->curs_col = b->cols - 1;
 		break;
 	case C0_CR:
-		t->curs_col = 0;
+		b->curs_col = 0;
 		break;
 	case C0_VT:
 	case C0_FF:
 	case C0_LF:
-		cursor_line_down(vt);
+		cursor_line_down(t);
 		break;
 	case C0_SO: /* shift out, invoke the G1 character set */
-		vt->graphmode = vt->charsets[1];
+		t->graphmode = t->charsets[1];
 		break;
 	case C0_SI: /* shift in, invoke the G0 character set */
-		vt->graphmode = vt->charsets[0];
+		t->graphmode = t->charsets[0];
 		break;
 	}
 }
@@ -1324,106 +1324,106 @@ void vt_destroy(Vt *t)
 	free(t);
 }
 
-void vt_dirty(Vt *vt)
+void vt_dirty(Vt *t)
 {
-	Buffer *t = vt->buffer;
-	for (Row *row = t->lines, *end = row + t->rows; row < end; row++)
+	Buffer *b = t->buffer;
+	for (Row *row = b->lines, *end = row + b->rows; row < end; row++)
 		row->dirty = true;
 }
 
-static void copymode_get_selection_boundry(Vt *vt, Row **start_row, int *start_col, Row **end_row, int *end_col, bool clip) {
-	Buffer *t = vt->buffer;
-	if (vt->copymode_sel_start_row >= t->lines && vt->copymode_sel_start_row < t->lines + t->rows) {
+static void copymode_get_selection_boundry(Vt *t, Row **start_row, int *start_col, Row **end_row, int *end_col, bool clip) {
+	Buffer *b = t->buffer;
+	if (t->copymode_sel_start_row >= b->lines && t->copymode_sel_start_row < b->lines + b->rows) {
 		/* within the current page */
-		if (t->curs_row >= vt->copymode_sel_start_row) {
-			*start_row = vt->copymode_sel_start_row;
-			*end_row = t->curs_row;
-			*start_col = vt->copymode_sel_start_col;
-			*end_col = t->curs_col;
+		if (b->curs_row >= t->copymode_sel_start_row) {
+			*start_row = t->copymode_sel_start_row;
+			*end_row = b->curs_row;
+			*start_col = t->copymode_sel_start_col;
+			*end_col = b->curs_col;
 		} else {
-			*start_row = t->curs_row;
-			*end_row = vt->copymode_sel_start_row;
-			*start_col = t->curs_col;
-			*end_col = vt->copymode_sel_start_col;
+			*start_row = b->curs_row;
+			*end_row = t->copymode_sel_start_row;
+			*start_col = b->curs_col;
+			*end_col = t->copymode_sel_start_col;
 		}
-		if (t->curs_col < *start_col && *start_row == *end_row) {
-			*start_col = t->curs_col;
-			*end_col = vt->copymode_sel_start_col;
+		if (b->curs_col < *start_col && *start_row == *end_row) {
+			*start_col = b->curs_col;
+			*end_col = t->copymode_sel_start_col;
 		}
 	} else {
 		/* part of the scrollback buffer is also selected */
-		if (vt->copymode_sel_start_row < t->lines) {
+		if (t->copymode_sel_start_row < b->lines) {
 			/* above the current page */
 			if (clip) {
-				*start_row = t->lines;
+				*start_row = b->lines;
 				*start_col = 0;
 			} else {
-				int copied_lines = t->lines - vt->copymode_sel_start_row;
-				*start_row = &t->scroll_buf
-					[(t->scroll_buf_ptr - copied_lines + t->scroll_buf_sz) % t->scroll_buf_sz];
-				*start_col = vt->copymode_sel_start_col;
+				int copied_lines = b->lines - t->copymode_sel_start_row;
+				*start_row = &b->scroll_buf
+					[(b->scroll_buf_ptr - copied_lines + b->scroll_buf_sz) % b->scroll_buf_sz];
+				*start_col = t->copymode_sel_start_col;
 			}
-			*end_row = t->curs_row;
-			*end_col = t->curs_col;
+			*end_row = b->curs_row;
+			*end_col = b->curs_col;
 		} else {
 			/* below the current page */
-			*start_row = t->curs_row;
-			*start_col = t->curs_col;
+			*start_row = b->curs_row;
+			*start_col = b->curs_col;
 			if (clip) {
-				*end_row = t->lines + t->rows;
-				*end_col = t->cols - 1;
+				*end_row = b->lines + b->rows;
+				*end_col = b->cols - 1;
 			} else {
-				int copied_lines = vt->copymode_sel_start_row -(t->lines + t->rows);
-				*end_row = &t->scroll_buf
-					[(t->scroll_buf_ptr + copied_lines) % t->scroll_buf_sz];
-				*end_col = vt->copymode_sel_start_col;
+				int copied_lines = t->copymode_sel_start_row -(b->lines + b->rows);
+				*end_row = &b->scroll_buf
+					[(b->scroll_buf_ptr + copied_lines) % b->scroll_buf_sz];
+				*end_col = t->copymode_sel_start_col;
 			}
 		}
 	}
 }
 
-void vt_draw(Vt *vt, WINDOW * win, int srow, int scol)
+void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	bool sel = false;
 	Row *sel_row_start, *sel_row_end;
 	int sel_col_start, sel_col_end;
 
-	copymode_get_selection_boundry(vt, &sel_row_start, &sel_col_start, &sel_row_end, &sel_col_end, true);
+	copymode_get_selection_boundry(t, &sel_row_start, &sel_col_start, &sel_row_end, &sel_col_end, true);
 	curs_set(0);
 
-	for (int i = 0; i < t->rows; i++) {
-		Row *row = t->lines + i;
+	for (int i = 0; i < b->rows; i++) {
+		Row *row = b->lines + i;
 
 		if (!row->dirty)
 			continue;
 
 		wmove(win, srow + i, scol);
 		Cell *cell = NULL;
-		for (int j = 0; j < t->cols; j++) {
+		for (int j = 0; j < b->cols; j++) {
 			Cell *prev_cell = cell;
 			cell = row->cells + j;
 			if (!prev_cell || cell->attr != prev_cell->attr
 			    || cell->fg != prev_cell->fg
 			    || cell->bg != prev_cell->bg) {
 				if (cell->attr == A_NORMAL)
-					cell->attr = vt->defattrs;
+					cell->attr = t->defattrs;
 				if (cell->fg == -1)
-					cell->fg = vt->deffg;
+					cell->fg = t->deffg;
 				if (cell->bg == -1)
-					cell->bg = vt->defbg;
+					cell->bg = t->defbg;
 				wattrset(win, (attr_t) cell->attr << NCURSES_ATTR_SHIFT);
-				wcolor_set(win, vt_color_get(vt, cell->fg, cell->bg), NULL);
+				wcolor_set(win, vt_color_get(t, cell->fg, cell->bg), NULL);
 			}
 
-			if (vt->copymode_selecting && ((row > sel_row_start && row < sel_row_end) ||
+			if (t->copymode_selecting && ((row > sel_row_start && row < sel_row_end) ||
 			    (row == sel_row_start && j >= sel_col_start && (row != sel_row_end || j <= sel_col_end)) ||
 			    (row == sel_row_end && j <= sel_col_end && (row != sel_row_start || j >= sel_col_start)))) {
 				wattrset(win, (attr_t) ((cell->attr << NCURSES_ATTR_SHIFT)|COPYMODE_ATTR));
 				sel = true;
 			} else if (sel) {
 				wattrset(win, (attr_t) cell->attr << NCURSES_ATTR_SHIFT);
-				wcolor_set(win, vt_color_get(vt, cell->fg, cell->bg), NULL);
+				wcolor_set(win, vt_color_get(t, cell->fg, cell->bg), NULL);
 				sel = false;
 			}
 
@@ -1440,34 +1440,34 @@ void vt_draw(Vt *vt, WINDOW * win, int srow, int scol)
 		row->dirty = false;
 	}
 
-	wmove(win, srow + t->curs_row - t->lines, scol + t->curs_col);
+	wmove(win, srow + b->curs_row - b->lines, scol + b->curs_col);
 
-	if (vt->copymode_searching) {
-		wattrset(win, vt->defattrs << NCURSES_ATTR_SHIFT);
-		mvwaddch(win, srow + t->rows - 1, 0, vt->copymode_searching == 1 ? '/' : '?');
-		int len = waddnwstr(win, vt->searchbuf, t->cols - 1);
-		whline(win, ' ', t->cols - len - 1);
+	if (t->copymode_searching) {
+		wattrset(win, t->defattrs << NCURSES_ATTR_SHIFT);
+		mvwaddch(win, srow + b->rows - 1, 0, t->copymode_searching == 1 ? '/' : '?');
+		int len = waddnwstr(win, t->searchbuf, b->cols - 1);
+		whline(win, ' ', b->cols - len - 1);
 	}
 
-	curs_set(vt_cursor(vt));
+	curs_set(vt_cursor(t));
 }
 
-void vt_scroll(Vt *vt, int rows)
+void vt_scroll(Vt *t, int rows)
 {
-	Buffer *t = vt->buffer;
-	if (!t->scroll_buf_sz)
+	Buffer *b = t->buffer;
+	if (!b->scroll_buf_sz)
 		return;
 	if (rows < 0) { /* scroll back */
-		if (rows < -t->scroll_buf_len)
-			rows = -t->scroll_buf_len;
+		if (rows < -b->scroll_buf_len)
+			rows = -b->scroll_buf_len;
 	} else { /* scroll forward */
-		if (rows > t->scroll_amount)
-			rows = t->scroll_amount;
+		if (rows > b->scroll_amount)
+			rows = b->scroll_amount;
 	}
-	fill_scroll_buf(t, rows);
-	t->scroll_amount -= rows;
-	if (vt->copymode_selecting)
-		vt->copymode_sel_start_row -= rows;
+	fill_scroll_buf(b, rows);
+	b->scroll_amount -= rows;
+	if (t->copymode_selecting)
+		t->copymode_sel_start_row -= rows;
 }
 
 void vt_noscroll(Vt *t)
@@ -1546,12 +1546,12 @@ int vt_write(Vt *t, const char *buf, int len)
 	return ret;
 }
 
-static void send_curs(Vt *vt)
+static void send_curs(Vt *t)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	char keyseq[16];
-	sprintf(keyseq, "\e[%d;%dR", (int)(t->curs_row - t->lines), t->curs_col);
-	vt_write(vt, keyseq, strlen(keyseq));
+	sprintf(keyseq, "\e[%d;%dR", (int)(b->curs_row - b->lines), b->curs_col);
+	vt_write(t, keyseq, strlen(keyseq));
 }
 
 void vt_keypress(Vt *t, int keycode)
@@ -1636,18 +1636,18 @@ static Row *buffer_next_row(Buffer *t, Row *row, int direction)
 	}
 }
 
-static void row_show(Vt *vt, Row *r)
+static void row_show(Vt *t, Row *r)
 {
-	Buffer *t = vt->buffer;
-	int below = t->scroll_amount;
-	int above = t->scroll_buf_len;
-	int ptr = t->scroll_buf_ptr;
-	int size = t->scroll_buf_sz;
-	int row = r - t->scroll_buf;
+	Buffer *b = t->buffer;
+	int below = b->scroll_amount;
+	int above = b->scroll_buf_len;
+	int ptr = b->scroll_buf_ptr;
+	int size = b->scroll_buf_sz;
+	int row = r - b->scroll_buf;
 	int scroll = 0;
 
-	if (t->lines <= r && r < t->lines + t->rows) {
-		t->curs_row = r;
+	if (b->lines <= r && r < b->lines + b->rows) {
+		b->curs_row = r;
 		return;
 	}
 
@@ -1667,49 +1667,49 @@ static void row_show(Vt *vt, Row *r)
 	}
 
 	if (scroll) {
-		vt_scroll(vt, scroll);
-		t->curs_row = t->lines + (scroll > 0  ? t->rows - 1 : 0);
+		vt_scroll(t, scroll);
+		b->curs_row = b->lines + (scroll > 0  ? b->rows - 1 : 0);
 	}
 }
 
-static void copymode_search(Vt *vt, int direction)
+static void copymode_search(Vt *t, int direction)
 {
-	if (!vt->searchbuf || vt->searchbuf[0] == '\0')
+	if (!t->searchbuf || t->searchbuf[0] == '\0')
 		return;
 
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	/* avoid match at current cursor position */
-	Row *start_row = t->curs_row;
-	int start_col = t->curs_col + direction;
-	if (start_col >= t->cols) {
+	Row *start_row = b->curs_row;
+	int start_col = b->curs_col + direction;
+	if (start_col >= b->cols) {
 		start_col = 0;
-		start_row = buffer_next_row(t, start_row, 1);
+		start_row = buffer_next_row(b, start_row, 1);
 	} else if (start_col < 0) {
-		start_col = t->cols - 1;
-		start_row = buffer_next_row(t, start_row, -1);
+		start_col = b->cols - 1;
+		start_row = buffer_next_row(b, start_row, -1);
 	}
 
 	Row *row = start_row, *matched_row = NULL;
 	int matched_col = 0;
-	int end_col = direction > 0 ? t->cols - 1 : 0;
-	int s_start = direction > 0 ? 0 : vt->searchbuf_curs - 1;
-	int s_end = direction > 0 ? vt->searchbuf_curs - 1 : 0;
+	int end_col = direction > 0 ? b->cols - 1 : 0;
+	int s_start = direction > 0 ? 0 : t->searchbuf_curs - 1;
+	int s_end = direction > 0 ? t->searchbuf_curs - 1 : 0;
 	int s = s_start;
 
 	for (;;) {
-		int col = direction > 0 ? 0 : t->cols - 1;
+		int col = direction > 0 ? 0 : b->cols - 1;
 		if (row == start_row)
 			col = start_col;
 		for (;;) {
-			if (vt->searchbuf[s] == row->cells[col].text) {
+			if (t->searchbuf[s] == row->cells[col].text) {
 				if (s == s_start) {
 					matched_row = row;
 					matched_col = col;
 				}
 				if (s == s_end) {
-					t->curs_col = matched_col;
+					b->curs_col = matched_col;
 					if (matched_row)
-						row_show(vt, matched_row);
+						row_show(t, matched_row);
 					return;
 				}
 				s += direction;
@@ -1721,143 +1721,143 @@ static void copymode_search(Vt *vt, int direction)
 			col += direction;
 		}
 
-		if ((row = buffer_next_row(t, row, direction)) == start_row)
+		if ((row = buffer_next_row(b, row, direction)) == start_row)
 			break;
 	}
 }
 
-void vt_copymode_keypress(Vt *vt, int keycode)
+void vt_copymode_keypress(Vt *t, int keycode)
 {
-	Buffer *t = vt->buffer;
+	Buffer *b = t->buffer;
 	Row *start_row, *end_row;
-	int direction, col, start_col, end_col, delta, scroll_page = t->rows / 2;
+	int direction, col, start_col, end_col, delta, scroll_page = b->rows / 2;
 	char *copybuf, keychar = (char)keycode;
 	wchar_t wc;
 	ssize_t len;
 	bool found;
 
-	if (!vt->copymode)
+	if (!t->copymode)
 		return;
 
-	if (vt->copymode_searching) {
+	if (t->copymode_searching) {
 		switch (keycode) {
 		case KEY_BACKSPACE:
-			if (--vt->searchbuf_curs < 0)
-				vt->searchbuf_curs = 0;
-			vt->searchbuf[vt->searchbuf_curs] = '\0';
+			if (--t->searchbuf_curs < 0)
+				t->searchbuf_curs = 0;
+			t->searchbuf[t->searchbuf_curs] = '\0';
 			break;
 		case '\n':
-			copymode_search(vt, vt->copymode_searching);
+			copymode_search(t, t->copymode_searching);
 		case '\e':
-			vt->copymode_searching = 0;
-			t->lines[t->rows - 1].dirty = true;
+			t->copymode_searching = 0;
+			b->lines[b->rows - 1].dirty = true;
 			break;
 		default:
-			len = (ssize_t)mbrtowc(&wc, &keychar, 1, &vt->searchbuf_ps);
+			len = (ssize_t)mbrtowc(&wc, &keychar, 1, &t->searchbuf_ps);
 
 			if (len == -2)
 				return;
 			if (len == -1)
 				wc = keycode;
-			if (vt->searchbuf_curs >= vt->searchbuf_size - 2) {
-				vt->searchbuf_size *= 2;
-				wchar_t *buf = realloc(vt->searchbuf, vt->searchbuf_size * sizeof(wchar_t));
+			if (t->searchbuf_curs >= t->searchbuf_size - 2) {
+				t->searchbuf_size *= 2;
+				wchar_t *buf = realloc(t->searchbuf, t->searchbuf_size * sizeof(wchar_t));
 				if (!buf)
 					return;
-				vt->searchbuf = buf;
+				t->searchbuf = buf;
 			}
-			vt->searchbuf[vt->searchbuf_curs++] = wc;
-			vt->searchbuf[vt->searchbuf_curs] = '\0';
+			t->searchbuf[t->searchbuf_curs++] = wc;
+			t->searchbuf[t->searchbuf_curs] = '\0';
 			break;
 		}
 	} else {
 		switch (keycode) {
 		case '0' ... '9':
-			vt->copymode_cmd_multiplier = (vt->copymode_cmd_multiplier * 10) + (keychar - '0');
+			t->copymode_cmd_multiplier = (t->copymode_cmd_multiplier * 10) + (keychar - '0');
 			return;
 		case KEY_PPAGE:
-			delta = t->curs_row - t->lines;
+			delta = b->curs_row - b->lines;
 			if (delta > scroll_page)
-				t->curs_row -= scroll_page;
+				b->curs_row -= scroll_page;
 			else {
-				t->curs_row = t->lines;
-				vt_scroll(vt, delta - scroll_page);
+				b->curs_row = b->lines;
+				vt_scroll(t, delta - scroll_page);
 			}
 			break;
 		case KEY_NPAGE:
-			delta = t->rows - (t->curs_row - t->lines);
+			delta = b->rows - (b->curs_row - b->lines);
 			if (delta > scroll_page)
-				t->curs_row += scroll_page;
+				b->curs_row += scroll_page;
 			else {
-				t->curs_row = t->lines + t->rows - 1;
-				vt_scroll(vt, scroll_page - delta);
+				b->curs_row = b->lines + b->rows - 1;
+				vt_scroll(t, scroll_page - delta);
 			}
 			break;
 		case 'g':
-			if (t->scroll_buf_len)
-				vt_scroll(vt, -t->scroll_buf_len);
+			if (b->scroll_buf_len)
+				vt_scroll(t, -b->scroll_buf_len);
 			/* fall through */
 		case 'H':
-			t->curs_row = t->lines;
+			b->curs_row = b->lines;
 			break;
 		case 'M':
-			t->curs_row = t->lines + (t->rows / 2);
+			b->curs_row = b->lines + (b->rows / 2);
 			break;
 		case 'G':
-			vt_noscroll(vt);
+			vt_noscroll(t);
 			/* fall through */
 		case 'L':
-			t->curs_row = t->lines + t->rows - 1;
+			b->curs_row = b->lines + b->rows - 1;
 			break;
 		case KEY_HOME:
 		case '^':
-			t->curs_col = 0;
+			b->curs_col = 0;
 			break;
 		case KEY_END:
 		case '$':
-			start_col = t->cols - 1;
-			for (int i = 0; i < t->cols; i++)
-				if (t->curs_row->cells[i].text)
+			start_col = b->cols - 1;
+			for (int i = 0; i < b->cols; i++)
+				if (b->curs_row->cells[i].text)
 					start_col = i;
-			t->curs_col = start_col;
+			b->curs_col = start_col;
 			break;
 		case '/':
 		case '?':
-			memset(&vt->searchbuf_ps, 0, sizeof(mbstate_t));
-			if (!vt->searchbuf) {
-				vt->searchbuf_size = t->cols+1;
-				vt->searchbuf = malloc(vt->searchbuf_size * sizeof(wchar_t));
+			memset(&t->searchbuf_ps, 0, sizeof(mbstate_t));
+			if (!t->searchbuf) {
+				t->searchbuf_size = b->cols+1;
+				t->searchbuf = malloc(t->searchbuf_size * sizeof(wchar_t));
 			}
-			if (!vt->searchbuf)
+			if (!t->searchbuf)
 				return;
-			vt->searchbuf[0] = L'\0';
-			vt->searchbuf_curs = 0;
-			vt->copymode_searching = keycode == '/' ? 1 : -1;
+			t->searchbuf[0] = L'\0';
+			t->searchbuf_curs = 0;
+			t->copymode_searching = keycode == '/' ? 1 : -1;
 			break;
 		case 'n':
 		case 'N':
-			copymode_search(vt, keycode == 'n' ? 1 : -1);
+			copymode_search(t, keycode == 'n' ? 1 : -1);
 			break;
 		case 'v':
-			vt->copymode_selecting = true;
-			vt->copymode_sel_start_row = t->curs_row;
-			vt->copymode_sel_start_col = t->curs_col;
+			t->copymode_selecting = true;
+			t->copymode_sel_start_row = b->curs_row;
+			t->copymode_sel_start_col = b->curs_col;
 			break;
 		case 'y':
-			if (!vt->copymode_selecting) {
-				t->curs_col = 0;
-				vt->copymode_sel_start_row = t->curs_row +
-					(vt->copymode_cmd_multiplier ? vt->copymode_cmd_multiplier - 1 : 0);
-				if (vt->copymode_sel_start_row >= t->lines + t->rows)
-					vt->copymode_sel_start_row = t->lines + t->rows - 1;
-				vt->copymode_sel_start_col = t->cols - 1;
+			if (!t->copymode_selecting) {
+				b->curs_col = 0;
+				t->copymode_sel_start_row = b->curs_row +
+					(t->copymode_cmd_multiplier ? t->copymode_cmd_multiplier - 1 : 0);
+				if (t->copymode_sel_start_row >= b->lines + b->rows)
+					t->copymode_sel_start_row = b->lines + b->rows - 1;
+				t->copymode_sel_start_col = b->cols - 1;
 			}
 
-			copymode_get_selection_boundry(vt, &start_row, &start_col, &end_row, &end_col, false);
-			int line_count = vt->copymode_sel_start_row > t->curs_row ?
-				vt->copymode_sel_start_row - t->curs_row :
-				t->curs_row - vt->copymode_sel_start_row;
-			copybuf = calloc(1, (line_count + 1) * t->cols * MB_CUR_MAX + 1);
+			copymode_get_selection_boundry(t, &start_row, &start_col, &end_row, &end_col, false);
+			int line_count = t->copymode_sel_start_row > b->curs_row ?
+				t->copymode_sel_start_row - b->curs_row :
+				b->curs_row - t->copymode_sel_start_row;
+			copybuf = calloc(1, (line_count + 1) * b->cols * MB_CUR_MAX + 1);
 
 			if (copybuf) {
 				char *s = copybuf, *last_non_space = s;
@@ -1866,7 +1866,7 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 				Row *row = start_row;
 				for (;;) {
 					int j = (row == start_row) ? start_col : 0;
-					int col = (row == end_row) ? end_col : t->cols - 1;
+					int col = (row == end_row) ? end_col : b->cols - 1;
 					while (j <= col) {
 						if (row->cells[j].text) {
 							size_t len = wcrtomb(s, row->cells[j].text, &ps);
@@ -1885,32 +1885,32 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 					else
 						*s++ = '\n';
 
-					row = buffer_next_row(t, row, 1);
+					row = buffer_next_row(b, row, 1);
 				}
 				*s = '\0';
-				if (vt->event_handler)
-					vt->event_handler(vt, VT_EVENT_COPY_TEXT, copybuf);
+				if (t->event_handler)
+					t->event_handler(t, VT_EVENT_COPY_TEXT, copybuf);
 			}
 			/* fall through */
 		case '\e':
 		case 'q':
-			vt_copymode_leave(vt);
+			vt_copymode_leave(t);
 			return;
 		default:
-			for (int c = 0; c < (vt->copymode_cmd_multiplier ? vt->copymode_cmd_multiplier : 1); c++) {
+			for (int c = 0; c < (t->copymode_cmd_multiplier ? t->copymode_cmd_multiplier : 1); c++) {
 				switch (keycode) {
 				case 'w':
 				case 'W':
 				case 'b':
 				case 'B':
 					direction = (keycode == 'w' || keycode == 'W') ? 1 : -1;
-					start_col = (direction > 0) ? 0 : t->cols - 1;
-					end_col = (direction > 0) ? t->cols - 1 : 0;
-					col = t->curs_col;
+					start_col = (direction > 0) ? 0 : b->cols - 1;
+					end_col = (direction > 0) ? b->cols - 1 : 0;
+					col = b->curs_col;
 					found = false;
 					do {
 						for (;;) {
-							if (t->curs_row->cells[col].text == ' ') {
+							if (b->curs_row->cells[col].text == ' ') {
 								found = true;
 								break;
 							}
@@ -1921,66 +1921,66 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 						}
 
 						if (found) {
-							while (t->curs_row->cells[col].text == ' ') {
+							while (b->curs_row->cells[col].text == ' ') {
 								if (col == end_col) {
-									t->curs_row += direction;
+									b->curs_row += direction;
 									break;
 								}
 								col += direction;
 							}
 						} else {
 							col = start_col;
-							t->curs_row += direction;
+							b->curs_row += direction;
 						}
 
-						if (t->curs_row < t->lines) {
-							t->curs_row = t->lines;
-							if (t->scroll_buf_len)
-								vt_scroll(vt, -1);
+						if (b->curs_row < b->lines) {
+							b->curs_row = b->lines;
+							if (b->scroll_buf_len)
+								vt_scroll(t, -1);
 							else
 								break;
 						}
 
-						if (t->curs_row >= t->lines + t->rows) {
-							t->curs_row = t->lines + t->rows - 1;
-							if (t->scroll_amount)
-								vt_scroll(vt, 1);
+						if (b->curs_row >= b->lines + b->rows) {
+							b->curs_row = b->lines + b->rows - 1;
+							if (b->scroll_amount)
+								vt_scroll(t, 1);
 							else
 								break;
 						}
 					} while (!found);
 
 					if (found)
-						t->curs_col = col;
+						b->curs_col = col;
 					break;
 				case KEY_UP:
 				case 'k':
-					if (t->curs_row == t->lines)
-						vt_scroll(vt, -1);
+					if (b->curs_row == b->lines)
+						vt_scroll(t, -1);
 					else
-						t->curs_row--;
+						b->curs_row--;
 					break;
 				case KEY_DOWN:
 				case 'j':
-					if (t->curs_row == t->lines + t->rows - 1)
-						vt_scroll(vt, 1);
+					if (b->curs_row == b->lines + b->rows - 1)
+						vt_scroll(t, 1);
 					else
-						t->curs_row++;
+						b->curs_row++;
 					break;
 				case KEY_RIGHT:
 				case 'l':
-					t->curs_col++;
-					if (t->curs_col >= t->cols) {
-						t->curs_col = t->cols - 1;
-						vt->copymode_cmd_multiplier = 0;
+					b->curs_col++;
+					if (b->curs_col >= b->cols) {
+						b->curs_col = b->cols - 1;
+						t->copymode_cmd_multiplier = 0;
 					}
 					break;
 				case KEY_LEFT:
 				case 'h':
-					t->curs_col--;
-					if (t->curs_col < 0) {
-						t->curs_col = 0;
-						vt->copymode_cmd_multiplier = 0;
+					b->curs_col--;
+					if (b->curs_col < 0) {
+						b->curs_col = 0;
+						t->copymode_cmd_multiplier = 0;
 					}
 					break;
 				}
@@ -1988,9 +1988,9 @@ void vt_copymode_keypress(Vt *vt, int keycode)
 			break;
 		}
 	}
-	if (vt->copymode_selecting)
-		vt_dirty(vt);
-	vt->copymode_cmd_multiplier = 0;
+	if (t->copymode_selecting)
+		vt_dirty(t);
+	t->copymode_cmd_multiplier = 0;
 }
 
 void vt_mouse(Vt *t, int x, int y, mmask_t mask)
@@ -2154,29 +2154,29 @@ unsigned vt_copymode(Vt *t)
 	return t->copymode;
 }
 
-void vt_copymode_enter(Vt *vt)
+void vt_copymode_enter(Vt *t)
 {
-	if (vt->copymode)
+	if (t->copymode)
 		return;
-	Buffer *t = vt->buffer;
-	vt->copymode_curs_srow = t->curs_row - t->lines;
-	vt->copymode_curs_scol = t->curs_col;
-	vt->copymode = true;
+	Buffer *b = t->buffer;
+	t->copymode_curs_srow = b->curs_row - b->lines;
+	t->copymode_curs_scol = b->curs_col;
+	t->copymode = true;
 }
 
-void vt_copymode_leave(Vt *vt)
+void vt_copymode_leave(Vt *t)
 {
-	if (!vt->copymode)
+	if (!t->copymode)
 		return;
-	Buffer *t = vt->buffer;
-	vt->copymode = false;
-	vt->copymode_selecting = false;
-	vt->copymode_searching = false;
-	vt->copymode_sel_start_row = t->lines;
-	vt->copymode_sel_start_col = 0;
-	vt->copymode_cmd_multiplier = 0;
-	t->curs_row = t->lines + vt->copymode_curs_srow;
-	t->curs_col = vt->copymode_curs_scol;
-	vt_noscroll(vt);
-	vt_dirty(vt);
+	Buffer *b = t->buffer;
+	t->copymode = false;
+	t->copymode_selecting = false;
+	t->copymode_searching = false;
+	t->copymode_sel_start_row = b->lines;
+	t->copymode_sel_start_col = 0;
+	t->copymode_cmd_multiplier = 0;
+	b->curs_row = b->lines + t->copymode_curs_srow;
+	b->curs_col = t->copymode_curs_scol;
+	vt_noscroll(t);
+	vt_dirty(t);
 }
