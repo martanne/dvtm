@@ -671,6 +671,8 @@ destroy(Client *c) {
 
 static void
 cleanup() {
+	while (clients)
+		destroy(clients);
 	vt_shutdown();
 	endwin();
 	if (bar.fd > 0)
