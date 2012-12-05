@@ -540,11 +540,12 @@ static void
 resize_screen() {
 	struct winsize ws;
 
-	if (ioctl(0, TIOCGWINSZ, &ws) == -1)
-		return;
-
-	screen.w = ws.ws_col;
-	screen.h = ws.ws_row;
+	if (ioctl(0, TIOCGWINSZ, &ws) == -1) {
+		getmaxyx(stdscr, screen.h, screen.w);
+	} else {
+		screen.w = ws.ws_col;
+		screen.h = ws.ws_row;
+	}
 
 	debug("resize_screen(), w: %d h: %d\n", screen.w, screen.h);
 
@@ -632,7 +633,6 @@ setup() {
 	mouse_setup();
 	raw();
 	vt_init();
-	getmaxyx(stdscr, screen.h, screen.w);
 	resize_screen();
 	signal(SIGWINCH, sigwinch_handler);
 	signal(SIGCHLD, sigchld_handler);
