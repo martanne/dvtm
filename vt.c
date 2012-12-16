@@ -1861,22 +1861,25 @@ void vt_copymode_keypress(Vt *t, int keycode)
 			copybuf = calloc(1, (line_count + 1) * b->cols * MB_CUR_MAX + 1);
 
 			if (copybuf) {
-				char *s = copybuf, *last_non_space = s;
+				char *s = copybuf;
 				mbstate_t ps;
-				memset(&ps, 0, sizeof(mbstate_t));
+				memset(&ps, 0, sizeof(ps));
 				Row *row = start_row;
 				for (;;) {
+					char *last_non_space = s;
 					int j = (row == start_row) ? start_col : 0;
 					int col = (row == end_row) ? end_col : b->cols - 1;
-					while (j <= col) {
+					for (size_t len = 0; j <= col; j++) {
 						if (row->cells[j].text) {
-							size_t len = wcrtomb(s, row->cells[j].text, &ps);
+							len = wcrtomb(s, row->cells[j].text, &ps);
 							if (len > 0)
 								s += len;
 							last_non_space = s;
-						} else
+						} else if (len) {
+							len = 0;
+						} else {
 							*s++ = ' ';
-						j++;
+						}
 					}
 
 					s = last_non_space;
