@@ -38,6 +38,7 @@ forkpty(int *master, char *name, struct termios *tio, struct winsize *ws)
 	int	slave, fd;
 	char   *path;
 	pid_t	pid;
+	struct termios tio2;
 
 	if ((*master = open("/dev/ptc", O_RDWR|O_NOCTTY)) == -1)
 		return (-1);
@@ -76,7 +77,12 @@ forkpty(int *master, char *name, struct termios *tio, struct winsize *ws)
 			fatal("open failed");
 		close(fd);
 
-		if (tio != NULL && tcsetattr(slave, TCSAFLUSH, tio) == -1)
+		if (tcgetattr(slave, &tio2) != 0)
+			fatal("tcgetattr failed");
+		if (tio != NULL)
+			memcpy(tio2.c_cc, tio->c_cc, sizeof tio2.c_cc);
+		tio2.c_cc[VERASE] = '\177';
+		if (tcsetattr(slave, TCSAFLUSH, &tio2) == -1)
 			fatal("tcsetattr failed");
 		if (ioctl(slave, TIOCSWINSZ, ws) == -1)
 			fatal("ioctl failed");
