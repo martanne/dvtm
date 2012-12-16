@@ -167,7 +167,6 @@ struct Vt {
 	int searchbuf_curs, searchbuf_size;
 	int copymode_cmd_multiplier;
 	/* buffers and parsing state */
-	mbstate_t ps;
 	char rbuf[BUFSIZ];
 	char ebuf[BUFSIZ];
 	unsigned int rlen, elen;
@@ -1112,6 +1111,8 @@ int vt_process(Vt *t)
 {
 	int res;
 	unsigned int pos = 0;
+	mbstate_t ps;
+	memset(&ps, 0, sizeof(ps));
 
 	if (t->pty < 0) {
 		errno = EINVAL;
@@ -1127,7 +1128,7 @@ int vt_process(Vt *t)
 		wchar_t wc;
 		ssize_t len;
 
-		len = (ssize_t)mbrtowc(&wc, t->rbuf + pos, t->rlen - pos, &t->ps);
+		len = (ssize_t)mbrtowc(&wc, t->rbuf + pos, t->rlen - pos, &ps);
 		if (len == -2) {
 			t->rlen -= pos;
 			memmove(t->rbuf, t->rbuf + pos, t->rlen);
