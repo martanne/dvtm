@@ -1905,6 +1905,7 @@ void vt_copymode_keypress(Vt *t, int keycode)
 			return;
 		default:
 			for (int c = 0; c < (t->copymode_cmd_multiplier ? t->copymode_cmd_multiplier : 1); c++) {
+				int width;
 				switch (keycode) {
 				case 'w':
 				case 'W':
@@ -1976,7 +1977,8 @@ void vt_copymode_keypress(Vt *t, int keycode)
 					break;
 				case KEY_RIGHT:
 				case 'l':
-					b->curs_col++;
+					width = wcwidth(b->curs_row->cells[b->curs_col].text);
+					b->curs_col += width < 1 ? 1 : width;
 					if (b->curs_col >= b->cols) {
 						b->curs_col = b->cols - 1;
 						t->copymode_cmd_multiplier = 0;
@@ -1984,7 +1986,10 @@ void vt_copymode_keypress(Vt *t, int keycode)
 					break;
 				case KEY_LEFT:
 				case 'h':
-					b->curs_col--;
+					width = 1;
+					if (b->curs_col >= 2 && !b->curs_row->cells[b->curs_col-1].text)
+						width = wcwidth(b->curs_row->cells[b->curs_col-2].text);
+					b->curs_col -= width < 1 ? 1 : width;
 					if (b->curs_col < 0) {
 						b->curs_col = 0;
 						t->copymode_cmd_multiplier = 0;
