@@ -1106,17 +1106,14 @@ handle_cmdfifo() {
 						/* remove the escape character '\\' move every
 						 * following character to the left by one position
 						 */
-						switch (*(++p)) {
+						switch (p[1]) {
 							case '\\':
 							case '\'':
 							case '\"': {
-								char *t = p;
-								for (;;) {
-									*(t - 1) = *t;
-									if (*t++ == '\0')
-										break;
-								}
-								p -= 2;
+								char *t = p+1;
+								do {
+									t[-1] = *t;
+								} while (*t++);
 							}
 						}
 						break;
@@ -1139,12 +1136,14 @@ handle_cmdfifo() {
 
 							while (*p == ' ')
 								++p;
-							arg = p;
+							arg = p--;
 						}
 						break;
 					}
 
 					if (c == '\n' || *p == '\n') {
+						if (!*p)
+							p++;
 						debug("execute %s", s);
 						for(int i = 0; i < argc; i++)
 							debug(" %s", args[i]);
