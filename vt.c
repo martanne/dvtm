@@ -80,34 +80,6 @@ static short color_pairs_reserved, color_pairs_max, color_pair_current;
 static short *color2palette, default_fg, default_bg;
 static char vt_term[32] = "dvtm";
 
-enum {
-	C0_NUL = 0x00,
-	C0_SOH, C0_STX, C0_ETX, C0_EOT, C0_ENQ, C0_ACK, C0_BEL,
-	C0_BS, C0_HT, C0_LF, C0_VT, C0_FF, C0_CR, C0_SO, C0_SI,
-	C0_DLE, C0_DC1, C0_DC2, D0_DC3, C0_DC4, C0_NAK, C0_SYN, C0_ETB,
-	C0_CAN, C0_EM, C0_SUB, C0_ESC, C0_IS4, C0_IS3, C0_IS2, C0_IS1,
-};
-
-enum {
-	C1_40 = 0x40,
-	C1_41, C1_BPH, C1_NBH, C1_44, C1_NEL, C1_SSA, C1_ESA,
-	C1_HTS, C1_HTJ, C1_VTS, C1_PLD, C1_PLU, C1_RI, C1_SS2, C1_SS3,
-	C1_DCS, C1_PU1, C1_PU2, C1_STS, C1_CCH, C1_MW, C1_SPA, C1_EPA,
-	C1_SOS, C1_59, C1_SCI, C1_CSI, CS_ST, C1_OSC, C1_PM, C1_APC,
-};
-
-enum {
-	CSI_ICH = 0x40,
-	CSI_CUU, CSI_CUD, CSI_CUF, CSI_CUB, CSI_CNL, CSI_CPL, CSI_CHA,
-	CSI_CUP, CSI_CHT, CSI_ED, CSI_EL, CSI_IL, CSI_DL, CSI_EF, CSI_EA,
-	CSI_DCH, CSI_SEE, CSI_CPR, CSI_SU, CSI_SD, CSI_NP, CSI_PP, CSI_CTC,
-	CSI_ECH, CSI_CVT, CSI_CBT, CSI_SRS, CSI_PTX, CSI_SDS, CSI_SIMD, CSI_5F,
-	CSI_HPA, CSI_HPR, CSI_REP, CSI_DA, CSI_VPA, CSI_VPR, CSI_HVP, CSI_TBC,
-	CSI_SM, CSI_MC, CSI_HPB, CSI_VPB, CSI_RM, CSI_SGR, CSI_DSR, CSI_DAQ,
-	CSI_70, CSI_71, CSI_72, CSI_73, CSI_74, CSI_75, CSI_76, CSI_77,
-	CSI_78, CSI_79, CSI_7A, CSI_7B, CSI_7C, CSI_7D, CSI_7E, CSI_7F
-};
-
 typedef struct {
 	wchar_t text;
 	uint16_t attr;
@@ -991,34 +963,34 @@ static void process_nonprinting(Vt *t, wchar_t wc)
 {
 	Buffer *b = t->buffer;
 	switch (wc) {
-	case C0_ESC:
+	case '\e': /* ESC */
 		new_escape_sequence(t);
 		break;
-	case C0_BEL:
+	case '\a': /* BEL */
 		if (t->bell)
 			beep();
 		break;
-	case C0_BS:
+	case '\b': /* BS */
 		if (b->curs_col > 0)
 			b->curs_col--;
 		break;
-	case C0_HT: /* tab */
+	case '\t': /* HT */
 		b->curs_col = (b->curs_col + 8) & ~7;
 		if (b->curs_col >= b->cols)
 			b->curs_col = b->cols - 1;
 		break;
-	case C0_CR:
+	case '\r': /* CR */
 		b->curs_col = 0;
 		break;
-	case C0_VT:
-	case C0_FF:
-	case C0_LF:
+	case '\v': /* VT */
+	case '\f': /* FF */
+	case '\n': /* LF */
 		cursor_line_down(t);
 		break;
-	case C0_SO: /* shift out, invoke the G1 character set */
+	case '\016': /* SO: shift out, invoke the G1 character set */
 		t->graphmode = t->charsets[1];
 		break;
-	case C0_SI: /* shift in, invoke the G0 character set */
+	case '\017': /* SI: shift in, invoke the G0 character set */
 		t->graphmode = t->charsets[0];
 		break;
 	}
