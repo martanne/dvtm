@@ -919,9 +919,14 @@ static void try_interpret_escape_seq(Vt *t)
 	}
 
 	switch (*t->ebuf) {
-	case '#': /* ignore DECDHL, DECSWL, DECDWL, DECHCP, DECALN, DECFPP */
-		if (t->elen == 2)
+	case '#': /* ignore DECDHL, DECSWL, DECDWL, DECHCP, DECFPP */
+		if (t->elen == 2) {
+			if (lastchar == '8') { /* DECALN */
+				interpret_csi_ed(t, (int []){ 2 }, 1);
+				goto handled;
+			}
 			goto cancel;
+		}
 		break;
 	case '(':
 	case ')':
