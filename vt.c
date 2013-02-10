@@ -78,6 +78,7 @@
 static bool is_utf8, has_default_colors;
 static short color_pairs_reserved, color_pairs_max, color_pair_current;
 static short *color2palette, default_fg, default_bg;
+static char vt_term[32] = "dvtm";
 
 enum {
 	C0_NUL = 0x00,
@@ -1517,7 +1518,7 @@ pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *env[], in
 			setenv(envp[0], envp[1], 1);
 			envp += 2;
 		}
-		setenv("TERM", COLORS >= 256 ? "rxvt-256color" : "rxvt", 1);
+		setenv("TERM", vt_term, 1);
 		execv(p, (char *const *)argv);
 		fprintf(stderr, "\nexecv() failed.\nCommand: '%s'\n", argv[0]);
 		exit(1);
@@ -2127,6 +2128,12 @@ void vt_init(void)
 {
 	init_colors();
 	is_utf8_locale();
+	char color_suffix[] = "-256color";
+	char *term = getenv("DVTM_TERM");
+	if (term)
+		strncpy(vt_term, term, sizeof(vt_term) - sizeof(color_suffix));
+	if (COLORS >= 256)
+		strcat(vt_term, color_suffix);
 }
 
 void vt_shutdown(void)
