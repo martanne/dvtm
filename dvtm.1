@@ -1,9 +1,21 @@
 .TH DVTM 1 dvtm\-VERSION
+.nh
 .SH NAME
 dvtm \- dynamic virtual terminal manager
 .SH SYNOPSIS
 .B dvtm
-.RB [ \-v ] \ [ \-m \ mod ] \ [ \-s \ status-fifo ] \ [cmd...]
+.RB [ \-v ]
+.RB [ \-m
+.IR modifier ]
+.RB [ \-d
+.IR delay ]
+.RB [ \-h
+.IR lines ]
+.RB [ \-s
+.IR status-fifo ]
+.RB [ \-c
+.IR cmd-fifo ]
+.RI [ command \ ... "" ]
 .SH DESCRIPTION
 dvtm is a dynamic tiling window manager for the console.
 As a console window manager it tries to make it easy to work with multiple
@@ -11,30 +23,46 @@ console based applications.
 .SH OPTIONS
 .TP
 .B \-v
-prints version information to standard output, then exits.
+Print version information to standard output and exit.
 .TP
-.B \-m mod
-set default modifier at runtime.
+.BI \-m \ modifier
+Set command modifier at runtime.
 .TP
-.B \-d escdelay
-set the delay ncurses waits before deciding if a character that might be part
-of an escape sequence is actually part of an escape sequence.
+.BI \-d \ delay
+Set the delay ncurses waits before deciding if a character that might be
+part of an escape sequence is actually part of an escape sequence.
 .TP
-.B \-h nnn
-set the scrollback history buffer size at runtime.
+.BI \-h \ lines
+Set the scrollback history buffer size at runtime.
 .TP
-.B \-s status-fifo
-if status-fifo is a named pipe, its content is read and displayed. See the dvtm-status script
-for an usage example.
+.BI \-s \ status-fifo
+Open or create the named pipe
+.I status-fifo
+read its content and display it in the statusbar. See the
+.I dvtm-status
+script for an usage example.
 .TP
-.B [cmd...]
-Execute cmd after dvtm is started.
+.BI \-c \ cmd-fifo
+Open or create the named pipe
+.I cmd-fifo
+and look for commands to execute which were defined in
+.IR config.h .
+.TP
+.IR command \ ...
+Execute
+.IR command (s),
+each in a separate window.
 .SH USAGE
 .SS Keyboard commands
 .TP
 .B Mod
-Each keybinding begins with Mod which defaults to ^g but can be changed in config.h or with
-the -m command line option.
+Each keybinding begins with Mod which defaults to
+.BI ^g ,
+but can be changed in
+.I config.h
+or with the
+.B \-m
+command line option.
 .TP
 .B Mod\-c
 Create a new shell window.
@@ -43,10 +71,12 @@ Create a new shell window.
 Close focused window.
 .TP
 .B Mod\-l
-Increases the master area width about 5% (all except grid and fullscreen layout).
+Increases the master area width about 5% (all except grid and
+fullscreen layout).
 .TP
 .B Mod\-h
-Decreases the master area width about 5% (all except grid and fullscreen layout).
+Decreases the master area width about 5% (all except grid and
+fullscreen layout).
 .TP
 .B Mod\-j
 Focus next window.
@@ -54,9 +84,9 @@ Focus next window.
 .B Mod\-k
 Focus previous window.
 .TP
-.B Mod\-[1..n]
+.BI Mod\- n
 Focus the
-.BR nth
+.IR n \-th
 window.
 .TP
 .B Mod\-.
@@ -93,7 +123,7 @@ Change to bottom stack tiling layout.
 Change to grid layout.
 .TP
 .B Mod\-s
-Shows/hides the status bar.
+Show/hide the status bar.
 .TP
 .B Mod\-r
 Redraw whole screen.
@@ -102,7 +132,8 @@ Redraw whole screen.
 Escape the next typed key.
 .TP
 .B Mod\-a
-Toggle keyboard multiplexing mode, if activated keypresses are sent to all non minimized windows.
+Toggle keyboard multiplexing mode, if activated keypresses are sent to all
+non minimized windows.
 .TP
 .B Mod\-X
 Lock screen.
@@ -133,10 +164,14 @@ Quit dvtm.
 .SS Mouse commands
 .TP
 .B Copy and Paste
-By default dvtm captures mouse events to provide the actions listed below. Unfortunately
-this interferes with the standard X copy and paste mechanism. To work around this
-you need to hold down SHIFT while selecting or pasting text. Alternatively you can
-disable mouse support at compile time, or use Mod\-M to toggle mouse support dynamically.
+By default dvtm captures mouse events to provide the actions listed below.
+Unfortunately this interferes with the standard X copy and paste mechanism.
+To work around this you need to hold down
+.B Shift
+while selecting or pasting text.
+Alternatively you can disable mouse support at compile time, or use
+.B Mod\-M
+to toggle mouse support dynamically.
 .TP
 .B Button1 click
 Select window.
@@ -145,47 +180,68 @@ Select window.
 Select window and toggle maximization.
 .TP
 .B Button2 click
-Zooms/cycles current window to/from master area.
+Zoom/cycle current window to/from master area.
 .TP
 .B Button3 click
 Toggle minimization of current window.
-
 .SS Copy mode
-Copy mode gives easy access to past output. The commands use vi style keybindings
-and support number prefixes as command multiplier.
+Copy mode gives easy access to past output.
+The commands use vi style keybindings and support number prefixes as
+command multipliers.
 .TP
 .B Entering
-Copy mode can be entered with \fBMod\-v\fR.
+Copy mode can be entered with
+.BR Mod\-v .
 .TP
 .B Navigation
-Once in, navigation works with vi style keybindings (\fBh,j,k,l,^,$,g,H,M,L,G\fR) as well as with the
-\fBArrows/Home/End/Page-Down/Page-Up\fR keys.
+Once in, navigation works with vi style keybindings
+.RB ( h , j , k , l , ^ , $ , g , H , M , L , G )
+as well as with the
+.BR Arrows / Home / End / Page-Down / Page-Up
+keys.
 .TP
 .B Searching
-Search forward with \fB/\fR and backwards with \fB?\fR. Jump forward to next match with \fBn\fR.
-Jump backwards to next match with \fBN\fR.
+Search forward with
+.B /
+and backwards with
+.BR ? .
+Jump forward to next match with
+.BR n .
+Jump backwards to next match with
+.BR N .
 .TP
 .B Selecting
-To start making a selection press \fBv\fR (similar to visual mode in vi).
+To start making a selection press
+.B v
+(similar to visual mode in vi).
 .TP
 .B Copying
-To copy the current selection use \fBy\fR. If you haven't made a selection the current line is copied.
-Add a number prefix to copy n lines starting from the current line. This command leaves the copy mode.
+To copy the current selection use
+.BR y .
+If you haven't made a selection the current line is copied.
+Add a number prefix to copy n lines starting from the current line.
+This command leaves the copy mode.
 .TP
 .B Pasting
-The previously copied text can be pasted at the current cursor position with \fBMod\-p\fR.
+The previously copied text can be pasted at the current cursor position
+with
+.BR Mod\-p .
 .TP
 .B Leaving
-Copy mode is automatically left upon copying something. To manually exit at any
-time press \fBESC\fR or \fBq\fR.
-
+Copy mode is automatically left upon copying something. To manually
+exit at any time press
+.B ESC
+or
+.BR q .
 .SH EXAMPLE
-.TP
-See the dvtm-status script as an example of how to display text in the status bar.
-
+See the
+.I dvtm-status
+script as an example of how to display text in the
+status bar.
 .SH CUSTOMIZATION
-dvtm is customized by creating a custom config.h and (re)compiling the source
-code. This keeps it fast, secure and simple.
-
+dvtm is customized by creating a custom
+.I config.h
+and (re)compiling the source code.
+This keeps it fast, secure and simple.
 .SH AUTHOR
 dvtm is written by Marc Andre Tanner <mat at brain-dump.org>
