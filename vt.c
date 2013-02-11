@@ -678,6 +678,8 @@ static void interpret_csi_decstbm(Vt *t, int param[], int pcount)
 	default:
 		return;	/* malformed */
 	}
+	b->curs_row = b->scroll_top;
+	b->curs_col = 0;
 }
 
 static void interpret_csi(Vt *t)
