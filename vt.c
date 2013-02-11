@@ -98,6 +98,7 @@ typedef struct {
 	Row *scroll_buf;
 	Row *scroll_top;
 	Row *scroll_bot;
+	bool *tabs;
 	int scroll_buf_size;
 	int scroll_buf_ptr;
 	int scroll_amount_above;
@@ -204,6 +205,7 @@ static char const * const keytable[KEY_MAX+1] = {
 	[KEY_RESIZE]    = "",
 };
 
+static void puttab(Vt *t, int count);
 static void process_nonprinting(Vt *t, wchar_t wc);
 static void send_curs(Vt *t);
 
@@ -681,6 +683,7 @@ static void interpret_csi_decstbm(Vt *t, int param[], int pcount)
 static void interpret_csi(Vt *t)
 {
 	static int csiparam[BUFSIZ];
+	Buffer *b = t->buffer;
 	int param_count = 0;
 	const char *p = t->ebuf + 1;
 	char verb = t->ebuf[t->elen - 1];
@@ -797,6 +800,18 @@ static void interpret_csi(Vt *t)
 	case 'X': /* erase chars */
 		interpret_csi_ech(t, csiparam, param_count);
 		break;
+	case 'Z': /* CBT: cursor backward tabulation */
+		puttab(t, param_count ? -csiparam[0] : -1);
+		break;
+	case 'g': /* TBC: tabulation clear */
+		switch (csiparam[0]) {
+		case 0:
+			b->tabs[b->curs_col] = false;
+			break;
+		case 3:
+			memset(b->tabs, 0, sizeof(*b->tabs) * b->maxcols);
+			break;
+		}
 	case 'r': /* set scrolling region */
 		interpret_csi_decstbm(t, csiparam, param_count);
 		break;
@@ -937,6 +952,9 @@ static void try_interpret_escape_seq(Vt *t)
 	case 'E': /* NEL: next line */
 		interpret_csi_nel(t);
 		goto handled;
+	case 'H': /* HTS: horizontal tab set */
+		t->buffer->tabs[t->buffer->curs_col] = true;
+		goto handled;
 	default:
 		goto cancel;
 	}
@@ -959,6 +977,28 @@ handled:
 	}
 }
 
+static void puttab(Vt *t, int count)
+{
+	Buffer *b = t->buffer;
+	int direction = count >= 0 ? 1 : -1;
+	int col = b->curs_col + direction;
+	while (count) {
+		if (col < 0) {
+			b->curs_col = 0;
+			break;
+		}
+		if (col >= b->cols) {
+			b->curs_col = b->cols - 1;
+			break;
+		}
+		if (b->tabs[col]) {
+			b->curs_col = col;
+			count -= direction;
+		}
+		col += direction;
+	}
+}
+
 static void process_nonprinting(Vt *t, wchar_t wc)
 {
 	Buffer *b = t->buffer;
@@ -975,9 +1015,7 @@ static void process_nonprinting(Vt *t, wchar_t wc)
 			b->curs_col--;
 		break;
 	case '\t': /* HT */
-		b->curs_col = (b->curs_col + 8) & ~7;
-		if (b->curs_col >= b->cols)
-			b->curs_col = b->cols - 1;
+		puttab(t, 1);
 		break;
 	case '\r': /* CR */
 		b->curs_col = 0;
@@ -1144,6 +1182,7 @@ static void buffer_free(Buffer *t)
 	for (int i = 0; i < t->scroll_buf_size; i++)
 		free(t->scroll_buf[i].cells);
 	free(t->scroll_buf);
+	free(t->tabs);
 }
 
 static bool buffer_init(Buffer *t, int rows, int cols, int scroll_buf_size)
@@ -1175,6 +1214,11 @@ static bool buffer_init(Buffer *t, int rows, int cols, int scroll_buf_size)
 			goto fail;
 		}
 	}
+	t->tabs = calloc(cols, sizeof(*t->tabs));
+	if (!t->tabs)
+		goto fail;
+	for (int col = 8; col < cols; col += 8)
+		t->tabs[col] = true;
 	t->curs_row = lines;
 	t->curs_col = 0;
 	/* initial scrolling area is the whole window */
@@ -1242,6 +1286,9 @@ static void buffer_resize(Buffer *t, int rows, int cols)
 			if (t->cols < cols)
 				row_set(sbuf + row, t->cols, cols - t->cols, NULL);
 		}
+		t->tabs = realloc(t->tabs, sizeof(*t->tabs) * cols);
+		for (int col = t->cols; col < cols; col++)
+			t->tabs[col] = !(col & 7);
 		t->maxcols = cols;
 		t->cols = cols;
 	} else if (t->cols != cols) {
