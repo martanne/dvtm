@@ -842,7 +842,7 @@ static void interpret_csi_ind(Vt *t)
 static void interpret_csi_ri(Vt *t)
 {
 	Buffer *b = t->buffer;
-	if (b->curs_row > b->lines)
+	if (b->curs_row > b->scroll_top)
 		b->curs_row--;
 	else {
 		row_roll(b->scroll_top, b->scroll_bot, -1);
