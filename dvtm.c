@@ -378,11 +378,18 @@ detach(Client *c) {
 }
 
 static void
+settitle(Client *c) {
+	if (sel == c && *c->title)
+		printf("\033]0;%s\007", c->title);
+}
+
+static void
 focus(Client *c) {
 	Client *tmp = sel;
 	if (sel == c)
 		return;
 	sel = c;
+	settitle(c);
 	if (tmp) {
 		draw_border(tmp);
 		wrefresh(tmp->window);
@@ -420,6 +427,7 @@ term_event_handler(Vt *term, int event, void *event_data) {
 		if (event_data)
 			strncpy(c->title, event_data, sizeof(c->title) - 1);
 		c->title[event_data ? sizeof(c->title) - 1 : 0] = '\0';
+		settitle(c);
 		draw_border(c);
 		applycolorrules(c);
 		break;
