@@ -1230,7 +1230,7 @@ open_or_create_fifo(const char *name, const char **name_created) {
 static void
 usage() {
 	cleanup();
-	eprint("usage: dvtm [-v] [-m mod] [-d escdelay] [-h n] "
+	eprint("usage: dvtm [-v] [-M] [-m mod] [-d delay] [-h lines] "
 		"[-s status-fifo] "
 		"[-c cmd-fifo] "
 		"[cmd...]\n");
@@ -1254,12 +1254,15 @@ parse_args(int argc, char *argv[]) {
 			create(args);
 			continue;
 		}
-		if (argv[arg][1] != 'v' && (arg + 1) >= argc)
+		if (argv[arg][1] != 'v' && argv[arg][1] != 'M' && (arg + 1) >= argc)
 			usage();
 		switch (argv[arg][1]) {
 			case 'v':
 				puts("dvtm-"VERSION" (c) 2007-2012 Marc Andre Tanner");
 				exit(EXIT_SUCCESS);
+			case 'M':
+				mouse_events_enabled = !mouse_events_enabled;
+				break;
 			case 'm': {
 				char *mod = argv[++arg];
 				if (mod[0] == '^' && mod[1])

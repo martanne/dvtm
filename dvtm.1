@@ -5,6 +5,7 @@ dvtm \- dynamic virtual terminal manager
 .SH SYNOPSIS
 .B dvtm
 .RB [ \-v ]
+.RB [ \-M ]
 .RB [ \-m
 .IR modifier ]
 .RB [ \-d
@@ -24,6 +25,10 @@ console based applications.
 .TP
 .B \-v
 Print version information to standard output and exit.
+.TP
+.B \-M
+Toggle default mouse grabbing upon startup. Use this to allow normal mouse operation
+under X.
 .TP
 .BI \-m \ modifier
 Set command modifier at runtime.
@@ -169,9 +174,10 @@ Unfortunately this interferes with the standard X copy and paste mechanism.
 To work around this you need to hold down
 .B Shift
 while selecting or pasting text.
-Alternatively you can disable mouse support at compile time, or use
-.B Mod\-M
-to toggle mouse support dynamically.
+Alternatively you can disable mouse support at compile time, start dvtm with the
+.B -M
+flag or toggle mouse support during runtime with
+.BR Mod\-M .
 .TP
 .B Button1 click
 Select window.
