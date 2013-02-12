@@ -805,6 +805,12 @@ static void interpret_csi(Vt *t)
 	case 'X': /* erase chars */
 		interpret_csi_ech(t, csiparam, param_count);
 		break;
+	case 'S': /* SU: scroll up */
+		vt_scroll(t, param_count ? -csiparam[0] : -1);
+		break;
+	case 'T': /* SD: scroll down */
+		vt_scroll(t, param_count ? csiparam[0] : 1);
+		break;
 	case 'Z': /* CBT: cursor backward tabulation */
 		puttab(t, param_count ? -csiparam[0] : -1);
 		break;
