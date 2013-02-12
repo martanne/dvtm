@@ -130,6 +130,7 @@ struct Vt {
 	unsigned relposmode:1;
 	unsigned mousetrack:1;
 	unsigned graphmode:1;
+	unsigned savgraphmode:1;
 	bool charsets[2];
 	char copymode_searching;
 	/* copymode */
@@ -286,6 +287,7 @@ static void save_attrs(Vt *t)
 	b->savattrs = b->curattrs;
 	b->savfg = b->curfg;
 	b->savbg = b->curbg;
+	t->savgraphmode = t->graphmode;
 }
 
 static void restore_attrs(Vt *t)
@@ -294,6 +296,7 @@ static void restore_attrs(Vt *t)
 	b->curattrs = b->savattrs;
 	b->curfg = b->savfg;
 	b->curbg = b->savbg;
+	t->graphmode = t->savgraphmode;
 }
 
 static void fill_scroll_buf(Buffer *t, int s)
