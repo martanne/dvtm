@@ -1459,14 +1459,23 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 
 			if (is_utf8 && cell->text >= 128) {
 				char buf[MB_CUR_MAX + 1];
-				int len = wcrtomb(buf, cell->text, NULL);
-				waddnstr(win, buf, len);
-				if (wcwidth(cell->text) > 1)
-					j++;
+				size_t len = wcrtomb(buf, cell->text, NULL);
+				if (len > 0) {
+					waddnstr(win, buf, len);
+					if (wcwidth(cell->text) > 1)
+						j++;
+				}
 			} else {
 				waddch(win, cell->text > ' ' ? cell->text : ' ');
 			}
 		}
+
+		int x, y;
+		getyx(win, y, x);
+		(void)y;
+		if (x && x < b->cols - 1)
+			whline(win, ' ', b->cols - x);
+
 		row->dirty = false;
 	}
 
