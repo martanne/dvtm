@@ -1598,7 +1598,7 @@ static void send_curs(Vt *t)
 {
 	Buffer *b = t->buffer;
 	char keyseq[16];
-	sprintf(keyseq, "\e[%d;%dR", (int)(b->curs_row - b->lines), b->curs_col);
+	snprintf(keyseq, sizeof keyseq, "\e[%d;%dR", (int)(b->curs_row - b->lines), b->curs_col);
 	vt_write(t, keyseq, strlen(keyseq));
 }
 
@@ -2178,7 +2178,7 @@ void vt_init(void)
 	if (term)
 		strncpy(vt_term, term, sizeof(vt_term) - sizeof(color_suffix));
 	if (COLORS >= 256)
-		strcat(vt_term, color_suffix);
+		strncat(vt_term, color_suffix, sizeof(color_suffix) - 1);
 }
 
 void vt_shutdown(void)
