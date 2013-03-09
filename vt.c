@@ -2164,7 +2164,8 @@ static void init_colors(void)
 		default_bg = COLOR_BLACK;
 	has_default_colors = (use_default_colors() == OK);
 	color_pairs_max = MIN(COLOR_PAIRS, MAX_COLOR_PAIRS);
-	color2palette = calloc((COLORS + 2) * (COLORS + 2), sizeof(short));
+	if (COLORS)
+		color2palette = calloc((COLORS + 2) * (COLORS + 2), sizeof(short));
 	vt_color_reserve(COLOR_WHITE, COLOR_BLACK);
 }
 
