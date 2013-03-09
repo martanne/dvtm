@@ -36,7 +36,7 @@ dist: clean
 	@mkdir -p dvtm-${VERSION}
 	@cp -R LICENSE Makefile README config.h config.mk \
 		${SRC} vt.h forkpty-aix.c tile.c bstack.c tstack.c grid.c fullscreen.c \
-		fibonacci.c dvtm-status dvtm.1 dvtm-${VERSION}
+		fibonacci.c dvtm-status dvtm.info dvtm.1 dvtm-${VERSION}
 	@tar -cf dvtm-${VERSION}.tar dvtm-${VERSION}
 	@gzip dvtm-${VERSION}.tar
 	@rm -rf dvtm-${VERSION}
