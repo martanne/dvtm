@@ -38,7 +38,7 @@
 #include "fullscreen.c"
 
 /* by default the first layout entry is used */
-Layout layouts[] = {
+static Layout layouts[] = {
 	{ "[]=", tile },
 	{ "+++", grid },
 	{ "TTT", bstack },
@@ -48,7 +48,7 @@ Layout layouts[] = {
 #define MOD CTRL('g')
 
 /* you can at most specifiy MAX_ARGS (2) number of arguments */
-Key keys[] = {
+static Key keys[] = {
 	{ MOD, 'c',       { create,         { NULL }                    } },
 	{ MOD, 'x',       { killclient,     { NULL }                    } },
 	{ MOD, 'j',       { focusnext,      { NULL }                    } },
@@ -134,7 +134,7 @@ static const ColorRule colorrules[] = {
 #define ENABLE_MOUSE true /* whether to enable mouse events by default */
 
 #ifdef CONFIG_MOUSE
-Button buttons[] = {
+static Button buttons[] = {
 	{ BUTTON1_CLICKED,        { mouse_focus,      { NULL  } } },
 	{ BUTTON1_DOUBLE_CLICKED, { mouse_fullscreen, { "[ ]" } } },
 	{ BUTTON2_CLICKED,        { mouse_zoom,       { NULL  } } },
@@ -142,11 +142,11 @@ Button buttons[] = {
 };
 #endif /* CONFIG_MOUSE */
 
-Cmd commands[] = {
+static Cmd commands[] = {
 	{ "create", { create,	{ NULL } } },
 };
 
 /* gets executed when dvtm is started */
-Action actions[] = {
+static Action actions[] = {
 	{ create, { NULL } },
 };
