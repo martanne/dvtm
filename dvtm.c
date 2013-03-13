@@ -717,8 +717,17 @@ create(const char *args[]) {
 		NULL
 	};
 
-	c->window = newwin(wah, waw, way, wax);
-	c->term = vt_create(screen.h - 1, screen.w, screen.history);
+	if (!(c->window = newwin(wah, waw, way, wax))) {
+		free(c);
+		return;
+	}
+
+	if (!(c->term = vt_create(screen.h - 1, screen.w, screen.history))) {
+		delwin(c->window);
+		free(c);
+		return;
+	}
+
 	c->cmd = cmd;
 	if (args && args[1]) {
 		strncpy(c->title, args[1], sizeof(c->title) - 1);
