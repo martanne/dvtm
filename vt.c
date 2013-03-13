@@ -1216,7 +1216,7 @@ static bool buffer_init(Buffer *t, int rows, int cols, int scroll_buf_size)
 	if (scroll_buf_size < 0)
 		scroll_buf_size = 0;
 	t->scroll_buf = scroll_buf = calloc(scroll_buf_size, sizeof(Row));
-	if (!scroll_buf)
+	if (!scroll_buf && scroll_buf_size)
 		goto fail;
 	for (Row *row = scroll_buf, *end = scroll_buf + scroll_buf_size; row < end; row++) {
 		row->cells = calloc(cols, sizeof(Cell));
