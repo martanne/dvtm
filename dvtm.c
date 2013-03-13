@@ -178,6 +178,7 @@ static void resize(Client *c, int x, int y, int w, int h);
 extern Screen screen;
 static unsigned int waw, wah, wax, way;
 static Client *clients = NULL;
+static char *title;
 #define COLOR(fg, bg) COLOR_PAIR(vt_color_reserve(fg, bg))
 
 #include "config.h"
@@ -380,8 +381,11 @@ detach(Client *c) {
 
 static void
 settitle(Client *c) {
-	if (sel == c && *c->title)
-		printf("\033]0;%s\007", c->title);
+	char *t = title;
+	if (!t && sel == c && *c->title)
+		t = c->title;
+	if (t)
+		printf("\033]0;%s\007", t);
 }
 
 static void
@@ -1248,10 +1252,8 @@ open_or_create_fifo(const char *name, const char **name_created) {
 static void
 usage() {
 	cleanup();
-	eprint("usage: dvtm [-v] [-M] [-m mod] [-d delay] [-h lines] "
-		"[-s status-fifo] "
-		"[-c cmd-fifo] "
-		"[cmd...]\n");
+	eprint("usage: dvtm [-v] [-M] [-m mod] [-d delay] [-h lines] [-t title] "
+	       "[-s status-fifo] [-c cmd-fifo] [cmd...]\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -1298,6 +1300,9 @@ parse_args(int argc, char *argv[]) {
 				break;
 			case 'h':
 				screen.history = atoi(argv[++arg]);
+				break;
+			case 't':
+				title = argv[++arg];
 				break;
 			case 's':
 				bar.fd = open_or_create_fifo(argv[++arg], &bar.file);

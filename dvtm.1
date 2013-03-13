@@ -12,6 +12,8 @@ dvtm \- dynamic virtual terminal manager
 .IR delay ]
 .RB [ \-h
 .IR lines ]
+.RB [ \-t
+.IR title ]
 .RB [ \-s
 .IR status-fifo ]
 .RB [ \-c
@@ -39,6 +41,11 @@ part of an escape sequence is actually part of an escape sequence.
 .TP
 .BI \-h \ lines
 Set the scrollback history buffer size at runtime.
+.TP
+.BI \-t \ title
+Set a static terminal
+.I title
+and don't change it to the one of the currently focused window.
 .TP
 .BI \-s \ status-fifo
 Open or create the named pipe
