@@ -150,3 +150,7 @@ static Cmd commands[] = {
 static Action actions[] = {
 	{ create, { NULL } },
 };
+
+static char const * const keytable[] = {
+	/* add your custom key escape sequences */
+};

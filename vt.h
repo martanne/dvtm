@@ -61,6 +61,7 @@ enum {
 typedef void (*vt_event_handler_t)(Vt *, int event, void *data);
 
 void vt_init(void);
+void vt_set_keytable(char const * const keytable_overlay[], int count);
 void vt_shutdown(void);
 void vt_set_escseq_handler(Vt *, vt_escseq_handler_t);
 void vt_set_event_handler(Vt *, vt_event_handler_t);

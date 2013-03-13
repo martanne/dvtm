@@ -655,6 +655,7 @@ setup() {
 	mouse_setup();
 	raw();
 	vt_init();
+	vt_set_keytable(keytable, countof(keytable));
 	resize_screen();
 	signal(SIGWINCH, sigwinch_handler);
 	signal(SIGCHLD, sigchld_handler);

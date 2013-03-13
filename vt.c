@@ -156,7 +156,7 @@ struct Vt {
 	void *data;
 };
 
-static char const * const keytable[KEY_MAX+1] = {
+static const char *keytable[KEY_MAX+1] = {
 	['\n']          = "\r",
 	/* for the arrow keys the CSI / SS3 sequences are not stored here
 	 * because they depend on the current cursor terminal mode
@@ -2179,6 +2179,15 @@ void vt_init(void)
 		strncpy(vt_term, term, sizeof(vt_term) - sizeof(color_suffix));
 	if (COLORS >= 256)
 		strncat(vt_term, color_suffix, sizeof(color_suffix) - 1);
+}
+
+void vt_set_keytable(const char * const keytable_overlay[], int count)
+{
+	for (int k = 0; k < count && k < KEY_MAX; k++) {
+		const char *keyseq = keytable_overlay[k];
+		if (keyseq)
+			keytable[k] = keyseq;
+	}
 }
 
 void vt_shutdown(void)
