@@ -139,7 +139,8 @@ struct Vt {
 	int copymode_sel_start_col;
 	wchar_t *searchbuf;
 	mbstate_t searchbuf_ps;
-	int searchbuf_curs, searchbuf_size;
+	int searchbuf_curs, searchbuf_len, searchbuf_size, searchbuf_display;
+	int searchbuf_curs_pos;
 	int copymode_cmd_multiplier;
 	/* buffers and parsing state */
 	char rbuf[BUFSIZ];
@@ -1492,9 +1493,10 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 
 	if (t->copymode_searching) {
 		wattrset(win, t->defattrs << NCURSES_ATTR_SHIFT);
-		mvwaddch(win, srow + b->rows - 1, 0, t->copymode_searching == 1 ? '/' : '?');
-		int len = waddnwstr(win, t->searchbuf, b->cols - 1);
-		whline(win, ' ', b->cols - len - 1);
+		mvwaddch(win, srow + b->rows - 1, 0, t->copymode_searching > 0 ? '/' : '?');
+		whline(win, ' ', b->cols - 1);
+		waddnwstr(win, t->searchbuf + t->searchbuf_display, b->cols - 1);
+		wmove(win, srow + b->rows - 1, 1 + ((abs(t->copymode_searching) == 2) ? t->searchbuf_curs_pos : 0));
 	}
 
 	curs_set(vt_cursor(t));
@@ -1789,11 +1791,66 @@ void vt_copymode_keypress(Vt *t, int keycode)
 		return;
 
 	if (t->copymode_searching) {
+		if (keycode != KEY_UP && abs(t->copymode_searching) == 1) {
+			t->searchbuf[0] = L'\0';
+			t->searchbuf_display = t->searchbuf_curs = t->searchbuf_len = 0;
+		}
+		if (abs(t->copymode_searching) == 1)
+			t->copymode_searching *= 2;
+		size_t n = (t->searchbuf_len - t->searchbuf_curs) * sizeof(wchar_t);
+		int width = -1;
 		switch (keycode) {
 		case KEY_BACKSPACE:
-			if (--t->searchbuf_curs < 0)
-				t->searchbuf_curs = 0;
-			t->searchbuf[t->searchbuf_curs] = '\0';
+			if (!t->searchbuf_curs)
+				break;
+			wchar_t *buf = t->searchbuf + t->searchbuf_curs;
+			width = wcwidth(buf[-1]);
+			if (width == -1)
+				width = 1;
+			memmove(buf - 1, buf, n);
+			if (--t->searchbuf_len < 0)
+				t->searchbuf_len = 0;
+			t->searchbuf[t->searchbuf_len] = L'\0';
+		case KEY_LEFT:
+			if (t->searchbuf_curs_pos == 0) {
+				if (t->searchbuf_display > 0)
+					t->searchbuf_display--;
+			} else {
+				if (width == -1)
+					width = wcwidth(t->searchbuf[t->searchbuf_curs]);
+				if (width < 1)
+					width = 1;
+				t->searchbuf_curs_pos -= width;
+				if (t->searchbuf_curs_pos < 0)
+					t->searchbuf_curs_pos = 0;
+			}
+			if (t->searchbuf_curs > 0)
+				t->searchbuf_curs--;
+			break;
+		case KEY_UP:
+			break;
+		case KEY_DOWN:
+			t->searchbuf_display = t->searchbuf_curs = t->searchbuf_len = 0;
+			t->searchbuf[0] = L'\0';
+		case KEY_HOME:
+			t->searchbuf_display = t->searchbuf_curs = 0;
+			t->searchbuf_curs_pos = 0;
+			break;
+		case KEY_END:
+			t->searchbuf_curs = t->searchbuf_len;
+			width = 0;
+			int disp = t->searchbuf_len;
+			while (disp >= 0) {
+				int tmp = wcwidth(t->searchbuf[disp]);
+				if (tmp == -1)
+					tmp = 1;
+				if (width + tmp > b->cols -2)
+					break;
+				width += tmp;
+				disp--;
+			}
+			t->searchbuf_display = disp >= 0 ? disp + 1: 0;
+			t->searchbuf_curs_pos = width < b->cols -2 ? width : b->cols -2;
 			break;
 		case '\n':
 			copymode_search(t, t->copymode_searching);
@@ -1803,20 +1860,57 @@ void vt_copymode_keypress(Vt *t, int keycode)
 			break;
 		default:
 			len = (ssize_t)mbrtowc(&wc, &keychar, 1, &t->searchbuf_ps);
-
 			if (len == -2)
 				return;
 			if (len == -1)
 				wc = keycode;
-			if (t->searchbuf_curs >= t->searchbuf_size - 2) {
+
+			width = wcwidth(wc);
+			if (width == -1)
+				width = 1;
+
+			if (t->searchbuf_len >= t->searchbuf_size - 2) {
 				t->searchbuf_size *= 2;
 				wchar_t *buf = realloc(t->searchbuf, t->searchbuf_size * sizeof(wchar_t));
 				if (!buf)
 					return;
 				t->searchbuf = buf;
 			}
-			t->searchbuf[t->searchbuf_curs++] = wc;
-			t->searchbuf[t->searchbuf_curs] = '\0';
+
+			if (t->searchbuf_curs < t->searchbuf_len) {
+				wchar_t *buf = t->searchbuf + t->searchbuf_curs;
+				memmove(buf + 1, buf, n);
+			}
+			t->searchbuf[t->searchbuf_curs] = wc;
+			t->searchbuf[++t->searchbuf_len] = L'\0';
+		case KEY_RIGHT:
+			if (t->searchbuf_curs_pos == b->cols - 2) {
+				int w = 0;
+				for (int disp = t->searchbuf_display; disp < t->searchbuf_len && width < b->cols -1; disp++) {
+					int tmp = wcwidth(t->searchbuf[disp]);
+					if (tmp == -1) tmp = 1;
+					w += tmp;
+				}
+				if (w >= b->cols -1) {
+					if (width == -1)
+						width = 1;
+					for (w = 0; w < width;) {
+						int tmp = wcwidth(t->searchbuf[t->searchbuf_display++]);
+						if (tmp == -1) tmp = 1;
+						w += tmp;
+					}
+				}
+			} else {
+				if (width == -1)
+					width = wcwidth(t->searchbuf[t->searchbuf_curs]);
+				if (width == -1)
+					width = 1;
+				t->searchbuf_curs_pos += width;
+				if (t->searchbuf_curs_pos > b->cols - 2)
+					t->searchbuf_curs_pos = b->cols - 2;
+			}
+			if (t->searchbuf_curs < t->searchbuf_len)
+				t->searchbuf_curs++;
 			break;
 		}
 	} else {
@@ -1875,13 +1969,13 @@ void vt_copymode_keypress(Vt *t, int keycode)
 			memset(&t->searchbuf_ps, 0, sizeof(mbstate_t));
 			if (!t->searchbuf) {
 				t->searchbuf_size = b->cols+1;
-				t->searchbuf = malloc(t->searchbuf_size * sizeof(wchar_t));
+				t->searchbuf = calloc(t->searchbuf_size, sizeof(wchar_t));
 			}
 			if (!t->searchbuf)
 				return;
-			t->searchbuf[0] = L'\0';
-			t->searchbuf_curs = 0;
 			t->copymode_searching = keycode == '/' ? 1 : -1;
+			t->searchbuf_curs = t->searchbuf_len;
+			t->searchbuf_curs_pos = 0;
 			break;
 		case 'n':
 		case 'N':
