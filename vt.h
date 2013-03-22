@@ -72,7 +72,7 @@ void vt_set_default_colors(Vt *, unsigned attrs, short fg, short bg);
 Vt *vt_create(int rows, int cols, int scroll_buf_sz);
 void vt_resize(Vt *, int rows, int cols);
 void vt_destroy(Vt *);
-pid_t vt_forkpty(Vt *, const char *, const char *argv[], const char *envp[], int *pty);
+pid_t vt_forkpty(Vt *, const char *, const char *argv[], const char *cwd, const char *envp[], int *pty);
 int vt_getpty(Vt *);
 unsigned vt_cursor(Vt *t);
 

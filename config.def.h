@@ -47,9 +47,10 @@ static Layout layouts[] = {
 
 #define MOD CTRL('g')
 
-/* you can at most specifiy MAX_ARGS (2) number of arguments */
+/* you can at most specifiy MAX_ARGS (3) number of arguments */
 static Key keys[] = {
 	{ MOD, 'c',       { create,         { NULL }                    } },
+	{ MOD, 'C',       { create,         { NULL, NULL, "$CWD" }      } },
 	{ MOD, 'x',       { killclient,     { NULL }                    } },
 	{ MOD, 'j',       { focusnext,      { NULL }                    } },
 	{ MOD, 'u',       { focusnextnm,    { NULL }                    } },

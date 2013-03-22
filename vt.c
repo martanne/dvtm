@@ -1565,7 +1565,7 @@ void vt_togglebell(Vt *t)
 	t->bell = !t->bell;
 }
 
-pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *env[], int *pty)
+pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *cwd, const char *env[], int *pty)
 {
 	struct winsize ws;
 	pid_t pid;
@@ -1593,6 +1593,8 @@ pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *env[], in
 			envp += 2;
 		}
 		setenv("TERM", vt_term, 1);
+		if (cwd)
+			chdir(cwd);
 		execv(p, (char *const *)argv);
 		fprintf(stderr, "\nexecv() failed.\nCommand: '%s'\n", argv[0]);
 		exit(1);

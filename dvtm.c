@@ -89,13 +89,13 @@ typedef struct {
 #endif
 #define CTRL_ALT(k) ((k) + (129 - 'a'))
 
-#define MAX_ARGS 2
+#define MAX_ARGS 3
 
 typedef struct {
 	void (*cmd)(const char *args[]);
 	/* needed to avoid an error about initialization
 	 * of nested flexible array members */
-	const char *args[MAX_ARGS + 1];
+	const char *args[MAX_ARGS];
 } Action;
 
 typedef struct {
@@ -705,6 +705,14 @@ cleanup() {
 		unlink(cmdfifo.file);
 }
 
+static char *getcwd_by_pid(Client *c) {
+	if (!c)
+		return NULL;
+	char buf[32];
+	snprintf(buf, sizeof buf, "/proc/%d/cwd", c->pid);
+	return realpath(buf, NULL);
+}
+
 /* commands for use by keybindings */
 static void
 create(const char *args[]) {
@@ -714,7 +722,7 @@ create(const char *args[]) {
 	const char *cmd = (args && args[0]) ? args[0] : shell;
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
 	c->id = ++cmdfifo.id;
-	char buf[8];
+	char buf[8], *cwd = NULL;
 	snprintf(buf, sizeof buf, "%d", c->id);
 	const char *env[] = {
 		"DVTM", VERSION,
@@ -738,7 +746,11 @@ create(const char *args[]) {
 		strncpy(c->title, args[1], sizeof(c->title) - 1);
 		c->title[sizeof(c->title) - 1] = '\0';
 	}
-	c->pid = vt_forkpty(c->term, "/bin/sh", pargs, env, &c->pty);
+	if (args && args[2])
+		cwd = !strcmp(args[2], "$CWD") ? getcwd_by_pid(sel) : (char*)args[2];
+	c->pid = vt_forkpty(c->term, "/bin/sh", pargs, cwd, env, &c->pty);
+	if (args && args[2] && !strcmp(args[2], "$CWD"))
+		free(cwd);
 	vt_set_data(c->term, c);
 	vt_set_event_handler(c->term, term_event_handler);
 	c->w = screen.w;
@@ -1108,7 +1120,7 @@ handle_cmdfifo() {
 				bool quote = false;
 				int argc = 0;
 				/* XXX: initializer assumes MAX_ARGS == 2 use a initialization loop? */
-				const char *args[MAX_ARGS] = { NULL, NULL}, *arg;
+				const char *args[MAX_ARGS] = { NULL, NULL, NULL}, *arg;
 				/* if arguments were specified in config.h ignore the one given via
 				 * the named pipe and thus skip everything until we find a new line
 				 */
