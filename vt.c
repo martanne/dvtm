@@ -81,6 +81,25 @@ static short *color2palette, default_fg, default_bg;
 static char vt_term[32] = "dvtm";
 
 typedef struct {
+	wchar_t *buf;
+	wchar_t *cursor;
+	wchar_t *end;
+	wchar_t *display;
+	int size;
+	int width;
+	int cursor_pos;
+	mbstate_t ps;
+	enum {
+		CMDLINE_INACTIVE = 0,
+		CMDLINE_INIT,
+		CMDLINE_ACTIVE,
+	} state;
+	void *data;
+	void (*callback)(void *data);
+	char prefix;
+} Cmdline;
+
+typedef struct {
 	wchar_t text;
 	uint16_t attr;
 	short fg;
@@ -132,16 +151,12 @@ struct Vt {
 	unsigned graphmode:1;
 	unsigned savgraphmode:1;
 	bool charsets[2];
-	char copymode_searching;
 	/* copymode */
 	int copymode_curs_srow, copymode_curs_scol;
 	Row *copymode_sel_start_row;
 	int copymode_sel_start_col;
-	wchar_t *searchbuf;
-	mbstate_t searchbuf_ps;
-	int searchbuf_curs, searchbuf_len, searchbuf_size, searchbuf_display;
-	int searchbuf_curs_pos;
 	int copymode_cmd_multiplier;
+	Cmdline cmdline;
 	/* buffers and parsing state */
 	char rbuf[BUFSIZ];
 	char ebuf[BUFSIZ];
@@ -210,6 +225,15 @@ static const char *keytable[KEY_MAX+1] = {
 static void puttab(Vt *t, int count);
 static void process_nonprinting(Vt *t, wchar_t wc);
 static void send_curs(Vt *t);
+static void cmdline_hide_callback(void *t);
+static void cmdline_free(Cmdline *c);
+
+static int xwcwidth(wchar_t c) {
+	int w = wcwidth(c);
+	if (w == -1)
+		w = 1;
+	return w;
+}
 
 __attribute__ ((const))
 static uint16_t build_attrs(unsigned curattrs)
@@ -1265,6 +1289,7 @@ Vt *vt_create(int rows, int cols, int scroll_buf_size)
 	}
 	t->buffer = &t->buffer_normal;
 	t->copymode_cmd_multiplier = 0;
+	t->cmdline.callback = cmdline_hide_callback;
 	return t;
 }
 
@@ -1360,7 +1385,7 @@ void vt_destroy(Vt *t)
 		return;
 	buffer_free(&t->buffer_normal);
 	buffer_free(&t->buffer_alternate);
-	free(t->searchbuf);
+	cmdline_free(&t->cmdline);
 	free(t);
 }
 
@@ -1491,12 +1516,15 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 
 	wmove(win, srow + b->curs_row - b->lines, scol + b->curs_col);
 
-	if (t->copymode_searching) {
+	if (t->cmdline.state) {
 		wattrset(win, t->defattrs << NCURSES_ATTR_SHIFT);
-		mvwaddch(win, srow + b->rows - 1, 0, t->copymode_searching > 0 ? '/' : '?');
+		mvwaddch(win, srow + b->rows - 1, 0, t->cmdline.prefix);
 		whline(win, ' ', b->cols - 1);
-		waddnwstr(win, t->searchbuf + t->searchbuf_display, b->cols - 1);
-		wmove(win, srow + b->rows - 1, 1 + ((abs(t->copymode_searching) == 2) ? t->searchbuf_curs_pos : 0));
+		if (t->cmdline.state == CMDLINE_ACTIVE) {
+			waddnwstr(win, t->cmdline.display, b->cols - 1);
+			wmove(win, srow + b->rows - 1, 1 + t->cmdline.cursor_pos);
+		} else
+			wmove(win, srow + b->rows - 1, 1);
 	}
 
 	curs_set(vt_cursor(t));
@@ -1724,7 +1752,8 @@ static void row_show(Vt *t, Row *r)
 
 static void copymode_search(Vt *t, int direction)
 {
-	if (!t->searchbuf || t->searchbuf[0] == '\0')
+	wchar_t *searchbuf = t->cmdline.buf;
+	if (!searchbuf || *searchbuf == '\0')
 		return;
 
 	Buffer *b = t->buffer;
@@ -1741,8 +1770,9 @@ static void copymode_search(Vt *t, int direction)
 
 	Row *row = start_row, *matched_row = NULL;
 	int matched_col = 0;
-	int s_start = direction > 0 ? 0 : t->searchbuf_curs - 1;
-	int s_end = direction > 0 ? t->searchbuf_curs - 1 : 0;
+	int len = wcslen(searchbuf) - 1;
+	int s_start = direction > 0 ? 0 : len;
+	int s_end = direction > 0 ? len : 0;
 	int s = s_start;
 
 	for (;;) {
@@ -1750,7 +1780,7 @@ static void copymode_search(Vt *t, int direction)
 		if (row == start_row)
 			col = start_col;
 		for (; col >= 0 && col < b->cols; col += direction) {
-			if (t->searchbuf[s] == row->cells[col].text) {
+			if (searchbuf[s] == row->cells[col].text) {
 				if (s == s_start) {
 					matched_row = row;
 					matched_col = col;
@@ -1762,7 +1792,7 @@ static void copymode_search(Vt *t, int direction)
 					return;
 				}
 				s += direction;
-				int width = wcwidth(t->searchbuf[s]);
+				int width = wcwidth(searchbuf[s]);
 				if (width < 0)
 					width = 0;
 				else if (width >= 1)
@@ -1777,142 +1807,169 @@ static void copymode_search(Vt *t, int direction)
 	}
 }
 
+static void cmdline_hide_callback(void *t)
+{
+	Buffer *b = ((Vt *)t)->buffer;
+	b->lines[b->rows - 1].dirty = true;
+}
+
+static void cmdline_show(Cmdline *c, void *data, char prefix, int width)
+{
+	memset(&c->ps, 0, sizeof(mbstate_t));
+	if (!c->buf) {
+		c->size = width+1;
+		c->buf = calloc(c->size, sizeof(wchar_t));
+		c->cursor = c->end = c->display = c->buf;
+	}
+	if (!c->buf)
+		return;
+	c->state = CMDLINE_INIT;
+	c->data = data;
+	c->prefix = prefix;
+	c->width = width - (prefix ? 1 : 0);
+}
+
+static void cmdline_hide(Cmdline *c)
+{
+	c->state = CMDLINE_INACTIVE;
+	c->callback(c->data);
+}
+
+static void cmdline_keypress(Cmdline *c, int keycode)
+{
+	if (keycode != KEY_UP && c->state == CMDLINE_INIT) {
+		c->buf[0] = L'\0';
+		c->display = c->cursor = c->end = c->buf;
+		c->cursor_pos = 0;
+	}
+	char keychar = (char)keycode;
+	wchar_t wc = L'\0';
+	int width = -1;
+	ssize_t len;
+	size_t n = (c->end - c->cursor) * sizeof(wchar_t);
+	switch (keycode) {
+	case KEY_BACKSPACE:
+		if (c->cursor == c->buf)
+			break;
+		width = xwcwidth(c->cursor[-1]);
+		memmove(c->cursor - 1, c->cursor, n);
+		if (c->end > c->buf)
+			c->end--;
+		*c->end = L'\0';
+	case KEY_LEFT:
+		if (c->cursor_pos == 0) {
+			if (c->display > c->buf)
+				c->display--;
+		} else {
+			if (width == -1)
+				width = wcwidth(*c->cursor);
+			if (width < 1)
+				width = 1;
+			c->cursor_pos -= width;
+			if (c->cursor_pos < 0)
+				c->cursor_pos = 0;
+		}
+		if (c->cursor > c->buf)
+			c->cursor--;
+		break;
+	case KEY_UP:
+		break;
+	case KEY_DOWN:
+		c->buf[0] = L'\0';
+		c->end = c->buf;
+	case KEY_HOME:
+		c->display = c->cursor = c->buf;
+		c->cursor_pos = 0;
+		break;
+	case KEY_END:
+		c->cursor = c->end;
+		width = 0;
+		wchar_t *disp = c->end;
+		while (disp >= c->buf) {
+			int tmp = xwcwidth(*disp);
+			if (width + tmp > c->width - 1)
+				break;
+			width += tmp;
+			disp--;
+		}
+		c->display = disp >= c->buf ? disp + 1: c->buf;
+		c->cursor_pos = (width < c->width - 1) ? width : c->width - 1;
+		break;
+	case 1 ... 26: /* CTRL('a') ... CTRL('z') */
+		if (keycode != '\n')
+			break;
+		copymode_search(c->data, c->prefix == '/' ? 1 : -1);
+	case '\e':
+		cmdline_hide(c);
+		return;
+	default:
+		len = (ssize_t)mbrtowc(&wc, &keychar, 1, &c->ps);
+		if (len == -2)
+			return;
+		if (len == -1)
+			wc = keycode;
+
+		width = xwcwidth(wc);
+
+		if (c->end - c->buf >= c->size - 2) {
+			c->size *= 2;
+			wchar_t *buf = realloc(c->buf, c->size * sizeof(wchar_t));
+			if (!buf)
+				return;
+			ptrdiff_t diff = buf - c->buf;
+			c->cursor += diff;
+			c->end += diff;
+			c->display += diff;
+			c->buf = buf;
+		}
+
+		if (c->cursor < c->end)
+			memmove(c->cursor + 1, c->cursor, n);
+		*c->cursor = wc;
+		*(++c->end) = L'\0';
+	case KEY_RIGHT:
+		if (c->cursor_pos == c->width - 1) {
+			int w = 0;
+			for (wchar_t *disp = c->display; disp < c->end && width < c->width; disp++)
+				w += xwcwidth(*disp);
+			if (w >= c->width) {
+				if (width == -1)
+					width = 1;
+				for (w = 0; w < width;)
+					w += xwcwidth(*c->display++);
+			}
+		} else {
+			if (width == -1)
+				width = xwcwidth(*c->cursor);
+			c->cursor_pos += width;
+			if (c->cursor_pos > c->width - 1)
+				c->cursor_pos = c->width - 1;
+		}
+		if (c->cursor < c->end)
+			c->cursor++;
+		break;
+	}
+	c->state = CMDLINE_ACTIVE;
+}
+
+static void cmdline_free(Cmdline *c)
+{
+	free(c->buf);
+}
+
 void vt_copymode_keypress(Vt *t, int keycode)
 {
 	Buffer *b = t->buffer;
 	Row *start_row, *end_row;
 	int direction, col, start_col, end_col, delta, scroll_page = b->rows / 2;
 	char *copybuf, keychar = (char)keycode;
-	wchar_t wc;
-	ssize_t len;
 	bool found;
 
 	if (!t->copymode)
 		return;
 
-	if (t->copymode_searching) {
-		if (keycode != KEY_UP && abs(t->copymode_searching) == 1) {
-			t->searchbuf[0] = L'\0';
-			t->searchbuf_display = t->searchbuf_curs = t->searchbuf_len = 0;
-		}
-		if (abs(t->copymode_searching) == 1)
-			t->copymode_searching *= 2;
-		size_t n = (t->searchbuf_len - t->searchbuf_curs) * sizeof(wchar_t);
-		int width = -1;
-		switch (keycode) {
-		case KEY_BACKSPACE:
-			if (!t->searchbuf_curs)
-				break;
-			wchar_t *buf = t->searchbuf + t->searchbuf_curs;
-			width = wcwidth(buf[-1]);
-			if (width == -1)
-				width = 1;
-			memmove(buf - 1, buf, n);
-			if (--t->searchbuf_len < 0)
-				t->searchbuf_len = 0;
-			t->searchbuf[t->searchbuf_len] = L'\0';
-		case KEY_LEFT:
-			if (t->searchbuf_curs_pos == 0) {
-				if (t->searchbuf_display > 0)
-					t->searchbuf_display--;
-			} else {
-				if (width == -1)
-					width = wcwidth(t->searchbuf[t->searchbuf_curs]);
-				if (width < 1)
-					width = 1;
-				t->searchbuf_curs_pos -= width;
-				if (t->searchbuf_curs_pos < 0)
-					t->searchbuf_curs_pos = 0;
-			}
-			if (t->searchbuf_curs > 0)
-				t->searchbuf_curs--;
-			break;
-		case KEY_UP:
-			break;
-		case KEY_DOWN:
-			t->searchbuf_display = t->searchbuf_curs = t->searchbuf_len = 0;
-			t->searchbuf[0] = L'\0';
-		case KEY_HOME:
-			t->searchbuf_display = t->searchbuf_curs = 0;
-			t->searchbuf_curs_pos = 0;
-			break;
-		case KEY_END:
-			t->searchbuf_curs = t->searchbuf_len;
-			width = 0;
-			int disp = t->searchbuf_len;
-			while (disp >= 0) {
-				int tmp = wcwidth(t->searchbuf[disp]);
-				if (tmp == -1)
-					tmp = 1;
-				if (width + tmp > b->cols -2)
-					break;
-				width += tmp;
-				disp--;
-			}
-			t->searchbuf_display = disp >= 0 ? disp + 1: 0;
-			t->searchbuf_curs_pos = width < b->cols -2 ? width : b->cols -2;
-			break;
-		case '\n':
-			copymode_search(t, t->copymode_searching);
-		case '\e':
-			t->copymode_searching = 0;
-			b->lines[b->rows - 1].dirty = true;
-			break;
-		default:
-			len = (ssize_t)mbrtowc(&wc, &keychar, 1, &t->searchbuf_ps);
-			if (len == -2)
-				return;
-			if (len == -1)
-				wc = keycode;
-
-			width = wcwidth(wc);
-			if (width == -1)
-				width = 1;
-
-			if (t->searchbuf_len >= t->searchbuf_size - 2) {
-				t->searchbuf_size *= 2;
-				wchar_t *buf = realloc(t->searchbuf, t->searchbuf_size * sizeof(wchar_t));
-				if (!buf)
-					return;
-				t->searchbuf = buf;
-			}
-
-			if (t->searchbuf_curs < t->searchbuf_len) {
-				wchar_t *buf = t->searchbuf + t->searchbuf_curs;
-				memmove(buf + 1, buf, n);
-			}
-			t->searchbuf[t->searchbuf_curs] = wc;
-			t->searchbuf[++t->searchbuf_len] = L'\0';
-		case KEY_RIGHT:
-			if (t->searchbuf_curs_pos == b->cols - 2) {
-				int w = 0;
-				for (int disp = t->searchbuf_display; disp < t->searchbuf_len && width < b->cols -1; disp++) {
-					int tmp = wcwidth(t->searchbuf[disp]);
-					if (tmp == -1) tmp = 1;
-					w += tmp;
-				}
-				if (w >= b->cols -1) {
-					if (width == -1)
-						width = 1;
-					for (w = 0; w < width;) {
-						int tmp = wcwidth(t->searchbuf[t->searchbuf_display++]);
-						if (tmp == -1) tmp = 1;
-						w += tmp;
-					}
-				}
-			} else {
-				if (width == -1)
-					width = wcwidth(t->searchbuf[t->searchbuf_curs]);
-				if (width == -1)
-					width = 1;
-				t->searchbuf_curs_pos += width;
-				if (t->searchbuf_curs_pos > b->cols - 2)
-					t->searchbuf_curs_pos = b->cols - 2;
-			}
-			if (t->searchbuf_curs < t->searchbuf_len)
-				t->searchbuf_curs++;
-			break;
-		}
+	if (t->cmdline.state) {
+		cmdline_keypress(&t->cmdline, keycode);
 	} else {
 		switch (keycode) {
 		case '0' ... '9':
@@ -1966,16 +2023,7 @@ void vt_copymode_keypress(Vt *t, int keycode)
 			break;
 		case '/':
 		case '?':
-			memset(&t->searchbuf_ps, 0, sizeof(mbstate_t));
-			if (!t->searchbuf) {
-				t->searchbuf_size = b->cols+1;
-				t->searchbuf = calloc(t->searchbuf_size, sizeof(wchar_t));
-			}
-			if (!t->searchbuf)
-				return;
-			t->copymode_searching = keycode == '/' ? 1 : -1;
-			t->searchbuf_curs = t->searchbuf_len;
-			t->searchbuf_curs_pos = 0;
+			cmdline_show(&t->cmdline, t, keycode, b->cols);
 			break;
 		case 'n':
 		case 'N':
@@ -2338,12 +2386,12 @@ void vt_copymode_leave(Vt *t)
 	Buffer *b = t->buffer;
 	t->copymode = false;
 	t->copymode_selecting = false;
-	t->copymode_searching = false;
 	t->copymode_sel_start_row = b->lines;
 	t->copymode_sel_start_col = 0;
 	t->copymode_cmd_multiplier = 0;
 	b->curs_row = b->lines + t->copymode_curs_srow;
 	b->curs_col = t->copymode_curs_scol;
+	cmdline_hide(&t->cmdline);
 	vt_noscroll(t);
 	vt_dirty(t);
 }
