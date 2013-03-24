@@ -1837,6 +1837,19 @@ static void cmdline_hide(Cmdline *c)
 	c->callback(c->data);
 }
 
+static void cmdline_adjust_cursor_pos(Cmdline *c)
+{
+	int pos = 0, w;
+	for (wchar_t *cur = c->display; cur < c->cursor; cur++)
+		pos += xwcwidth(*cur);
+	int extraspace = pos - c->width + 1;
+	if (extraspace > 0) {
+		for (w = 0; w < extraspace; w += xwcwidth(*c->display++));
+		c->cursor_pos = pos - w;
+	} else
+		c->cursor_pos = pos;
+}
+
 static void cmdline_keypress(Cmdline *c, int keycode)
 {
 	if (keycode != KEY_UP && c->state == CMDLINE_INIT) {
@@ -1853,26 +1866,19 @@ static void cmdline_keypress(Cmdline *c, int keycode)
 	case KEY_BACKSPACE:
 		if (c->cursor == c->buf)
 			break;
-		width = xwcwidth(c->cursor[-1]);
 		memmove(c->cursor - 1, c->cursor, n);
 		if (c->end > c->buf)
 			c->end--;
 		*c->end = L'\0';
 	case KEY_LEFT:
-		if (c->cursor_pos == 0) {
-			if (c->display > c->buf)
-				c->display--;
-		} else {
-			if (width == -1)
-				width = wcwidth(*c->cursor);
-			if (width < 1)
-				width = 1;
-			c->cursor_pos -= width;
-			if (c->cursor_pos < 0)
-				c->cursor_pos = 0;
-		}
 		if (c->cursor > c->buf)
 			c->cursor--;
+		if (c->cursor_pos == 0) {
+			c->display -= c->width / 2;
+			if (c->display < c->buf)
+				c->display = c->buf;
+		}
+		cmdline_adjust_cursor_pos(c);
 		break;
 	case KEY_UP:
 		break;
@@ -1931,24 +1937,23 @@ static void cmdline_keypress(Cmdline *c, int keycode)
 		*(++c->end) = L'\0';
 	case KEY_RIGHT:
 		if (c->cursor_pos == c->width - 1) {
-			int w = 0;
-			for (wchar_t *disp = c->display; disp < c->end && width < c->width; disp++)
-				w += xwcwidth(*disp);
-			if (w >= c->width) {
-				if (width == -1)
-					width = 1;
-				for (w = 0; w < width;)
-					w += xwcwidth(*c->display++);
+			if (c->cursor < c->end)
+				c->cursor++;
+			if (c->cursor != c->end) {
+				c->display += c->width / 2;
+				if (c->display > c->end)
+					c->display = c->buf;
 			}
+			cmdline_adjust_cursor_pos(c);
 		} else {
 			if (width == -1)
 				width = xwcwidth(*c->cursor);
 			c->cursor_pos += width;
 			if (c->cursor_pos > c->width - 1)
 				c->cursor_pos = c->width - 1;
+			if (c->cursor < c->end)
+				c->cursor++;
 		}
-		if (c->cursor < c->end)
-			c->cursor++;
 		break;
 	}
 	c->state = CMDLINE_ACTIVE;
