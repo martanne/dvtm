@@ -1799,8 +1799,13 @@ static void copymode_search(Vt *t, int direction)
 				else if (width >= 1)
 					width--;
 				col += direction > 0 ? width : -width;
-			} else
+			} else if (searchbuf[s_start] == row->cells[col].text) {
+				s = s_start + direction;
+				matched_row = row;
+				matched_col = col;
+			} else {
 				s = s_start;
+			}
 		}
 
 		if ((row = buffer_next_row(b, row, direction)) == start_row)
