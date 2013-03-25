@@ -694,6 +694,7 @@ cleanup() {
 		destroy(clients);
 	vt_shutdown();
 	endwin();
+	delscreen(set_term(NULL));
 	free(copybuf);
 	if (bar.fd > 0)
 		close(bar.fd);
