@@ -193,7 +193,7 @@ static StatusBar bar = { -1, BAR_POS, 1 };
 static CmdFifo cmdfifo = { -1 };
 static const char *shell;
 static char *copybuf;
-static bool running = true;
+static volatile sig_atomic_t running = true;
 static bool runinall = false;
 
 static void
@@ -525,14 +525,11 @@ sigchld_handler(int sig) {
 			c->died = true;
 	}
 
-	signal(SIGCHLD, sigchld_handler);
-
 	errno = errsv;
 }
 
 static void
 sigwinch_handler(int sig) {
-	signal(SIGWINCH, sigwinch_handler);
 	screen.need_resize = true;
 }
 
@@ -657,9 +654,15 @@ setup() {
 	vt_init();
 	vt_set_keytable(keytable, countof(keytable));
 	resize_screen();
-	signal(SIGWINCH, sigwinch_handler);
-	signal(SIGCHLD, sigchld_handler);
-	signal(SIGTERM, sigterm_handler);
+	struct sigaction sa;
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_handler = sigwinch_handler;
+	sigaction(SIGWINCH, &sa, NULL);
+	sa.sa_handler = sigchld_handler;
+	sigaction(SIGCHLD, &sa, NULL);
+	sa.sa_handler = sigterm_handler;
+	sigaction(SIGTERM, &sa, NULL);
 }
 
 static void
