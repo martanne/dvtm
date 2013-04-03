@@ -41,7 +41,7 @@ int ESCDELAY;
 #endif
 
 typedef struct {
-	double mfact;
+	float mfact;
 	int history;
 	int w;
 	int h;
@@ -949,14 +949,14 @@ setlayout(const char *args[]) {
 
 static void
 setmfact(const char *args[]) {
-	double delta;
+	float delta;
 
 	if (isarrange(fullscreen) || isarrange(grid))
 		return;
 	/* arg handling, manipulate mfact */
 	if (args[0] == NULL)
 		screen.mfact = MFACT;
-	else if (1 == sscanf(args[0], "%lf", &delta)) {
+	else if (1 == sscanf(args[0], "%f", &delta)) {
 		if (args[0][0] == '+' || args[0][0] == '-')
 			screen.mfact += delta;
 		else
