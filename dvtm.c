@@ -58,7 +58,7 @@ struct Client {
 	WINDOW *window;
 	Vt *term;
 	const char *cmd;
-	char title[256];
+	char title[255];
 	int order;
 	pid_t pid;
 	int pty;
