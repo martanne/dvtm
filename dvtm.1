@@ -246,6 +246,12 @@ exit at any time press
 .B ESC
 or
 .BR q .
+.SH ENVIRONMENT VARIABLES
+By default dvtm uses its own terminfo file and therefore sets
+.BR TERM=dvtm
+within the client windows. This can be overridden by setting the
+.BR DVTM_TERM
+environment variable to a valid terminal name before launching dvtm.
 .SH EXAMPLE
 See the
 .I dvtm-status
@@ -257,4 +263,4 @@ dvtm is customized by creating a custom
 and (re)compiling the source code.
 This keeps it fast, secure and simple.
 .SH AUTHOR
-dvtm is written by Marc Andre Tanner <mat at brain-dump.org>
+dvtm is written by Marc André Tanner <mat at brain-dump.org>
