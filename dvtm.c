@@ -59,7 +59,7 @@ struct Client {
 	Vt *term;
 	const char *cmd;
 	char title[256];
-	uint8_t order;
+	int order;
 	pid_t pid;
 	int pty;
 	unsigned short int id;
@@ -335,19 +335,17 @@ arrange() {
 
 static void
 attach(Client *c) {
-	uint8_t order;
 	if (clients)
 		clients->prev = c;
 	c->next = clients;
 	c->prev = NULL;
 	clients = c;
-	for (order = 1; c; c = c->next, order++)
-		c->order = order;
+	for (int o = 1; c; c = c->next, o++)
+		c->order = o;
 }
 
 static void
 attachafter(Client *c, Client *a) { /* attach c after a */
-	uint8_t o;
 	if (c == a)
 		return;
 	if (!a)
@@ -359,7 +357,7 @@ attachafter(Client *c, Client *a) { /* attach c after a */
 		c->next = a->next;
 		c->prev = a;
 		a->next = c;
-		for (o = a->order; c; c = c->next)
+		for (int o = a->order; c; c = c->next)
 			c->order = ++o;
 	}
 }
