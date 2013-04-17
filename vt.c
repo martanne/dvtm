@@ -1873,6 +1873,14 @@ static void cmdline_keypress(Cmdline *c, int keycode)
 	ssize_t len;
 	size_t n = (c->end - c->cursor) * sizeof(wchar_t);
 	switch (keycode) {
+	case KEY_DC:
+		if (c->cursor == c->end) /* n == 0 */
+			break;
+		memmove(c->cursor, c->cursor + 1, n - sizeof(wchar_t));
+		c->end--;
+		*c->end = L'\0';
+		cmdline_adjust_cursor_pos(c);
+		break;
 	case KEY_BACKSPACE:
 		if (c->cursor == c->buf)
 			break;
