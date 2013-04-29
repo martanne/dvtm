@@ -1616,9 +1616,12 @@ int vt_write(Vt *t, const char *buf, int len)
 
 	while (len > 0) {
 		int res = write(t->pty, buf, len);
-		if (res < 0 && errno != EAGAIN && errno != EINTR)
-			return -1;
-
+		if (res < 0) {
+			if (errno != EAGAIN && errno != EINTR)
+				return -1;
+			else
+				continue;
+		}
 		buf += res;
 		len -= res;
 	}
