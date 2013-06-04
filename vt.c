@@ -1151,7 +1151,7 @@ static void put_wc(Vt *t, wchar_t wc)
 			Cell *src = b->curs_row->cells + b->curs_col;
 			Cell *dest = src + width;
 			size_t len = b->cols - b->curs_col - width;
-			memmove(dest, src, len);
+			memmove(dest, src, len * sizeof *dest);
 		}
 
 		b->curs_row->cells[b->curs_col] = blank_cell;
