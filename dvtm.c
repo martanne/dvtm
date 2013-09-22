@@ -195,6 +195,7 @@ static const char *shell;
 static char *copybuf;
 static volatile sig_atomic_t running = true;
 static bool runinall = false;
+static bool escape_next_key = false;
 
 static void
 eprint(const char *errstr, ...) {
@@ -779,11 +780,7 @@ copymode(const char *args[]) {
 
 static void
 escapekey(const char *args[]) {
-	int key;
-	if ((key = getch()) >= 0) {
-		debug("escaping key `%c'\n", key);
-		keypress(CTRL(key));
-	}
+	escape_next_key = true;
 }
 
 static void
@@ -1407,6 +1404,9 @@ main(int argc, char *argv[]) {
 					else if ((key = keybinding(mod, code)))
 						key->action.cmd(key->action.args);
 					mod = ERR;
+				} else if (escape_next_key) {
+					keypress(code);
+					escape_next_key = false;
 				} else if (code == KEY_MOUSE) {
 					handle_mouse();
 				} else if (is_modifier(code)) {
