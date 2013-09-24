@@ -1386,6 +1386,7 @@ void vt_destroy(Vt *t)
 	buffer_free(&t->buffer_normal);
 	buffer_free(&t->buffer_alternate);
 	cmdline_free(t->cmdline);
+	close(t->pty);
 	free(t);
 }
 
