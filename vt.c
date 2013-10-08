@@ -789,14 +789,14 @@ static void interpret_csi(Vt *t)
 		if (param_count == 1 && csiparam[0] == 4) /* replace mode */
 			t->insert = false;
 		break;
-	case 'm': /* it's a 'set attribute' sequence */
+	case 'm': /* set attribute */
 		interpret_csi_sgr(t, csiparam, param_count);
 		break;
-	case 'J': /* it's an 'erase display' sequence */
+	case 'J': /* erase display */
 		interpret_csi_ed(t, csiparam, param_count);
 		break;
 	case 'H':
-	case 'f': /* it's a 'move cursor' sequence */
+	case 'f': /* move cursor */
 		interpret_csi_cup(t, csiparam, param_count);
 		break;
 	case 'A':
@@ -809,8 +809,7 @@ static void interpret_csi(Vt *t)
 	case 'e':
 	case 'a':
 	case 'd':
-	case '`':
-		/* it is a 'relative move' */
+	case '`': /* relative move */
 		interpret_csi_c(t, verb, csiparam, param_count);
 		break;
 	case 'K': /* erase line */
