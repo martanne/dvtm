@@ -907,8 +907,16 @@ quit(const char *args[]) {
 
 static void
 redraw(const char *args[]) {
-	for (Client *c = clients; c; c = c->next)
-		vt_dirty(c->term);
+	for (Client *c = clients; c; c = c->next) {
+		if (!c->minimized) {
+			vt_dirty(c->term);
+			wclear(c->window);
+			wnoutrefresh(c->window);
+		}
+	}
+	wclear(stdscr);
+	wnoutrefresh(stdscr);
+	doupdate();
 	resize_screen();
 	draw_all(true);
 }
