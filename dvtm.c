@@ -219,13 +219,6 @@ isarrange(void (*func)()) {
 }
 
 static void
-clear_workspace() {
-	for (unsigned int y = 0; y < wah; y++)
-		mvhline(way + y, 0, ' ', waw);
-	wnoutrefresh(stdscr);
-}
-
-static void
 drawbar() {
 	wchar_t wbuf[sizeof bar.text];
 	int w, maxwidth = screen.w - 2;
@@ -325,7 +318,7 @@ draw_all(bool border) {
 
 static void
 arrange() {
-	clear_workspace();
+	erase();
 	attrset(NORMAL_ATTR);
 	layout->arrange();
 	wnoutrefresh(stdscr);
