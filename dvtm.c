@@ -284,7 +284,7 @@ draw_border(Client *c) {
 
 static void
 draw_content(Client *c) {
-	if (!c->minimized || isarrange(fullscreen)) {
+	if (!c->minimized) {
 		vt_draw(c->term, c->window, 1, 0);
 		if (c != sel)
 			curs_set(0);
@@ -1428,10 +1428,9 @@ main(int argc, char *argv[]) {
 					c = t;
 					continue;
 				}
-				if (c != sel) {
+				if (c != sel && !isarrange(fullscreen)) {
 					draw_content(c);
-					if (!isarrange(fullscreen))
-						wnoutrefresh(c->window);
+					wnoutrefresh(c->window);
 				}
 			}
 			c = c->next;
