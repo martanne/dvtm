@@ -1345,6 +1345,8 @@ parse_args(int argc, char *argv[]) {
 
 int
 main(int argc, char *argv[]) {
+	int mod = ERR;
+
 	if (!parse_args(argc, argv)) {
 		setup();
 		startup(NULL);
@@ -1399,17 +1401,16 @@ main(int argc, char *argv[]) {
 			int code = getch();
 			Key *key;
 			if (code >= 0) {
-				if (code == KEY_MOUSE) {
+				if (mod >= 0) {
+					if (code == mod)
+						keypress(code);
+					else if ((key = keybinding(mod, code)))
+						key->action.cmd(key->action.args);
+					mod = ERR;
+				} else if (code == KEY_MOUSE) {
 					handle_mouse();
 				} else if (is_modifier(code)) {
-					int mod = code;
-					code = getch();
-					if (code >= 0) {
-						if (code == mod)
-							keypress(code);
-						else if ((key = keybinding(mod, code)))
-							key->action.cmd(key->action.args);
-					}
+					mod = code;
 				} else if ((key = keybinding(0, code))) {
 					key->action.cmd(key->action.args);
 				} else if (sel && vt_copymode(sel->term)) {
