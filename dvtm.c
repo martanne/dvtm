@@ -1284,7 +1284,7 @@ parse_args(int argc, char *argv[]) {
 		set_escdelay(100);
 	for (arg = 1; arg < argc; arg++) {
 		if (argv[arg][0] != '-') {
-			const char *args[] = { argv[arg], NULL };
+			const char *args[] = { argv[arg], NULL, NULL };
 			if (!init) {
 				setup();
 				init = true;
