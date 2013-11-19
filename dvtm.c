@@ -271,13 +271,13 @@ draw_border(Client *c) {
 	if (t)
 		c->title[maxlen] = t;
 	wmove(c->window, y, x);
-	if (!c->minimized)
+	if (!c->minimized || isarrange(fullscreen))
 		curs_set(vt_cursor(c->term));
 }
 
 static void
 draw_content(Client *c) {
-	if (!c->minimized) {
+	if (!c->minimized || isarrange(fullscreen)) {
 		vt_draw(c->term, c->window, 1, 0);
 		if (c != sel)
 			curs_set(0);
