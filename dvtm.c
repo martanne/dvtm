@@ -292,28 +292,21 @@ draw(Client *c) {
 }
 
 static void
-draw_all(bool border) {
+draw_all() {
 	Client *c;
 	curs_set(0);
 	for (c = clients; c; c = c->next) {
 		redrawwin(c->window);
 		if (c == sel)
 			continue;
-		draw_content(c);
-		if (border)
-			draw_border(c);
-		wnoutrefresh(c->window);
+		draw(c);
 	}
 	/* as a last step the selected window is redrawn,
 	 * this has the effect that the cursor position is
 	 * accurate
 	 */
-	if (sel) {
-		draw_content(sel);
-		if (border)
-			draw_border(sel);
-		wnoutrefresh(sel->window);
-	}
+	if (sel)
+		draw(sel);
 }
 
 static void
@@ -322,7 +315,7 @@ arrange() {
 	attrset(NORMAL_ATTR);
 	layout->arrange();
 	wnoutrefresh(stdscr);
-	draw_all(true);
+	draw_all();
 }
 
 static void
@@ -911,7 +904,7 @@ redraw(const char *args[]) {
 	wnoutrefresh(stdscr);
 	doupdate();
 	resize_screen();
-	draw_all(true);
+	draw_all();
 }
 
 static void
@@ -1037,7 +1030,7 @@ togglemouse(const char *args[]) {
 static void
 togglerunall(const char *args[]) {
 	runinall = !runinall;
-	draw_all(true);
+	draw_all();
 }
 
 static void
