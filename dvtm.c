@@ -379,10 +379,10 @@ detach(Client *c) {
 
 static void
 settitle(Client *c) {
-	char *t = title;
+	char *term, *t = title;
 	if (!t && sel == c && *c->title)
 		t = c->title;
-	if (t)
+	if (t && (term = getenv("TERM")) && !strstr(term, "linux"))
 		printf("\033]0;%s\007", t);
 }
 
