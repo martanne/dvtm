@@ -613,7 +613,7 @@ keypress(int code) {
 	}
 
 	for (c = runinall ? clients : sel; c; c = c->next) {
-		if (!c->minimized || isarrange(fullscreen)) {
+		if (is_visible(c)) {
 			if (code == '\e')
 				vt_write(c->term, buf, len);
 			else
