@@ -1524,8 +1524,6 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 		} else
 			wmove(win, srow + b->rows - 1, 1);
 	}
-
-	curs_set(vt_cursor(t));
 }
 
 void vt_scroll(Vt *t, int rows)

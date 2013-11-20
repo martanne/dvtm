@@ -218,6 +218,15 @@ isarrange(void (*func)()) {
 	return func == layout->arrange;
 }
 
+static bool
+is_visible(Client *c) {
+	if (!c)
+		return false;
+	if (isarrange(fullscreen))
+		return sel == c;
+	return !c->minimized;
+}
+
 static void
 drawbar() {
 	wchar_t wbuf[sizeof bar.text];
@@ -244,7 +253,7 @@ drawbar() {
 	mvaddch(bar.y, screen.w - 1, ']');
 	attrset(NORMAL_ATTR);
 	move(y, x);
-	if (sel)
+	if (is_visible(sel))
 		curs_set(vt_cursor(sel->term));
 	wnoutrefresh(stdscr);
 }
@@ -273,23 +282,25 @@ draw_border(Client *c) {
 	if (t)
 		c->title[maxlen] = t;
 	wmove(c->window, y, x);
-	if (!c->minimized || isarrange(fullscreen))
-		curs_set(vt_cursor(c->term));
+	if (is_visible(sel))
+		curs_set(vt_cursor(sel->term));
 }
 
 static void
 draw_content(Client *c) {
-	if (!c->minimized || isarrange(fullscreen)) {
-		vt_draw(c->term, c->window, 1, 0);
-		if (c != sel)
-			curs_set(0);
-	}
+	vt_draw(c->term, c->window, 1, 0);
+	if (c == sel)
+		curs_set(vt_cursor(sel->term));
 }
 
 static void
 draw(Client *c) {
-	draw_content(c);
-	draw_border(c);
+	if (is_visible(c)) {
+		redrawwin(c->window);
+		draw_content(c);
+	}
+	if (!isarrange(fullscreen) || sel == c)
+		draw_border(c);
 	wnoutrefresh(c->window);
 }
 
@@ -297,11 +308,12 @@ static void
 draw_all() {
 	Client *c;
 	curs_set(0);
-	for (c = clients; c; c = c->next) {
-		redrawwin(c->window);
-		if (c == sel)
-			continue;
-		draw(c);
+	if (!isarrange(fullscreen)) {
+		for (c = clients; c; c = c->next) {
+			if (c == sel)
+				continue;
+			draw(c);
+		}
 	}
 	/* as a last step the selected window is redrawn,
 	 * this has the effect that the cursor position is
@@ -314,6 +326,7 @@ draw_all() {
 static void
 arrange() {
 	erase();
+	drawbar();
 	attrset(NORMAL_ATTR);
 	layout->arrange();
 	wnoutrefresh(stdscr);
@@ -380,14 +393,16 @@ focus(Client *c) {
 		return;
 	sel = c;
 	settitle(c);
-	if (tmp) {
+	if (tmp && !isarrange(fullscreen)) {
 		draw_border(tmp);
 		wnoutrefresh(tmp->window);
 	}
-	if (isarrange(fullscreen))
-		redrawwin(c->window);
-	draw_border(c);
-	wnoutrefresh(c->window);
+	if (isarrange(fullscreen)) {
+		draw(c);
+	} else {
+		draw_border(c);
+		wnoutrefresh(c->window);
+	}
 }
 
 static void
@@ -418,7 +433,8 @@ term_event_handler(Vt *term, int event, void *event_data) {
 			strncpy(c->title, event_data, sizeof(c->title) - 1);
 		c->title[event_data ? sizeof(c->title) - 1 : 0] = '\0';
 		settitle(c);
-		draw_border(c);
+		if (!isarrange(fullscreen) || sel == c)
+			draw_border(c);
 		applycolorrules(c);
 		break;
 	case VT_EVENT_COPY_TEXT:
@@ -559,7 +575,6 @@ resize_screen() {
 	waw = screen.w;
 	wah = screen.h;
 	updatebarpos();
-	drawbar();
 	arrange();
 }
 
@@ -975,7 +990,6 @@ togglebar(const char *args[]) {
 		bar.pos = BAR_OFF;
 	updatebarpos();
 	arrange();
-	drawbar();
 }
 
 static void
@@ -1424,7 +1438,7 @@ main(int argc, char *argv[]) {
 					c = t;
 					continue;
 				}
-				if (c != sel && !isarrange(fullscreen)) {
+				if (c != sel && is_visible(c)) {
 					draw_content(c);
 					wnoutrefresh(c->window);
 				}
@@ -1432,7 +1446,7 @@ main(int argc, char *argv[]) {
 			c = c->next;
 		}
 
-		if (sel) {
+		if (is_visible(sel)) {
 			draw_content(sel);
 			wnoutrefresh(sel->window);
 		}
