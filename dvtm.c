@@ -221,9 +221,10 @@ isarrange(void (*func)()) {
 static void
 drawbar() {
 	wchar_t wbuf[sizeof bar.text];
-	int w, maxwidth = screen.w - 2;
+	int x, y, w, maxwidth = screen.w - 2;
 	if (bar.pos == BAR_OFF || !bar.text[0])
 		return;
+	getyx(stdscr, y, x);
 	curs_set(0);
 	attrset(BAR_ATTR);
 	mvaddch(bar.y, 0, '[');
@@ -242,6 +243,7 @@ drawbar() {
 	}
 	mvaddch(bar.y, screen.w - 1, ']');
 	attrset(NORMAL_ATTR);
+	move(y, x);
 	if (sel)
 		curs_set(vt_cursor(sel->term));
 	wnoutrefresh(stdscr);
