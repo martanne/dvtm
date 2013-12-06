@@ -219,7 +219,7 @@ isarrange(void (*func)()) {
 }
 
 static bool
-is_visible(Client *c) {
+is_content_visible(Client *c) {
 	if (!c)
 		return false;
 	if (isarrange(fullscreen))
@@ -253,7 +253,7 @@ drawbar() {
 	mvaddch(bar.y, screen.w - 1, ']');
 	attrset(NORMAL_ATTR);
 	move(y, x);
-	if (is_visible(sel))
+	if (is_content_visible(sel))
 		curs_set(vt_cursor(sel->term));
 	wnoutrefresh(stdscr);
 }
@@ -282,7 +282,7 @@ draw_border(Client *c) {
 	if (t)
 		c->title[maxlen] = t;
 	wmove(c->window, y, x);
-	if (is_visible(sel))
+	if (is_content_visible(sel))
 		curs_set(vt_cursor(sel->term));
 }
 
@@ -295,7 +295,7 @@ draw_content(Client *c) {
 
 static void
 draw(Client *c) {
-	if (is_visible(c)) {
+	if (is_content_visible(c)) {
 		redrawwin(c->window);
 		draw_content(c);
 	}
@@ -613,7 +613,7 @@ keypress(int code) {
 	}
 
 	for (c = runinall ? clients : sel; c; c = c->next) {
-		if (is_visible(c)) {
+		if (is_content_visible(c)) {
 			if (code == '\e')
 				vt_write(c->term, buf, len);
 			else
@@ -1438,7 +1438,7 @@ main(int argc, char *argv[]) {
 					c = t;
 					continue;
 				}
-				if (c != sel && is_visible(c)) {
+				if (c != sel && is_content_visible(c)) {
 					draw_content(c);
 					wnoutrefresh(c->window);
 				}
@@ -1446,7 +1446,7 @@ main(int argc, char *argv[]) {
 			c = c->next;
 		}
 
-		if (is_visible(sel)) {
+		if (is_content_visible(sel)) {
 			draw_content(sel);
 			wnoutrefresh(sel->window);
 		}
