@@ -77,7 +77,6 @@ static Key keys[] = {
 	{ MOD, '8',       { focusn,         { "8" }                     } },
 	{ MOD, '9',       { focusn,         { "9" }                     } },
 	{ MOD, 'q',       { quit,           { NULL }                    } },
-	{ MOD, 'G',       { escapekey,      { NULL }                    } },
 	{ MOD, 'a',       { togglerunall,   { NULL }                    } },
 	{ MOD, 'r',       { redraw,         { NULL }                    } },
 	{ MOD, 'X',       { lock,           { NULL }                    } },

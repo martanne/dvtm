@@ -145,7 +145,6 @@ typedef struct {
 /* commands for use by keybindings */
 static void create(const char *args[]);
 static void copymode(const char *args[]);
-static void escapekey(const char *args[]);
 static void focusn(const char *args[]);
 static void focusnext(const char *args[]);
 static void focusnextnm(const char *args[]);
@@ -195,7 +194,6 @@ static const char *shell;
 static char *copybuf;
 static volatile sig_atomic_t running = true;
 static bool runinall = false;
-static bool escape_next_key = false;
 
 static void
 eprint(const char *errstr, ...) {
@@ -776,11 +774,6 @@ copymode(const char *args[]) {
 		vt_copymode_keypress(sel->term, args[0][0]);
 		draw(sel);
 	}
-}
-
-static void
-escapekey(const char *args[]) {
-	escape_next_key = true;
 }
 
 static void
@@ -1404,9 +1397,6 @@ main(int argc, char *argv[]) {
 					else if ((key = keybinding(mod, code)))
 						key->action.cmd(key->action.args);
 					mod = ERR;
-				} else if (escape_next_key) {
-					keypress(code);
-					escape_next_key = false;
 				} else if (code == KEY_MOUSE) {
 					handle_mouse();
 				} else if (is_modifier(code)) {
