@@ -1400,9 +1400,7 @@ main(int argc, char *argv[]) {
 			Key *key;
 			if (code >= 0) {
 				if (mod >= 0) {
-					if (code == mod)
-						keypress(code);
-					else if ((key = keybinding(mod, code)))
+					if ((key = keybinding(mod, code)))
 						key->action.cmd(key->action.args);
 					mod = ERR;
 				} else if (code == KEY_MOUSE) {
