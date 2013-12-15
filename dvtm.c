@@ -156,6 +156,7 @@ static void paste(const char *args[]);
 static void quit(const char *args[]);
 static void redraw(const char *args[]);
 static void scrollback(const char *args[]);
+static void send(const char *args[]);
 static void setlayout(const char *args[]);
 static void setmfact(const char *args[]);
 static void startup(const char *args[]);
@@ -924,6 +925,12 @@ scrollback(const char *args[]) {
 		vt_scroll(sel->term,  sel->h/2);
 
 	draw(sel);
+}
+
+static void
+send(const char *args[]) {
+	if (sel && args && args[0])
+		vt_write(sel->term, args[0], strlen(args[0]));
 }
 
 static void
