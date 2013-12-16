@@ -1228,11 +1228,12 @@ handle_statusbar() {
 			bar.fd = -1;
 			break;
 		default:
-			bar.text[r] = '\0'; p = bar.text + strlen(bar.text) - 1;
+			bar.text[r] = '\0';
+			p = bar.text + r - 1;
 			for (; p >= bar.text && *p == '\n'; *p-- = '\0');
 			for (; p >= bar.text && *p != '\n'; --p);
-			if (p > bar.text)
-				strncpy(bar.text, p + 1, sizeof bar.text);
+			if (p >= bar.text)
+				memmove(bar.text, p + 1, strlen(p));
 			drawbar();
 	}
 }
