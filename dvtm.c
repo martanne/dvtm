@@ -230,7 +230,7 @@ static void
 drawbar() {
 	wchar_t wbuf[sizeof bar.text];
 	int x, y, w, maxwidth = screen.w - 2;
-	if (bar.pos == BAR_OFF || !bar.text[0])
+	if (bar.pos == BAR_OFF)
 		return;
 	getyx(stdscr, y, x);
 	curs_set(0);
