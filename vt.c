@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <langinfo.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -222,6 +223,7 @@ static const char *keytable[KEY_MAX+1] = {
 	[KEY_F(21)]     = "\e[33~",
 	[KEY_F(22)]     = "\e[34~",
 	[KEY_RESIZE]    = "",
+	[KEY_EVENT]     = "",
 };
 
 static void puttab(Vt *t, int count);
@@ -1636,11 +1638,9 @@ static void send_curs(Vt *t)
 
 void vt_keypress(Vt *t, int keycode)
 {
-	char c = (char)keycode;
-
 	vt_noscroll(t);
 
-	if (keycode >= 0 && keycode < KEY_MAX && keytable[keycode]) {
+	if (keycode >= 0 && keycode <= KEY_MAX && keytable[keycode]) {
 		switch (keycode) {
 		case KEY_UP:
 		case KEY_DOWN:
@@ -1653,8 +1653,13 @@ void vt_keypress(Vt *t, int keycode)
 		default:
 			vt_write(t, keytable[keycode], strlen(keytable[keycode]));
 		}
-	} else {
+	} else if (keycode <= UCHAR_MAX) {
+		char c = keycode;
 		vt_write(t, &c, 1);
+	} else {
+#ifndef NDEBUG
+		fprintf(stderr, "unhandled key %#o\n", keycode);
+#endif
 	}
 }
 
