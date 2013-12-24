@@ -394,6 +394,7 @@ focus(Client *c) {
 		draw_border(c);
 		wnoutrefresh(c->window);
 	}
+	curs_set(vt_cursor(c->term));
 }
 
 static void
@@ -1436,6 +1437,7 @@ main(int argc, char *argv[]) {
 
 		if (is_content_visible(sel)) {
 			draw_content(sel);
+			curs_set(vt_cursor(sel->term));
 			wnoutrefresh(sel->window);
 		}
 	}
