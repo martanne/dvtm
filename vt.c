@@ -197,6 +197,7 @@ static const char *keytable[KEY_MAX+1] = {
 	[KEY_NPAGE]     = "\e[6~",
 	[KEY_HOME]      = "\e[7~",
 	[KEY_END]       = "\e[8~",
+	[KEY_BTAB]      = "\e[Z",
 	[KEY_SUSPEND]   = "\x1A",  /* Ctrl+Z gets mapped to this */
 	[KEY_F(1)]      = "\e[11~",
 	[KEY_F(2)]      = "\e[12~",
