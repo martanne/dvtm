@@ -234,7 +234,6 @@ drawbar() {
 	if (bar.pos == BAR_OFF)
 		return;
 	getyx(stdscr, y, x);
-	curs_set(0);
 	attrset(BAR_ATTR);
 	mvaddch(bar.y, 0, '[');
 	if (mbstowcs(wbuf, bar.text, sizeof bar.text) == (size_t)-1)
@@ -253,8 +252,6 @@ drawbar() {
 	mvaddch(bar.y, screen.w - 1, ']');
 	attrset(NORMAL_ATTR);
 	move(y, x);
-	if (is_content_visible(sel))
-		curs_set(vt_cursor(sel->term));
 	wnoutrefresh(stdscr);
 }
 
@@ -265,7 +262,6 @@ draw_border(Client *c) {
 
 	wattrset(c->window, (sel == c || (runinall && !c->minimized)) ? SELECTED_ATTR : NORMAL_ATTR);
 	getyx(c->window, y, x);
-	curs_set(0);
 	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
 	maxlen = c->w - (2 + sstrlen(TITLE) - sstrlen("%s%sd")  + sstrlen(SEPARATOR) + 2);
 	if (maxlen < 0)
@@ -282,15 +278,11 @@ draw_border(Client *c) {
 	if (t)
 		c->title[maxlen] = t;
 	wmove(c->window, y, x);
-	if (is_content_visible(sel))
-		curs_set(vt_cursor(sel->term));
 }
 
 static void
 draw_content(Client *c) {
 	vt_draw(c->term, c->window, 1, 0);
-	if (c == sel)
-		curs_set(vt_cursor(sel->term));
 }
 
 static void
@@ -307,7 +299,6 @@ draw(Client *c) {
 static void
 draw_all() {
 	Client *c;
-	curs_set(0);
 	if (!isarrange(fullscreen)) {
 		for (c = clients; c; c = c->next) {
 			if (c == sel)

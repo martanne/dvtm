@@ -1456,7 +1456,6 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 	int sel_col_start, sel_col_end;
 
 	copymode_get_selection_boundry(t, &sel_row_start, &sel_col_start, &sel_row_end, &sel_col_end, true);
-	curs_set(0);
 
 	for (int i = 0; i < b->rows; i++) {
 		Row *row = b->lines + i;
