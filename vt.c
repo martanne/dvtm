@@ -223,7 +223,9 @@ static const char *keytable[KEY_MAX+1] = {
 	[KEY_F(21)]     = "\e[33~",
 	[KEY_F(22)]     = "\e[34~",
 	[KEY_RESIZE]    = "",
+#ifdef KEY_EVENT
 	[KEY_EVENT]     = "",
+#endif
 };
 
 static void puttab(Vt *t, int count);
