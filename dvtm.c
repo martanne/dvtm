@@ -394,7 +394,7 @@ focus(Client *c) {
 		draw_border(c);
 		wnoutrefresh(c->window);
 	}
-	curs_set(vt_cursor(c->term));
+	curs_set(!c->minimized && vt_cursor(c->term));
 }
 
 static void
