@@ -89,6 +89,8 @@ static Key keys[] = {
 	{ MOD, KEY_NPAGE, { scrollback,     { "1"  }                    } },
 	{ MOD, KEY_F(1),  { create,         { "man dvtm", "dvtm help" } } },
 	{ MOD, MOD,       { send,           { (const char []){MOD, 0} } } },
+	{ NOMOD, KEY_SPREVIOUS, { scrollback, { "-1" }                  } },
+	{ NOMOD, KEY_SNEXT,     { scrollback, { "1"  }                  } },
 };
 
 static const ColorRule colorrules[] = {
