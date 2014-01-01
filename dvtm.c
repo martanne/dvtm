@@ -180,6 +180,7 @@ static unsigned int waw, wah, wax, way;
 static Client *clients = NULL;
 static char *title;
 #define COLOR(fg, bg) COLOR_PAIR(vt_color_reserve(fg, bg))
+#define NOMOD ERR
 
 #include "config.h"
 
@@ -1399,7 +1400,7 @@ main(int argc, char *argv[]) {
 					handle_mouse();
 				} else if (is_modifier(code)) {
 					mod = code;
-				} else if ((key = keybinding(0, code))) {
+				} else if ((key = keybinding(ERR, code))) {
 					key->action.cmd(key->action.args);
 				} else if (sel && vt_copymode(sel->term)) {
 					vt_copymode_keypress(sel->term, code);
