@@ -915,21 +915,31 @@ static void interpret_csi_scs(Vt *t)
 	t->graphmode = t->charsets[0];
 }
 
-/* Interpret xterm specific escape sequences */
-static void interpret_esc_xterm(Vt *t)
+/* Interpret an 'operating system command' (OSC) sequence */
+static void interpret_osc(Vt *t)
 {
-	/* ESC]n;dataBEL -- the ESC is not part of t->ebuf */
-	char *title = NULL;
-
-	switch (t->ebuf[1]) {
-	case '0':
-	case '2':
-		t->ebuf[t->elen - 1] = '\0';
-		if (t->elen > sstrlen("]n;\a"))
-			title = t->ebuf + sstrlen("]n;");
-
-		if (t->event_handler)
-			t->event_handler(t, VT_EVENT_TITLE, title);
+	/* ESC ] command ; data BEL
+	 * ESC ] command ; data ESC \\
+	 * Note that BEL or ESC \\ have already been replaced with NUL.
+	 */
+	char *data = NULL;
+	int command = strtoul(t->ebuf + 1, &data, 10);
+	if (data && *data == ';') {
+		++data;
+		switch (command) {
+		case 0: /* icon name and window title */
+		case 2: /* window title */
+			if (t->event_handler)
+				t->event_handler(t, VT_EVENT_TITLE, data);
+			break;
+		case 1: /* icon name */
+			break;
+		default:
+#ifndef NDEBUG
+			fprintf(stderr, "unknown OSC command: %d\n", command);
+#endif
+			break;
+		}
 	}
 }
 
@@ -969,14 +979,16 @@ static void try_interpret_escape_seq(Vt *t)
 			goto handled;
 		}
 		break;
-	case ']': /* xterm thing */
+	case ']': /* OSC - operating system command */
 		if (lastchar == '\a' ||
 		   (lastchar == '\\' && t->elen >= 2 && t->ebuf[t->elen - 2] == '\e')) {
-			interpret_esc_xterm(t);
+			t->elen -= lastchar == '\a' ? 1 : 2;
+			t->ebuf[t->elen] = '\0';
+			interpret_osc(t);
 			goto handled;
 		}
 		break;
-	case '[':
+	case '[': /* CSI - control sequence introducer */
 		if (is_valid_csi_ender(lastchar)) {
 			interpret_csi(t);
 			goto handled;
