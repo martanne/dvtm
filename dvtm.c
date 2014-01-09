@@ -568,6 +568,7 @@ resize_screen() {
 	waw = screen.w;
 	wah = screen.h;
 	updatebarpos();
+	clear();
 	arrange();
 }
 
@@ -901,11 +902,7 @@ redraw(const char *args[]) {
 			wnoutrefresh(c->window);
 		}
 	}
-	wclear(stdscr);
-	wnoutrefresh(stdscr);
-	doupdate();
 	resize_screen();
-	draw_all();
 }
 
 static void
