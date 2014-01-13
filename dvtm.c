@@ -299,9 +299,8 @@ draw(Client *c) {
 
 static void
 draw_all() {
-	Client *c;
 	if (!isarrange(fullscreen)) {
-		for (c = clients; c; c = c->next) {
+		for (Client *c = clients; c; c = c->next) {
 			if (c == sel)
 				continue;
 			draw(c);
@@ -444,9 +443,9 @@ move_client(Client *c, int x, int y) {
 	if (c->x == x && c->y == y)
 		return;
 	debug("moving, x: %d y: %d\n", x, y);
-	if (mvwin(c->window, y, x) == ERR)
+	if (mvwin(c->window, y, x) == ERR) {
 		eprint("error moving, x: %d y: %d\n", x, y);
-	else {
+	} else {
 		c->x = x;
 		c->y = y;
 	}
@@ -457,9 +456,9 @@ resize_client(Client *c, int w, int h) {
 	if (c->w == w && c->h == h)
 		return;
 	debug("resizing, w: %d h: %d\n", w, h);
-	if (wresize(c->window, h, w) == ERR)
+	if (wresize(c->window, h, w) == ERR) {
 		eprint("error resizing, w: %d h: %d\n", w, h);
-	else {
+	} else {
 		c->w = w;
 		c->h = h;
 	}
@@ -474,8 +473,7 @@ resize(Client *c, int x, int y, int w, int h) {
 
 static Client*
 get_client_by_pid(pid_t pid) {
-	Client *c;
-	for (c = clients; c; c = c->next) {
+	for (Client *c = clients; c; c = c->next) {
 		if (c->pid == pid)
 			return c;
 	}
@@ -484,12 +482,11 @@ get_client_by_pid(pid_t pid) {
 
 static Client*
 get_client_by_coord(unsigned int x, unsigned int y) {
-	Client *c;
 	if (y < way || y >= wah)
 		return NULL;
 	if (isarrange(fullscreen))
 		return sel;
-	for (c = clients; c; c = c->next) {
+	for (Client *c = clients; c; c = c->next) {
 		if (x >= c->x && x < c->x + c->w && y >= c->y && y < c->y + c->h) {
 			debug("mouse event, x: %d y: %d client: %d\n", x, y, c->order);
 			return c;
@@ -503,7 +500,6 @@ sigchld_handler(int sig) {
 	int errsv = errno;
 	int status;
 	pid_t pid;
-	Client *c;
 
 	while ((pid = waitpid(-1, &status, WNOHANG)) != 0) {
 		if (pid == -1) {
@@ -515,7 +511,8 @@ sigchld_handler(int sig) {
 			break;
 		}
 		debug("child with pid %d died\n", pid);
-		if ((c = get_client_by_pid(pid)))
+		Client *c = get_client_by_pid(pid);
+		if (c)
 			c->died = true;
 	}
 
@@ -574,8 +571,7 @@ resize_screen() {
 
 static bool
 is_modifier(unsigned int mod) {
-	unsigned int i;
-	for (i = 0; i < countof(keys); i++) {
+	for (unsigned int i = 0; i < countof(keys); i++) {
 		if (keys[i].mod == mod)
 			return true;
 	}
@@ -584,8 +580,7 @@ is_modifier(unsigned int mod) {
 
 static Key*
 keybinding(unsigned int mod, unsigned int code) {
-	unsigned int i;
-	for (i = 0; i < countof(keys); i++) {
+	for (unsigned int i = 0; i < countof(keys); i++) {
 		if (keys[i].mod == mod && keys[i].code == code)
 			return &keys[i];
 	}
@@ -594,7 +589,6 @@ keybinding(unsigned int mod, unsigned int code) {
 
 static void
 keypress(int code) {
-	Client *c;
 	unsigned int len = 1;
 	char buf[8] = { '\e' };
 
@@ -606,7 +600,7 @@ keypress(int code) {
 		nodelay(stdscr, FALSE);
 	}
 
-	for (c = runinall ? clients : sel; c; c = c->next) {
+	for (Client *c = runinall ? clients : sel; c; c = c->next) {
 		if (is_content_visible(c)) {
 			if (code == '\e')
 				vt_write(c->term, buf, len);
@@ -666,8 +660,9 @@ destroy(Client *c) {
 		if (clients) {
 			focus(clients);
 			toggleminimize(NULL);
-		} else
+		} else {
 			sel = NULL;
+		}
 	}
 	werase(c->window);
 	wnoutrefresh(c->window);
@@ -773,9 +768,7 @@ copymode(const char *args[]) {
 
 static void
 focusn(const char *args[]) {
-	Client *c;
-
-	for (c = clients; c; c = c->next) {
+	for (Client *c = clients; c; c = c->next) {
 		if (c->order == atoi(args[0])) {
 			focus(c);
 			if (c->minimized)
@@ -787,12 +780,9 @@ focusn(const char *args[]) {
 
 static void
 focusnext(const char *args[]) {
-	Client *c;
-
 	if (!sel)
 		return;
-
-	c = sel->next;
+	Client *c = sel->next;
 	if (!c)
 		c = clients;
 	if (c)
@@ -801,11 +791,9 @@ focusnext(const char *args[]) {
 
 static void
 focusnextnm(const char *args[]) {
-	Client *c;
-
 	if (!sel)
 		return;
-	c = sel;
+	Client *c = sel;
 	do {
 		c = c->next;
 		if (!c)
@@ -816,11 +804,9 @@ focusnextnm(const char *args[]) {
 
 static void
 focusprev(const char *args[]) {
-	Client *c;
-
 	if (!sel)
 		return;
-	c = sel->prev;
+	Client *c = sel->prev;
 	if (!c)
 		for (c = clients; c && c->next; c = c->next);
 	if (c)
@@ -829,11 +815,9 @@ focusprev(const char *args[]) {
 
 static void
 focusprevnm(const char *args[]) {
-	Client *c;
-
 	if (!sel)
 		return;
-	c = sel;
+	Client *c = sel;
 	do {
 		c = c->prev;
 		if (!c)
@@ -907,7 +891,8 @@ redraw(const char *args[]) {
 
 static void
 scrollback(const char *args[]) {
-	if (!sel) return;
+	if (!sel)
+		return;
 
 	if (!args[0] || atoi(args[0]) < 0)
 		vt_scroll(sel->term, -sel->h/2);
@@ -948,9 +933,9 @@ setmfact(const char *args[]) {
 	if (isarrange(fullscreen) || isarrange(grid))
 		return;
 	/* arg handling, manipulate mfact */
-	if (args[0] == NULL)
+	if (args[0] == NULL) {
 		screen.mfact = MFACT;
-	else if (1 == sscanf(args[0], "%f", &delta)) {
+	} else if (1 == sscanf(args[0], "%f", &delta)) {
 		if (args[0][0] == '+' || args[0][0] == '-')
 			screen.mfact += delta;
 		else
@@ -1267,12 +1252,11 @@ usage() {
 
 static bool
 parse_args(int argc, char *argv[]) {
-	int arg;
 	bool init = false;
 
 	if (!getenv("ESCDELAY"))
 		set_escdelay(100);
-	for (arg = 1; arg < argc; arg++) {
+	for (int arg = 1; arg < argc; arg++) {
 		if (argv[arg][0] != '-') {
 			const char *args[] = { argv[arg], NULL, NULL };
 			if (!init) {
@@ -1341,7 +1325,6 @@ main(int argc, char *argv[]) {
 	}
 
 	while (running) {
-		Client *c, *t;
 		int r, nfds = 0;
 		fd_set rd;
 
@@ -1363,9 +1346,9 @@ main(int argc, char *argv[]) {
 			nfds = max(nfds, bar.fd);
 		}
 
-		for (c = clients; c; ) {
+		for (Client *c = clients; c; ) {
 			if (c->died) {
-				t = c->next;
+				Client *t = c->next;
 				destroy(c);
 				c = t;
 				continue;
@@ -1374,6 +1357,7 @@ main(int argc, char *argv[]) {
 			nfds = max(nfds, c->pty);
 			c = c->next;
 		}
+
 		doupdate();
 		r = select(nfds + 1, &rd, NULL, NULL, NULL);
 
@@ -1416,11 +1400,11 @@ main(int argc, char *argv[]) {
 		if (bar.fd != -1 && FD_ISSET(bar.fd, &rd))
 			handle_statusbar();
 
-		for (c = clients; c; ) {
+		for (Client *c = clients; c; ) {
 			if (FD_ISSET(c->pty, &rd) && !vt_copymode(c->term)) {
 				if (vt_process(c->term) < 0 && errno == EIO) {
 					/* client probably terminated */
-					t = c->next;
+					Client *t = c->next;
 					destroy(c);
 					c = t;
 					continue;
