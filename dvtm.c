@@ -258,8 +258,15 @@ drawbar() {
 	wnoutrefresh(stdscr);
 }
 
+static int
+show_border() {
+	return (bar.fd != -1 && bar.pos != BAR_OFF) || (clients && clients->next);
+}
+
 static void
 draw_border(Client *c) {
+	if (!show_border())
+		return;
 	char t = '\0';
 	int x, y, maxlen;
 
@@ -285,7 +292,7 @@ draw_border(Client *c) {
 
 static void
 draw_content(Client *c) {
-	vt_draw(c->term, c->window, 1, 0);
+	vt_draw(c->term, c->window, show_border(), 0);
 }
 
 static void
@@ -465,7 +472,7 @@ resize_client(Client *c, int w, int h) {
 		c->w = w;
 		c->h = h;
 	}
-	vt_resize(c->term, h - 1, w);
+	vt_resize(c->term, h - show_border(), w);
 }
 
 static void
@@ -730,7 +737,7 @@ create(const char *args[]) {
 		return;
 	}
 
-	if (!(c->term = vt_create(screen.h - 1, screen.w, screen.history))) {
+	if (!(c->term = vt_create(screen.h - show_border(), screen.w, screen.history))) {
 		delwin(c->window);
 		free(c);
 		return;
@@ -973,7 +980,7 @@ togglebar(const char *args[]) {
 	else
 		bar.pos = BAR_OFF;
 	updatebarpos();
-	arrange();
+	redraw(NULL);
 }
 
 static void
