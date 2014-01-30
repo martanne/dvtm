@@ -902,7 +902,7 @@ redraw(const char *args[]) {
 
 static void
 scrollback(const char *args[]) {
-	if (!sel)
+	if (!is_content_visible(sel))
 		return;
 
 	if (!args[0] || atoi(args[0]) < 0)
@@ -911,6 +911,7 @@ scrollback(const char *args[]) {
 		vt_scroll(sel->term,  sel->h/2);
 
 	draw(sel);
+	curs_set(vt_cursor(sel->term));
 }
 
 static void
