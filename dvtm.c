@@ -150,6 +150,7 @@ static void focusnext(const char *args[]);
 static void focusnextnm(const char *args[]);
 static void focusprev(const char *args[]);
 static void focusprevnm(const char *args[]);
+static void focuslast(const char *args[]);
 static void killclient(const char *args[]);
 static void lock(const char *key[]);
 static void paste(const char *args[]);
@@ -187,6 +188,7 @@ static char *title;
 /* global variables */
 Screen screen = { MFACT, SCROLL_HISTORY };
 static Client *sel = NULL;
+static Client *lastsel = NULL;
 static Client *msel = NULL;
 static bool mouse_events_enabled = ENABLE_MOUSE;
 static Layout *layout = layouts;
@@ -382,6 +384,7 @@ focus(Client *c) {
 	Client *tmp = sel;
 	if (sel == c)
 		return;
+	lastsel = sel;
 	sel = c;
 	settitle(c);
 	if (tmp && !isarrange(fullscreen)) {
@@ -664,6 +667,8 @@ destroy(Client *c) {
 			sel = NULL;
 		}
 	}
+	if (lastsel == c)
+		lastsel = NULL;
 	werase(c->window);
 	wnoutrefresh(c->window);
 	vt_destroy(c->term);
@@ -824,6 +829,12 @@ focusprevnm(const char *args[]) {
 			for (c = clients; c && c->next; c = c->next);
 	} while (c->minimized && c != sel);
 	focus(c);
+}
+
+static void
+focuslast(const char *args[]) {
+	if (lastsel)
+		focus(lastsel);
 }
 
 static void

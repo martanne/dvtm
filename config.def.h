@@ -76,6 +76,7 @@ static Key keys[] = {
 	{ MOD, '7',       { focusn,         { "7" }                     } },
 	{ MOD, '8',       { focusn,         { "8" }                     } },
 	{ MOD, '9',       { focusn,         { "9" }                     } },
+	{ MOD, '\t',      { focuslast,      { NULL }                    } },
 	{ MOD, 'q',       { quit,           { NULL }                    } },
 	{ MOD, 'a',       { togglerunall,   { NULL }                    } },
 	{ MOD, 'r',       { redraw,         { NULL }                    } },
