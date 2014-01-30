@@ -1038,6 +1038,8 @@ zoom(const char *args[]) {
 
 	if (!sel)
 		return;
+	if (args && args[0])
+		focusn(args);
 	if ((c = sel) == clients)
 		if (!(c = c->next))
 			return;
