@@ -80,7 +80,6 @@ static Key keys[] = {
 	{ MOD,   'q',           { quit,           { NULL }                    } },
 	{ MOD,   'a',           { togglerunall,   { NULL }                    } },
 	{ MOD,   'r',           { redraw,         { NULL }                    } },
-	{ MOD,   'X',           { lock,           { NULL }                    } },
 	{ MOD,   'B',           { togglebell,     { NULL }                    } },
 	{ MOD,   'v',           { copymode,       { NULL }                    } },
 	{ MOD,   '/',           { copymode,       { "/" }                     } },

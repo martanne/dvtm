@@ -152,7 +152,6 @@ static void focusprev(const char *args[]);
 static void focusprevnm(const char *args[]);
 static void focuslast(const char *args[]);
 static void killclient(const char *args[]);
-static void lock(const char *key[]);
 static void paste(const char *args[]);
 static void quit(const char *args[]);
 static void redraw(const char *args[]);
@@ -850,37 +849,6 @@ killclient(const char *args[]) {
 		return;
 	debug("killing client with pid: %d\n", sel->pid);
 	kill(-sel->pid, SIGKILL);
-}
-
-static void
-lock(const char *args[]) {
-	size_t len = 0, i = 0;
-	char buf[16], *pass = buf;
-	int c;
-
-	erase();
-	curs_set(0);
-
-	if (args && args[0]) {
-		len = strlen(args[0]);
-		pass = (char *)args[0];
-	} else {
-		mvprintw(LINES / 2, COLS / 2 - 7, "Enter password");
-		while (len < sizeof buf && (c = getch()) != '\n')
-			if (c != ERR)
-				buf[len++] = c;
-	}
-
-	mvprintw(LINES / 2, COLS / 2 - 7, "Screen locked!");
-
-	while (i != len) {
-		for(i = 0; i < len; i++) {
-			if (getch() != pass[i])
-				break;
-		}
-	}
-
-	arrange();
 }
 
 static void
