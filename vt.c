@@ -163,6 +163,8 @@ struct Vt {
 	char rbuf[BUFSIZ];
 	char ebuf[BUFSIZ];
 	unsigned int rlen, elen;
+	/* last known start row, start column */
+	int srow, scol;
 
 	/* xterm style window title */
 	char title[256];
@@ -1456,6 +1458,12 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 	bool sel = false;
 	Row *sel_row_start, *sel_row_end;
 	int sel_col_start, sel_col_end;
+
+	if (srow != t->srow || scol != t->scol) {
+		vt_dirty(t);
+		t->srow = srow;
+		t->scol = scol;
+	}
 
 	copymode_get_selection_boundry(t, &sel_row_start, &sel_col_start, &sel_row_end, &sel_col_end, true);
 
