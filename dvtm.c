@@ -67,6 +67,7 @@ struct Client {
 	unsigned short int y;
 	unsigned short int w;
 	unsigned short int h;
+	bool has_title_line;
 	bool minimized;
 	bool died;
 	Client *next;
@@ -291,7 +292,7 @@ draw_border(Client *c) {
 
 static void
 draw_content(Client *c) {
-	vt_draw(c->term, c->window, show_border(), 0);
+	vt_draw(c->term, c->window, c->has_title_line, 0);
 }
 
 static void
@@ -462,16 +463,21 @@ move_client(Client *c, int x, int y) {
 
 static void
 resize_client(Client *c, int w, int h) {
-	if (c->w == w && c->h == h)
-		return;
-	debug("resizing, w: %d h: %d\n", w, h);
-	if (wresize(c->window, h, w) == ERR) {
-		eprint("error resizing, w: %d h: %d\n", w, h);
-	} else {
-		c->w = w;
-		c->h = h;
+	bool has_title_line = show_border();
+	bool resize_window = c->w != w || c->h != h;
+	if (resize_window) {
+		debug("resizing, w: %d h: %d\n", w, h);
+		if (wresize(c->window, h, w) == ERR) {
+			eprint("error resizing, w: %d h: %d\n", w, h);
+		} else {
+			c->w = w;
+			c->h = h;
+		}
 	}
-	vt_resize(c->term, h - show_border(), w);
+	if (resize_window || c->has_title_line != has_title_line) {
+		c->has_title_line = has_title_line;
+		vt_resize(c->term, h - has_title_line, w);
+	}
 }
 
 static void
@@ -736,7 +742,8 @@ create(const char *args[]) {
 		return;
 	}
 
-	if (!(c->term = vt_create(screen.h - show_border(), screen.w, screen.history))) {
+	c->has_title_line = show_border();
+	if (!(c->term = vt_create(screen.h - c->has_title_line, screen.w, screen.history))) {
 		delwin(c->window);
 		free(c);
 		return;
