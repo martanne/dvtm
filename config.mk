@@ -6,7 +6,7 @@ VERSION = 0.11
 PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 
-INCS = -I. -I/usr/include -I/usr/local/include
+INCS = -I.
 LIBS = -lc -lutil -lncursesw
 # NetBSD
 #LIBS = -lc -lutil -lcurses
@@ -16,7 +16,7 @@ LIBS = -lc -lutil -lncursesw
 #INCS += -I/usr/include/ncurses
 
 CFLAGS += -std=c99 -Os ${INCS} -DVERSION=\"${VERSION}\" -DNDEBUG
-LDFLAGS += -L/usr/lib -L/usr/local/lib ${LIBS}
+LDFLAGS += ${LIBS}
 
 DEBUG_CFLAGS = ${CFLAGS} -UNDEBUG -O0 -g -ggdb -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter
 
