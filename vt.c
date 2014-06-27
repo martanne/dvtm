@@ -2014,7 +2014,13 @@ void vt_copymode_keypress(Vt *t, int keycode)
 		cmdline_keypress(t->cmdline, keycode);
 	} else {
 		switch (keycode) {
-		case '0' ... '9':
+		case '0':
+			if (t->copymode_cmd_multiplier == 0) {
+				b->curs_col = 0;
+				break;
+			}
+			/* fall through */
+		case '1' ... '9':
 			t->copymode_cmd_multiplier = (t->copymode_cmd_multiplier * 10) + (keychar - '0');
 			return;
 		case KEY_PPAGE:
