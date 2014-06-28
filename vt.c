@@ -1939,7 +1939,7 @@ static void cmdline_keypress(Cmdline *c, int keycode)
 		c->display = disp >= c->buf ? disp + 1: c->buf;
 		c->cursor_pos = (width < c->width - 1) ? width : c->width - 1;
 		break;
-	case 1 ... 26: /* CTRL('a') ... CTRL('z') */
+	case CTRL('a') ... CTRL('z'):
 		if (keycode != '\n')
 			break;
 		copymode_search(c->data, c->prefix == '/' ? 1 : -1);
