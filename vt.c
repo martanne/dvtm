@@ -72,6 +72,10 @@
 # define MAX_COLOR_PAIRS COLOR_PAIRS
 #endif
 
+#ifndef CTRL
+# define CTRL(k)   ((k) & 0x1F)
+#endif
+
 #define IS_CONTROL(ch) !((ch) & 0xffffff60UL)
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define sstrlen(str) (sizeof(str) - 1)
@@ -2024,6 +2028,7 @@ void vt_copymode_keypress(Vt *t, int keycode)
 			t->copymode_cmd_multiplier = (t->copymode_cmd_multiplier * 10) + (keychar - '0');
 			return;
 		case KEY_PPAGE:
+		case CTRL('u'):
 			delta = b->curs_row - b->lines;
 			if (delta > scroll_page)
 				b->curs_row -= scroll_page;
@@ -2033,6 +2038,7 @@ void vt_copymode_keypress(Vt *t, int keycode)
 			}
 			break;
 		case KEY_NPAGE:
+		case CTRL('d'):
 			delta = b->rows - (b->curs_row - b->lines);
 			if (delta > scroll_page)
 				b->curs_row += scroll_page;
@@ -2138,6 +2144,7 @@ void vt_copymode_keypress(Vt *t, int keycode)
 			/* fall through */
 		case '\e':
 		case 'q':
+		case CTRL('c'):
 			vt_copymode_leave(t);
 			return;
 		default:
