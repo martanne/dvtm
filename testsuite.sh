@@ -50,6 +50,6 @@ test_copymode() { # requires wget, diff, vi
 	echo "Testing $DVTM" 1>&2
 	$DVTM -v 1>&2
 	test_copymode && echo "copymode: OK" 1>&2 || echo "copymode: FAIL" 1>&2;
-} 2> "$TEST_LOG" | $DVTM 2> $LOG
+} 2> "$TEST_LOG" | $DVTM -m ^g 2> $LOG
 
 cat "$TEST_LOG" && rm "$TEST_LOG" $LOG
