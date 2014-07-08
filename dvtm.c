@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <errno.h>
-#ifdef __CYGWIN__
+#if defined __CYGWIN__ || defined __sun
 # include <termios.h>
 #endif
 #include "vt.h"

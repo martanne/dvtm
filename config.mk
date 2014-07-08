@@ -12,8 +12,11 @@ LIBS = -lc -lutil -lncursesw
 #LIBS = -lc -lutil -lcurses
 # AIX
 #LIBS = -lc -lncursesw
+# Solaris
+#INCS = -I/usr/include/ncurses
+#LIBS = -lc -lncursesw
 # Cygwin
-#INCS += -I/usr/include/ncurses
+#INCS = -I/usr/include/ncurses
 
 CFLAGS += -std=c99 -Os ${INCS} -DVERSION=\"${VERSION}\" -DNDEBUG
 LDFLAGS += ${LIBS}

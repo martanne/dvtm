@@ -38,7 +38,7 @@
 #elif defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 # include <util.h>
 #endif
-#if defined(__CYGWIN__) || defined(_AIX)
+#if defined(__CYGWIN__) || defined(_AIX) || defined(__sun)
 # include <alloca.h>
 #endif
 
@@ -46,6 +46,8 @@
 
 #ifdef _AIX
 # include "forkpty-aix.c"
+#elif defined __sun
+# include "forkpty-sunos.c"
 #endif
 
 #ifndef NCURSES_ATTR_SHIFT
