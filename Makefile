@@ -56,7 +56,7 @@ install: dvtm
 	@sed "s/VERSION/${VERSION}/g" < dvtm.1 > ${DESTDIR}${MANPREFIX}/man1/dvtm.1
 	@chmod 644 ${DESTDIR}${MANPREFIX}/man1/dvtm.1
 	@echo installing terminfo description
-	@tic -o ${DESTDIR}${PREFIX}/share/terminfo -s dvtm.info
+	@TERMINFO=${TERMINFO} tic -s dvtm.info
 
 uninstall:
 	@echo removing executable file from ${DESTDIR}${PREFIX}/bin
