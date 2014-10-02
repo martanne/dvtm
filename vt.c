@@ -74,6 +74,9 @@
 # define MAX_COLOR_PAIRS COLOR_PAIRS
 #endif
 
+#if defined _AIX && defined CTRL
+# undef CTRL
+#endif
 #ifndef CTRL
 # define CTRL(k)   ((k) & 0x1F)
 #endif
