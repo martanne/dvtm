@@ -27,3 +27,4 @@ LDFLAGS += ${LIBS}
 DEBUG_CFLAGS = ${CFLAGS} -UNDEBUG -O0 -g -ggdb -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter
 
 CC = cc
+STRIP = strip
