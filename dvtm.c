@@ -75,10 +75,17 @@ struct Client {
 };
 
 typedef struct {
-	const char *title;
-	unsigned attrs;
 	short fg;
 	short bg;
+	short fg256;
+	short bg256;
+	short pair;
+} Color;
+
+typedef struct {
+	const char *title;
+	attr_t attrs;
+	Color *color;
 } ColorRule;
 
 #define ALT(k)      ((k) + (161 - 'a'))
@@ -180,7 +187,7 @@ extern Screen screen;
 static unsigned int waw, wah, wax, way;
 static Client *clients = NULL;
 static char *title;
-#define COLOR(fg, bg) COLOR_PAIR(vt_color_reserve(fg, bg))
+#define COLOR(c) COLOR_PAIR(colors[c].pair)
 #define NOMOD ERR
 
 #include "config.h"
@@ -410,15 +417,15 @@ focus(Client *c) {
 static void
 applycolorrules(Client *c) {
 	const ColorRule *r = colorrules;
-	short fg = r->fg, bg = r->bg;
+	short fg = r->color->fg, bg = r->color->bg;
 	unsigned attrs = r->attrs;
 
 	for (unsigned int i = 1; i < countof(colorrules); i++) {
 		r = &colorrules[i];
 		if (strstr(c->title, r->title)) {
 			attrs = r->attrs;
-			fg = r->fg;
-			bg = r->bg;
+			fg = r->color->fg;
+			bg = r->color->bg;
 			break;
 		}
 	}
@@ -654,6 +661,15 @@ setup() {
 	raw();
 	vt_init();
 	vt_set_keytable(keytable, countof(keytable));
+	for (unsigned int i = 0; i < countof(colors); i++) {
+		if (COLORS == 256) {
+			if (colors[i].fg256)
+				colors[i].fg = colors[i].fg256;
+			if (colors[i].bg256)
+				colors[i].bg = colors[i].bg256;
+		}
+		colors[i].pair = vt_color_reserve(colors[i].fg, colors[i].bg);
+	}
 	resize_screen();
 	struct sigaction sa;
 	sa.sa_flags = 0;

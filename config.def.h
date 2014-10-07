@@ -10,13 +10,23 @@
  * A_PROTECT       Protected mode
  * A_INVIS         Invisible or blank mode
  */
-#define BLUE            (COLORS==256 ? 68 : COLOR_BLUE)
+
+enum {
+	DEFAULT,
+	BLUE,
+};
+
+static Color colors[] = {
+	[DEFAULT] = { .fg = -1,         .bg = -1, .fg256 = -1, .bg256 = -1, },
+	[BLUE]    = { .fg = COLOR_BLUE, .bg = -1, .fg256 = 68, .bg256 = -1, },
+};
+
 /* curses attributes for the currently focused window */
-#define SELECTED_ATTR   COLOR(BLUE, -1) | A_NORMAL
+#define SELECTED_ATTR   (COLOR(BLUE) | A_NORMAL)
 /* curses attributes for normal (not selected) windows */
-#define NORMAL_ATTR     COLOR(-1, -1) | A_NORMAL
+#define NORMAL_ATTR     (COLOR(DEFAULT) | A_NORMAL)
 /* curses attributes for the status bar */
-#define BAR_ATTR        COLOR(BLUE, -1) | A_NORMAL
+#define BAR_ATTR        (COLOR(BLUE) | A_NORMAL)
 /* status bar (command line option -s) position */
 #define BAR_POS		BAR_TOP /* BAR_BOTTOM, BAR_OFF */
 /* determines whether the statusbar text should be right or left aligned */
@@ -94,11 +104,7 @@ static Key keys[] = {
 };
 
 static const ColorRule colorrules[] = {
-	{ "", A_NORMAL, -1, -1 }, /* default */
-#if 0
-	/* title attrs     fgcolor      bgcolor */
-	{ "ssh", A_NORMAL, COLOR_BLACK, 224      },
-#endif
+	{ "", A_NORMAL, &colors[DEFAULT] }, /* default */
 };
 
 /* possible values for the mouse buttons are listed below:
