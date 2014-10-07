@@ -2364,8 +2364,8 @@ short vt_color_reserve(short fg, short bg)
 		return 0;
 	unsigned int index = color_hash(fg, bg);
 	if (color2palette[index] >= 0) {
-		if (init_pair(++color_pairs_reserved, fg, bg) == OK)
-			color2palette[index] = -color_pairs_reserved;
+		if (init_pair(color_pairs_reserved + 1, fg, bg) == OK)
+			color2palette[index] = -(++color_pairs_reserved);
 	}
 	short color_pair = color2palette[index];
 	return color_pair >= 0 ? color_pair : -color_pair;
