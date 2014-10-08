@@ -1,25 +1,16 @@
 static void bstack(void)
 {
-	unsigned int i, m, n, nx, ny, nw, nh, mh, tw;
+	unsigned int i, n, nx, ny, nw, nh, mh, tw;
 	Client *c;
 
-	for (n = 0, m = 0, c = clients; c; c = c->next, n++)
-		if (c->minimized)
-			m++;
+	for (n = 0, c = clients; c && !c->minimized; c = c->next, n++);
 
-	if (n == 1)
-		mh = wah;
-	else if (n - 1 == m)
-		mh = wah - m;
-	else
-		mh = screen.mfact * (wah - m);
-	/* true if there are at least 2 non minimized clients */
-	if (n - 1 > m)
-		tw = waw / (n - m - 1);
-
+	mh = n <= 1 ? wah : screen.mfact * wah;
+	tw = n <= 1 ? 0 : waw / (n - 1);
 	nx = wax;
 	ny = way;
-	for (i = 0, c = clients; c; c = c->next, i++) {
+
+	for (i = 0, c = clients; c && !c->minimized; c = c->next, i++) {
 		if (i == 0) {	/* master */
 			nh = mh;
 			nw = waw;
@@ -27,22 +18,10 @@ static void bstack(void)
 			if (i == 1) {
 				nx = wax;
 				ny += mh;
-				nh = (way + wah - m) - ny;
+				nh = (way + wah) - ny;
 			}
-			if (i == n - m - 1) {	/* last not minimized client */
-				nw = (wax + waw) - nx;
-			} else if (i == n - m) {	/* first minimized client */
-				ny += nh;
-				nx = wax;
-				nw = waw;
-				nh = 1;
-			} else if (c->minimized) {	/* minimized window */
-				nw = waw;
-				nh = 1;
-				ny++;
-			} else	/* normal non minimized tile window */
-				nw = tw;
-			if (i > 1 && !c->minimized) {
+			nw = (i < n - 1) ? tw : (wax + waw) - nx;
+			if (i > 1) {
 				mvvline(ny, nx, ACS_VLINE, nh);
 				mvaddch(ny, nx, ACS_TTEE);
 				nx++, nw--;
@@ -51,7 +30,7 @@ static void bstack(void)
 
 		resize(c, nx, ny, nw, nh);
 
-		if (n > 1 && i < n - m - 1)
+		if (i > 0)
 			nx += nw;
 	}
 }

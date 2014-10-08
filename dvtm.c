@@ -332,10 +332,26 @@ draw_all() {
 
 static void
 arrange() {
+	int m = 0;
+	for (Client *c = clients; c; c = c->next)
+		if (c->minimized)
+			m++;
 	erase();
 	drawbar();
 	attrset(NORMAL_ATTR);
+	if (m && !isarrange(fullscreen))
+		wah--;
 	layout->arrange();
+	if (m && !isarrange(fullscreen)) {
+		int nw = waw / m, nx = wax;
+		for (Client *c = clients; c; c = c->next) {
+			if (c->minimized) {
+				resize(c, nx, way+wah, nw, 1);
+				nx += nw;
+			}
+		}
+		wah++;
+	}
 	wnoutrefresh(stdscr);
 	draw_all();
 }
@@ -557,6 +573,7 @@ updatebarpos(void) {
 	wax = 0;
 	way = 0;
 	wah = screen.h;
+	waw = screen.w;
 	if (bar.fd == -1)
 		return;
 	if (bar.pos == BAR_TOP) {
@@ -583,9 +600,6 @@ resize_screen() {
 
 	resizeterm(screen.h, screen.w);
 	wresize(stdscr, screen.h, screen.w);
-
-	waw = screen.w;
-	wah = screen.h;
 	updatebarpos();
 	clear();
 	arrange();

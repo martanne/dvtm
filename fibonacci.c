@@ -1,13 +1,9 @@
 static void fibonacci(int s)
 {
-	unsigned int nx, ny, nw, nnw, nh, nnh, i, n, m, nm, mod;
+	unsigned int nx, ny, nw, nnw, nh, nnh, i, n, mod;
 	Client *c;
 
-	for (n = 0, m = 0, c = clients; c; c = c->next, n++)
-		if (c->minimized)
-			m++;
-	/* number of non minimized windows */
-	nm = n - m;
+	for (n = 0, c = clients; c && !c->minimized; c = c->next, n++);
 
 	/* initial position and dimensions */
 	nx = wax;
@@ -18,12 +14,12 @@ static void fibonacci(int s)
 	 * variables for the next new width/height
 	 */
 	nnw = waw - nw - 1;
-	nnh = nh = (wah - m);	/* leave space for the minimized clients */
+	nnh = nh = wah;
 
 	/* set the mod factor, 2 for dwindle, 4 for spiral */
 	mod = s ? 4 : 2;
 
-	for (i = 0, c = clients; c; c = c->next, i++) {
+	for (i = 0, c = clients; c && !c->minimized; c = c->next, i++) {
 		if (!c->minimized) {
 			/* dwindle: even case, spiral: case 0 */
 			if (i % mod == 0) {
@@ -35,8 +31,8 @@ static void fibonacci(int s)
 						ny += nh;
 						nh = nnh;
 					}
-					/* don't adjust the width for the last non-minimized client */
-					if (i < nm - 1) {
+					/* don't adjust the width for the last client */
+					if (i < n - 1) {
 						nw /= 2;
 						nnw -= nw + 1;
 					}
@@ -48,16 +44,16 @@ static void fibonacci(int s)
 				mvaddch(ny, nx, ACS_TTEE);
 				++nx;
 				nw = nnw;
-				/* don't adjust the height for the last non-minimized client */
-				if (i < nm - 1) {
+				/* don't adjust the height for the last client */
+				if (i < n - 1) {
 					nh /= 2;
 					nnh -= nh;
 				}
 			} else if (i % mod == 2 && s) {	/* spiral: case 2 */
 				ny += nh;
 				nh = nnh;
-				/* don't adjust the width for the last non-minimized client */
-				if (i < nm - 1) {
+				/* don't adjust the width for the last client */
+				if (i < n - 1) {
 					nw /= 2;
 					nnw -= nw + 1;
 					nx += nnw;
@@ -70,8 +66,8 @@ static void fibonacci(int s)
 			} else if (s) {	/* spiral: case 3 */
 				nw = nnw;
 				nx -= nw + 1;	/* border */
-				/* don't adjust the height for the last non-minimized client */
-				if (i < nm - 1) {
+				/* don't adjust the height for the last client */
+				if (i < n - 1) {
 					nh /= 2;
 					nnh -= nh;
 					ny += nnh;
