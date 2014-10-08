@@ -20,65 +20,58 @@ static void fibonacci(int s)
 	mod = s ? 4 : 2;
 
 	for (i = 0, c = clients; c && !c->minimized; c = c->next, i++) {
-		if (!c->minimized) {
-			/* dwindle: even case, spiral: case 0 */
-			if (i % mod == 0) {
-				if (i) {
-					if (s) {
-						nh = nnh;
-						ny -= nh;
-					} else {
-						ny += nh;
-						nh = nnh;
-					}
-					/* don't adjust the width for the last client */
-					if (i < n - 1) {
-						nw /= 2;
-						nnw -= nw + 1;
-					}
-					mvaddch(ny, nx - 1, ACS_LTEE);
+		/* dwindle: even case, spiral: case 0 */
+		if (i % mod == 0) {
+			if (i) {
+				if (s) {
+					nh = nnh;
+					ny -= nh;
+				} else {
+					ny += nh;
+					nh = nnh;
 				}
-			} else if (i % mod == 1) {	/* dwindle: odd case, spiral: case 1 */
-				nx += nw;
-				mvvline(ny, nx, ACS_VLINE, nh);
-				mvaddch(ny, nx, ACS_TTEE);
-				++nx;
-				nw = nnw;
-				/* don't adjust the height for the last client */
-				if (i < n - 1) {
-					nh /= 2;
-					nnh -= nh;
-				}
-			} else if (i % mod == 2 && s) {	/* spiral: case 2 */
-				ny += nh;
-				nh = nnh;
 				/* don't adjust the width for the last client */
 				if (i < n - 1) {
 					nw /= 2;
 					nnw -= nw + 1;
-					nx += nnw;
-					mvvline(ny, nx, ACS_VLINE, nh);
-					mvaddch(ny, nx, ACS_TTEE);
-					++nx;
-				} else {
-					mvaddch(ny, nx - 1, ACS_LTEE);
-				}
-			} else if (s) {	/* spiral: case 3 */
-				nw = nnw;
-				nx -= nw + 1;	/* border */
-				/* don't adjust the height for the last client */
-				if (i < n - 1) {
-					nh /= 2;
-					nnh -= nh;
-					ny += nnh;
 				}
 				mvaddch(ny, nx - 1, ACS_LTEE);
 			}
-		} else {
-			nh = 1;
-			nw = waw;
-			nx = wax;
-			ny = way + wah - (n - i);
+		} else if (i % mod == 1) {	/* dwindle: odd case, spiral: case 1 */
+			nx += nw;
+			mvvline(ny, nx, ACS_VLINE, nh);
+			mvaddch(ny, nx, ACS_TTEE);
+			++nx;
+			nw = nnw;
+			/* don't adjust the height for the last client */
+			if (i < n - 1) {
+				nh /= 2;
+				nnh -= nh;
+			}
+		} else if (i % mod == 2 && s) {	/* spiral: case 2 */
+			ny += nh;
+			nh = nnh;
+			/* don't adjust the width for the last client */
+			if (i < n - 1) {
+				nw /= 2;
+				nnw -= nw + 1;
+				nx += nnw;
+				mvvline(ny, nx, ACS_VLINE, nh);
+				mvaddch(ny, nx, ACS_TTEE);
+				++nx;
+			} else {
+				mvaddch(ny, nx - 1, ACS_LTEE);
+			}
+		} else if (s) {	/* spiral: case 3 */
+			nw = nnw;
+			nx -= nw + 1;	/* border */
+			/* don't adjust the height for the last client */
+			if (i < n - 1) {
+				nh /= 2;
+				nnh -= nh;
+				ny += nnh;
+			}
+			mvaddch(ny, nx - 1, ACS_LTEE);
 		}
 
 		resize(c, nx, ny, nw, nh);
