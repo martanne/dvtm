@@ -132,7 +132,7 @@ Toggle between defined layouts (affects all windows).
 .B Mod\-Enter
 Zooms/cycles current window to/from master area.
 .TP
-.B Mod\-t
+.B Mod\-d
 Change to vertical stack tiling layout.
 .TP
 .B Mod\-b
@@ -145,6 +145,8 @@ Change to grid layout.
 Show/hide the status bar.
 .TP
 .B Mod\-r
+.TQ
+.B Mod\-^L
 Redraw whole screen.
 .TP
 .B Mod\-a
@@ -157,23 +159,40 @@ Toggle bell (off by default).
 .B Mod\-M
 Toggle dvtm mouse grabbing.
 .TP
-.B Mod\-v
+.B Mod\-e
 Enter copy mode (see section below for further information).
 .TP
 .B Mod\-/
 Enter copy mode and start searching forward (assumes a vi-like editor).
 .TP
-.B Mod\-?
-Enter copy mode and start searching backwards (assumes a vi-like editor).
-.TP
 .B Mod\-p
 Paste last copied text from copy mode at current cursor position.
 .TP
-.B Mod\-F1
+.B Mod\-?
 Show this manual page.
 .TP
 .B Mod\-Mod
 Send the Mod key.
+.TP
+.B Mod-F[1..n]
+.TQ
+.B Mod-v-[1..n]
+View all windows with nth tag.
+.TP
+.B Mod-0
+View all windows with any tag.
+.TP
+.B Mod-v-Tab
+Toggles to the previously selected tags.
+.TP
+.B Mod-V-[1..n]
+Add/remove all windows with nth tag to/from the view.
+.TP
+.B Mod-t-[1..n]
+Apply nth tag to focused window.
+.TP
+.B Mod-T-[1..n]
+Add/remove nth tag to/from focused window.
 .TP
 .B Mod\-q
 Quit dvtm.

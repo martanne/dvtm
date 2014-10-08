@@ -78,6 +78,8 @@ struct Client {
 	volatile sig_atomic_t died;
 	Client *next;
 	Client *prev;
+	Client *snext;
+	bool tags[1];
 };
 
 typedef struct {
@@ -135,6 +137,7 @@ enum { ALIGN_LEFT, ALIGN_RIGHT };
 typedef struct {
 	int fd;
 	int pos;
+	bool autohide;
 	unsigned short int h;
 	unsigned short int y;
 	char text[512];
@@ -187,11 +190,16 @@ static void send(const char *args[]);
 static void setlayout(const char *args[]);
 static void setmfact(const char *args[]);
 static void startup(const char *args[]);
+static void tag(const char *args[]);
 static void togglebar(const char *args[]);
 static void togglebell(const char *key[]);
 static void toggleminimize(const char *args[]);
 static void togglemouse(const char *args[]);
 static void togglerunall(const char *args[]);
+static void toggletag(const char *args[]);
+static void toggleview(const char *args[]);
+static void viewprevtag(const char *args[]);
+static void view(const char *args[]);
 static void zoom(const char *args[]);
 
 /* commands for use by mouse bindings */
@@ -201,6 +209,8 @@ static void mouse_minimize(const char *args[]);
 static void mouse_zoom(const char *args[]);
 
 /* functions and variables available to layouts via config.h */
+static Client* nextvisible(Client *c);
+static void focus(Client *c);
 static void resize(Client *c, int x, int y, int w, int h);
 extern Screen screen;
 static unsigned int waw, wah, wax, way;
@@ -212,12 +222,15 @@ static char *title;
 /* global variables */
 static const char *dvtm_name = "dvtm";
 Screen screen = { .mfact = MFACT, .history = SCROLL_HISTORY };
+static Client *stack = NULL;
 static Client *sel = NULL;
 static Client *lastsel = NULL;
 static Client *msel = NULL;
+static bool seltags[countof(tags)] = {[0] = true};
+static bool prevtags[countof(tags)];
 static bool mouse_events_enabled = ENABLE_MOUSE;
 static Layout *layout = layouts;
-static StatusBar bar = { .fd = -1, .pos = BAR_POS, .h = 1 };
+static StatusBar bar = { .fd = -1, .pos = BAR_POS, .autohide = BAR_AUTOHIDE, .h = 1 };
 static CmdFifo cmdfifo = { .fd = -1 };
 static const char *shell;
 static Register copyreg;
@@ -247,23 +260,96 @@ isarrange(void (*func)()) {
 }
 
 static bool
+isvisible(Client *c) {
+	for (unsigned int i = 0; i < countof(tags); i++)
+		if (c->tags[i] && seltags[i])
+			return true;
+	return false;
+}
+
+static bool
 is_content_visible(Client *c) {
 	if (!c)
 		return false;
 	if (isarrange(fullscreen))
 		return sel == c;
-	return !c->minimized;
+	return isvisible(c) && !c->minimized;
+}
+
+static Client*
+nextvisible(Client *c) {
+	for (; c && !isvisible(c); c = c->next);
+	return c;
+}
+
+static Client*
+nextbytag(Client *c, int tag) {
+	for (; c && !c->tags[tag]; c = c->next);
+	return c;
+}
+
+bool
+isoccupied(unsigned int t) {
+	for (Client *c = clients; c; c = c->next)
+		if (c->tags[t])
+			return true;
+	return false;
+}
+
+static void
+reorder(int tag) {
+	Client *c;
+	uint8_t order = 0;
+	if (tag < 0)
+		for (c = nextvisible(clients); c; c = nextvisible(c->next))
+			c->order = ++order;
+	else
+		for (c = nextbytag(clients, tag); c; c = nextbytag(c->next, tag))
+			c->order = ++order;
+}
+
+static void
+updatebarpos(void) {
+	bar.y = 0;
+	wax = 0;
+	way = 0;
+	wah = screen.h;
+	waw = screen.w;
+	if (bar.pos == BAR_TOP) {
+		wah -= bar.h;
+		way += bar.h;
+	} else if (bar.pos == BAR_BOTTOM) {
+		wah -= bar.h;
+		bar.y = wah;
+	}
 }
 
 static void
 drawbar(void) {
-	wchar_t wbuf[sizeof bar.text];
-	int x, y, w, maxwidth = screen.w - 2;
+	int sx, sy, x = 0;
 	if (bar.pos == BAR_OFF)
 		return;
-	getyx(stdscr, y, x);
+	getyx(stdscr, sy, sx);
 	attrset(BAR_ATTR);
-	mvaddch(bar.y, 0, '[');
+	move(bar.y, 0);
+	for (unsigned int i = 0; i < countof(tags); i++){
+		if (seltags[i])
+			attrset(TAG_SEL);
+		else if (isoccupied(i))
+			attrset(TAG_OCCUPIED);
+		else
+			attrset(TAG_NORMAL);
+		printw(TAG_SYMBOL, tags[i]);
+		/* -2 because we assume %s is contained in TAG_SYMBOL */
+		x += sstrlen(TAG_SYMBOL) - 2 + strlen(tags[i]);
+	}
+	attrset(TAG_NORMAL);
+	addch('[');
+	attrset(BAR_ATTR);
+
+	wchar_t wbuf[sizeof bar.text];
+	int w, maxwidth = screen.w - x - 2;
+
 	if (mbstowcs(wbuf, bar.text, sizeof bar.text) == (size_t)-1)
 		return;
 	if ((w = wcswidth(wbuf, maxwidth)) == -1)
@@ -277,15 +363,16 @@ drawbar(void) {
 		for (; w < maxwidth; w++)
 			addch(' ');
 	}
+	attrset(TAG_NORMAL);
 	mvaddch(bar.y, screen.w - 1, ']');
 	attrset(NORMAL_ATTR);
-	move(y, x);
+	move(sy, sx);
 	wnoutrefresh(stdscr);
 }
 
 static int
 show_border(void) {
-	return (bar.fd != -1 && bar.pos != BAR_OFF) || (clients && clients->next);
+	return (bar.pos != BAR_OFF) || (clients && clients->next);
 }
 
 static void
@@ -333,8 +420,17 @@ draw(Client *c) {
 
 static void
 draw_all(void) {
+	if (!nextvisible(clients)) {
+		sel = NULL;
+		curs_set(0);
+		erase();
+		drawbar();
+		doupdate();
+		return;
+	}
+
 	if (!isarrange(fullscreen)) {
-		for (Client *c = clients; c; c = c->next) {
+		for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
 			if (c == sel)
 				continue;
 			draw(c);
@@ -351,18 +447,26 @@ draw_all(void) {
 static void
 arrange(void) {
 	int m = 0;
-	for (Client *c = clients; c; c = c->next)
+	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next))
 		if (c->minimized)
 			m++;
 	erase();
-	drawbar();
 	attrset(NORMAL_ATTR);
+	if (bar.fd == -1 && bar.autohide) {
+		int n = 0;
+		for (Client *c = nextvisible(clients); c; c = nextvisible(c->next), n++);
+		if ((!clients || !clients->next) && n == 1)
+			bar.pos = BAR_OFF;
+		else
+			bar.pos = BAR_POS;
+		updatebarpos();
+	}
 	if (m && !isarrange(fullscreen))
 		wah--;
 	layout->arrange();
 	if (m && !isarrange(fullscreen)) {
 		int nw = waw / m, nx = wax;
-		for (Client *c = clients; c; c = c->next) {
+		for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
 			if (c->minimized) {
 				resize(c, nx, way+wah, nw, 1);
 				nx += nw;
@@ -370,7 +474,10 @@ arrange(void) {
 		}
 		wah++;
 	}
+	reorder(-1);
+	focus(NULL);
 	wnoutrefresh(stdscr);
+	drawbar();
 	draw_all();
 }
 
@@ -381,7 +488,7 @@ attach(Client *c) {
 	c->next = clients;
 	c->prev = NULL;
 	clients = c;
-	for (int o = 1; c; c = c->next, o++)
+	for (int o = 1; c; c = nextvisible(c->next), o++)
 		c->order = o;
 }
 
@@ -398,9 +505,15 @@ attachafter(Client *c, Client *a) { /* attach c after a */
 		c->next = a->next;
 		c->prev = a;
 		a->next = c;
-		for (int o = a->order; c; c = c->next)
+		for (int o = a->order; c; c = nextvisible(c->next))
 			c->order = ++o;
 	}
+}
+
+static void
+attachstack(Client *c) {
+	c->snext = stack;
+	stack = c;
 }
 
 static void
@@ -410,7 +523,7 @@ detach(Client *c) {
 		c->prev->next = c->next;
 	if (c->next) {
 		c->next->prev = c->prev;
-		for (d = c->next; d; d = d->next)
+		for (d = nextvisible(c->next); d; d = nextvisible(d->next))
 			--d->order;
 	}
 	if (c == clients)
@@ -428,24 +541,38 @@ settitle(Client *c) {
 }
 
 static void
+detachstack(Client *c) {
+	Client **tc;
+	for (tc=&stack; *tc && *tc != c; tc=&(*tc)->snext);
+	*tc = c->snext;
+}
+
+static void
 focus(Client *c) {
 	Client *tmp = sel;
+	if (!c)
+		for (c = stack; c && !isvisible(c); c = c->snext);
 	if (sel == c)
 		return;
 	lastsel = sel;
 	sel = c;
-	settitle(c);
 	if (tmp && !isarrange(fullscreen)) {
 		draw_border(tmp);
 		wnoutrefresh(tmp->window);
 	}
-	if (isarrange(fullscreen)) {
-		draw(c);
-	} else {
-		draw_border(c);
-		wnoutrefresh(c->window);
+
+	if (c) {
+		detachstack(c);
+		attachstack(c);
+		settitle(c);
+		if (isarrange(fullscreen)) {
+			draw(c);
+		} else {
+			draw_border(c);
+			wnoutrefresh(c->window);
+		}
 	}
-	curs_set(!c->minimized && vt_cursor_visible(c->term));
+	curs_set(c && !c->minimized && vt_cursor_visible(c->term));
 }
 
 static void
@@ -525,7 +652,7 @@ get_client_by_coord(unsigned int x, unsigned int y) {
 		return NULL;
 	if (isarrange(fullscreen))
 		return sel;
-	for (Client *c = clients; c; c = c->next) {
+	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
 		if (x >= c->x && x < c->x + c->w && y >= c->y && y < c->y + c->h) {
 			debug("mouse event, x: %d y: %d client: %d\n", x, y, c->order);
 			return c;
@@ -578,24 +705,6 @@ sigterm_handler(int sig) {
 }
 
 static void
-updatebarpos(void) {
-	bar.y = 0;
-	wax = 0;
-	way = 0;
-	wah = screen.h;
-	waw = screen.w;
-	if (bar.fd == -1)
-		return;
-	if (bar.pos == BAR_TOP) {
-		wah -= bar.h;
-		way += bar.h;
-	} else if (bar.pos == BAR_BOTTOM) {
-		wah -= bar.h;
-		bar.y = wah;
-	}
-}
-
-static void
 resize_screen(void) {
 	struct winsize ws;
 
@@ -631,6 +740,88 @@ keybinding(KeyCombo keys) {
 	return NULL;
 }
 
+static unsigned int
+idxoftag(const char *tag) {
+	unsigned int i;
+	for (i = 0; (i < countof(tags)) && (tags[i] != tag); i++);
+	return (i < countof(tags)) ? i : 0;
+}
+
+static void
+tagschanged() {
+	bool nm = false;
+	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
+		if (!c->minimized) {
+			nm = true;
+			break;
+		}
+	}
+	if (!nm && nextvisible(clients)) {
+		focus(NULL);
+		toggleminimize(NULL);
+	} else {
+		arrange();
+	}
+}
+
+static void
+tag(const char *args[]) {
+	unsigned int i;
+
+	if (!sel)
+		return;
+	for (i = 0; i < countof(tags); i++)
+		sel->tags[i] = (NULL == args[0]);
+	i = idxoftag(args[0]);
+	sel->tags[i] = true;
+	reorder(i);
+	tagschanged();
+}
+
+static void
+toggletag(const char *args[]) {
+	unsigned int i, j;
+
+	if (!sel)
+		return;
+	i = idxoftag(args[0]);
+	sel->tags[i] = !sel->tags[i];
+	for (j = 0; j < countof(tags) && !sel->tags[j]; j++);
+	if (j == countof(tags))
+		sel->tags[i] = true; /* at least one tag must be enabled */
+	tagschanged();
+}
+
+static void
+toggleview(const char *args[]) {
+	unsigned int i, j;
+
+	i = idxoftag(args[0]);
+	seltags[i] = !seltags[i];
+	for (j = 0; j < countof(tags) && !seltags[j]; j++);
+	if (j == countof(tags))
+		seltags[i] = true; /* at least one tag must be viewed */
+	tagschanged();
+}
+
+static void
+view(const char *args[]) {
+	memcpy(prevtags, seltags, sizeof seltags);
+	for (unsigned int i = 0; i < countof(tags); i++)
+		seltags[i] = (NULL == args[0]);
+	seltags[idxoftag(args[0])] = true;
+	tagschanged();
+}
+
+static void
+viewprevtag(const char *args[]) {
+	static bool tmp[countof(tags)];
+	memcpy(tmp, seltags, sizeof seltags);
+	memcpy(seltags, prevtags, sizeof seltags);
+	memcpy(prevtags, tmp, sizeof seltags);
+	tagschanged();
+}
+
 static void
 keypress(int code) {
 	unsigned int len = 1;
@@ -644,7 +835,7 @@ keypress(int code) {
 		nodelay(stdscr, FALSE);
 	}
 
-	for (Client *c = runinall ? clients : sel; c; c = c->next) {
+	for (Client *c = runinall ? nextvisible(clients) : sel; c; c = nextvisible(c->next)) {
 		if (is_content_visible(c)) {
 			if (code == '\e')
 				vt_write(c->term, buf, len);
@@ -730,12 +921,14 @@ setup(void) {
 
 static void
 destroy(Client *c) {
+	Client *t;
 	if (sel == c)
 		focusnextnm(NULL);
 	detach(c);
+	detachstack(c);
 	if (sel == c) {
-		if (clients) {
-			focus(clients);
+		if ((t = nextvisible(clients))) {
+			focus(t);
 			toggleminimize(NULL);
 		} else {
 			sel = NULL;
@@ -785,9 +978,10 @@ static char *getcwd_by_pid(Client *c) {
 /* commands for use by keybindings */
 static void
 create(const char *args[]) {
-	Client *c = calloc(1, sizeof(Client));
+	Client *c = calloc(1, sizeof(Client) + sizeof(seltags));
 	if (!c)
 		return;
+	memcpy(c->tags, seltags, sizeof seltags);
 	const char *cmd = (args && args[0]) ? args[0] : shell;
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
 	c->id = ++cmdfifo.id;
@@ -804,8 +998,7 @@ create(const char *args[]) {
 		return;
 	}
 
-	c->has_title_line = show_border();
-	c->term = c->app = vt_create(screen.h - c->has_title_line, screen.w, screen.history);
+	c->term = c->app = vt_create(screen.h, screen.w, screen.history);
 	if (!c->term) {
 		delwin(c->window);
 		free(c);
@@ -910,7 +1103,7 @@ copymode(const char *args[]) {
 
 static void
 focusn(const char *args[]) {
-	for (Client *c = clients; c; c = c->next) {
+	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
 		if (c->order == atoi(args[0])) {
 			focus(c);
 			if (c->minimized)
@@ -922,11 +1115,12 @@ focusn(const char *args[]) {
 
 static void
 focusnext(const char *args[]) {
+	Client *c;
 	if (!sel)
 		return;
-	Client *c = sel->next;
+	for (c = sel->next; c && !isvisible(c); c = c->next);
 	if (!c)
-		c = clients;
+		for (c = clients; c && !isvisible(c); c = c->next);
 	if (c)
 		focus(c);
 }
@@ -937,20 +1131,23 @@ focusnextnm(const char *args[]) {
 		return;
 	Client *c = sel;
 	do {
-		c = c->next;
+		c = nextvisible(c->next);
 		if (!c)
-			c = clients;
+			c = nextvisible(clients);
 	} while (c->minimized && c != sel);
 	focus(c);
 }
 
 static void
 focusprev(const char *args[]) {
+	Client *c;
 	if (!sel)
 		return;
-	Client *c = sel->prev;
-	if (!c)
+	for (c = sel->prev; c && !isvisible(c); c = c->prev);
+	if (!c) {
 		for (c = clients; c && c->next; c = c->next);
+		for (; c && !isvisible(c); c = c->prev);
+	}
 	if (c)
 		focus(c);
 }
@@ -961,9 +1158,11 @@ focusprevnm(const char *args[]) {
 		return;
 	Client *c = sel;
 	do {
-		c = c->prev;
-		if (!c)
+		for (c = c->prev; c && !isvisible(c); c = c->prev);
+		if (!c) {
 			for (c = clients; c && c->next; c = c->next);
+			for (; c && !isvisible(c); c = c->prev);
+		}
 	} while (c->minimized && c != sel);
 	focus(c);
 }
@@ -1078,6 +1277,7 @@ togglebar(const char *args[]) {
 		bar.pos = (BAR_POS == BAR_OFF) ? BAR_TOP : BAR_POS;
 	else
 		bar.pos = BAR_OFF;
+	bar.autohide = false;
 	updatebarpos();
 	redraw(NULL);
 }
@@ -1089,13 +1289,13 @@ togglebell(const char *args[]) {
 
 static void
 toggleminimize(const char *args[]) {
-	Client *c, *m;
+	Client *c, *m, *t;
 	unsigned int n;
 	if (!sel)
 		return;
 	/* the last window can't be minimized */
 	if (!sel->minimized) {
-		for (n = 0, c = clients; c; c = c->next)
+		for (n = 0, c = nextvisible(clients); c; c = nextvisible(c->next))
 			if (!c->minimized)
 				n++;
 		if (n == 1)
@@ -1104,20 +1304,20 @@ toggleminimize(const char *args[]) {
 	sel->minimized = !sel->minimized;
 	m = sel;
 	/* check whether the master client was minimized */
-	if (sel == clients && sel->minimized) {
-		c = sel->next;
+	if (sel == nextvisible(clients) && sel->minimized) {
+		c = nextvisible(sel->next);
 		detach(c);
 		attach(c);
 		focus(c);
 		detach(m);
-		for (; c && c->next && !c->next->minimized; c = c->next);
+		for (; c && (t = nextvisible(c->next)) && !t->minimized; c = t);
 		attachafter(m, c);
 	} else if (m->minimized) {
 		/* non master window got minimized move it above all other
 		 * minimized ones */
 		focusnextnm(NULL);
 		detach(m);
-		for (c = clients; c && c->next && !c->next->minimized; c = c->next);
+		for (c = nextvisible(clients); c && (t = nextvisible(c->next)) && !t->minimized; c = t);
 		attachafter(m, c);
 	} else { /* window is no longer minimized, move it to the master area */
 		vt_dirty(m->term);
@@ -1147,8 +1347,8 @@ zoom(const char *args[]) {
 		return;
 	if (args && args[0])
 		focusn(args);
-	if ((c = sel) == clients)
-		if (!(c = c->next))
+	if ((c = sel) == nextvisible(clients))
+		if (!(c = nextvisible(c->next)))
 			return;
 	detach(c);
 	attach(c);
