@@ -1696,7 +1696,7 @@ void vt_keypress(Vt *t, int keycode)
 static Row *buffer_next_row(Buffer *t, Row *row, int direction)
 {
 	bool has_scroll_buf = t->scroll_buf_size > 0;
-	Row *before_start_row, *before_end_row, *after_start_row, *after_end_row;
+	Row *before_start_row = NULL, *before_end_row = NULL, *after_start_row = NULL, *after_end_row = NULL;
 	Row *first_row = t->lines;
 	Row *last_row = t->lines + t->rows - 1;
 
