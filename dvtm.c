@@ -106,11 +106,14 @@ typedef struct {
 	const char *args[MAX_ARGS];
 } Action;
 
+#define MAX_KEYS 3
+
+typedef unsigned int KeyCombo[MAX_KEYS];
+
 typedef struct {
-	unsigned int mod;
-	unsigned int code;
+	KeyCombo keys;
 	Action action;
-} Key;
+} KeyBinding;
 
 typedef struct {
 	mmask_t mask;
@@ -605,20 +608,18 @@ resize_screen() {
 	arrange();
 }
 
-static bool
-is_modifier(unsigned int mod) {
-	for (unsigned int i = 0; i < countof(keys); i++) {
-		if (keys[i].mod == mod)
-			return true;
-	}
-	return false;
-}
-
-static Key*
-keybinding(unsigned int mod, unsigned int code) {
-	for (unsigned int i = 0; i < countof(keys); i++) {
-		if (keys[i].mod == mod && keys[i].code == code)
-			return &keys[i];
+static KeyBinding*
+keybinding(KeyCombo keys) {
+	unsigned int keycount = 0;
+	while (keycount < MAX_KEYS && keys[keycount])
+		keycount++;
+	for (unsigned int b = 0; b < countof(bindings); b++) {
+		for (unsigned int k = 0; k < keycount; k++) {
+			if (keys[k] != bindings[b].keys[k])
+				break;
+			if (k == keycount - 1)
+				return &bindings[b];
+		}
 	}
 	return NULL;
 }
@@ -1305,8 +1306,9 @@ parse_args(int argc, char *argv[]) {
 				char *mod = argv[++arg];
 				if (mod[0] == '^' && mod[1])
 					*mod = CTRL(mod[1]);
-				for (unsigned int i = 0; i < countof(keys); i++)
-					keys[i].mod = *mod;
+				for (unsigned int b = 0; b < countof(bindings); b++)
+					if (bindings[b].keys[0] == MOD)
+						bindings[b].keys[0] = *mod;
 				break;
 			}
 			case 'd':
@@ -1343,7 +1345,9 @@ parse_args(int argc, char *argv[]) {
 
 int
 main(int argc, char *argv[]) {
-	int mod = ERR;
+	KeyCombo keys;
+	unsigned int key_index = 0;
+	memset(keys, 0, sizeof(keys));
 
 	if (!parse_args(argc, argv)) {
 		setup();
@@ -1397,23 +1401,29 @@ main(int argc, char *argv[]) {
 
 		if (FD_ISSET(STDIN_FILENO, &rd)) {
 			int code = getch();
-			Key *key;
 			if (code >= 0) {
-				if (mod >= 0) {
-					if ((key = keybinding(mod, code)))
-						key->action.cmd(key->action.args);
-					mod = NOMOD;
-				} else if (code == KEY_MOUSE) {
+				keys[key_index++] = code;
+				KeyBinding *binding = NULL;
+				if (code == KEY_MOUSE) {
 					handle_mouse();
-				} else if (is_modifier(code)) {
-					mod = code;
-				} else if ((key = keybinding(NOMOD, code))) {
-					key->action.cmd(key->action.args);
-				} else if (sel && vt_copymode(sel->term)) {
-					vt_copymode_keypress(sel->term, code);
-					draw(sel);
+				} else if ((binding = keybinding(keys))) {
+					unsigned int key_length = 0;
+					while (key_length < MAX_KEYS && binding->keys[key_length])
+						key_length++;
+					if (key_index == key_length) {
+						binding->action.cmd(binding->action.args);
+						key_index = 0;
+						memset(keys, 0, sizeof(keys));
+					}
 				} else {
-					keypress(code);
+					key_index = 0;
+					memset(keys, 0, sizeof(keys));
+					if (sel && vt_copymode(sel->term)) {
+						vt_copymode_keypress(sel->term, code);
+						draw(sel);
+					} else {
+						keypress(code);
+					}
 				}
 			}
 			if (r == 1) /* no data available on pty's */
