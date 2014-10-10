@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <pwd.h>
 #if defined __CYGWIN__ || defined __sun
 # include <termios.h>
 #endif
@@ -196,6 +197,7 @@ static char *title;
 #include "config.h"
 
 /* global variables */
+static const char *dvtm_name = "dvtm";
 Screen screen = { MFACT, SCROLL_HISTORY };
 static Client *sel = NULL;
 static Client *lastsel = NULL;
@@ -663,10 +665,33 @@ mouse_setup() {
 #endif /* CONFIG_MOUSE */
 }
 
+static bool
+checkshell(const char *shell) {
+	if (shell == NULL || *shell == '\0' || *shell != '/')
+		return false;
+	fprintf(stderr, "%s == %s\n", strrchr(shell, '/')+1, dvtm_name);
+	if (!strcmp(strrchr(shell, '/')+1, dvtm_name))
+		return false;
+	if (access(shell, X_OK))
+		return false;
+	return true;
+}
+
+static const char *
+getshell(void) {
+	const char *shell = getenv("SHELL");
+	struct passwd *pw;
+
+	if (checkshell(shell))
+		return shell;
+	if ((pw = getpwuid(getuid())) && checkshell(pw->pw_shell))
+		return pw->pw_shell;
+	return "/bin/sh";
+}
+
 static void
 setup() {
-	if (!(shell = getenv("SHELL")))
-		shell = "/bin/sh";
+	shell = getshell();
 	setlocale(LC_CTYPE, "");
 	initscr();
 	start_color();
@@ -1280,7 +1305,10 @@ usage() {
 static bool
 parse_args(int argc, char *argv[]) {
 	bool init = false;
+	const char *name = argv[0];
 
+	if (name && (name = strrchr(name, '/')))
+		dvtm_name = name + 1;
 	if (!getenv("ESCDELAY"))
 		set_escdelay(100);
 	for (int arg = 1; arg < argc; arg++) {
