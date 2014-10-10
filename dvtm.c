@@ -243,7 +243,7 @@ is_content_visible(Client *c) {
 }
 
 static void
-drawbar() {
+drawbar(void) {
 	wchar_t wbuf[sizeof bar.text];
 	int x, y, w, maxwidth = screen.w - 2;
 	if (bar.pos == BAR_OFF)
@@ -271,7 +271,7 @@ drawbar() {
 }
 
 static int
-show_border() {
+show_border(void) {
 	return (bar.fd != -1 && bar.pos != BAR_OFF) || (clients && clients->next);
 }
 
@@ -319,7 +319,7 @@ draw(Client *c) {
 }
 
 static void
-draw_all() {
+draw_all(void) {
 	if (!isarrange(fullscreen)) {
 		for (Client *c = clients; c; c = c->next) {
 			if (c == sel)
@@ -336,7 +336,7 @@ draw_all() {
 }
 
 static void
-arrange() {
+arrange(void) {
 	int m = 0;
 	for (Client *c = clients; c; c = c->next)
 		if (c->minimized)
@@ -591,7 +591,7 @@ updatebarpos(void) {
 }
 
 static void
-resize_screen() {
+resize_screen(void) {
 	struct winsize ws;
 
 	if (ioctl(0, TIOCGWINSZ, &ws) == -1) {
@@ -652,7 +652,7 @@ keypress(int code) {
 }
 
 static void
-mouse_setup() {
+mouse_setup(void) {
 #ifdef CONFIG_MOUSE
 	mmask_t mask = 0;
 
@@ -690,7 +690,7 @@ getshell(void) {
 }
 
 static void
-setup() {
+setup(void) {
 	shell = getshell();
 	setlocale(LC_CTYPE, "");
 	initscr();
@@ -752,7 +752,7 @@ destroy(Client *c) {
 }
 
 static void
-cleanup() {
+cleanup(void) {
 	while (clients)
 		destroy(clients);
 	vt_shutdown();
@@ -1129,7 +1129,7 @@ get_cmd_by_name(const char *name) {
 }
 
 static void
-handle_cmdfifo() {
+handle_cmdfifo(void) {
 	int r;
 	char *p, *s, cmdbuf[512], c;
 	Cmd *cmd;
@@ -1224,7 +1224,7 @@ handle_cmdfifo() {
 }
 
 static void
-handle_mouse() {
+handle_mouse(void) {
 #ifdef CONFIG_MOUSE
 	MEVENT event;
 	unsigned int i;
@@ -1249,7 +1249,7 @@ handle_mouse() {
 }
 
 static void
-handle_statusbar() {
+handle_statusbar(void) {
 	char *p;
 	int r;
 	switch (r = read(bar.fd, bar.text, sizeof bar.text - 1)) {
@@ -1295,7 +1295,7 @@ open_or_create_fifo(const char *name, const char **name_created) {
 }
 
 static void
-usage() {
+usage(void) {
 	cleanup();
 	eprint("usage: dvtm [-v] [-M] [-m mod] [-d delay] [-h lines] [-t title] "
 	       "[-s status-fifo] [-c cmd-fifo] [cmd...]\n");
