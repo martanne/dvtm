@@ -1402,12 +1402,12 @@ main(int argc, char *argv[]) {
 				if (mod >= 0) {
 					if ((key = keybinding(mod, code)))
 						key->action.cmd(key->action.args);
-					mod = ERR;
+					mod = NOMOD;
 				} else if (code == KEY_MOUSE) {
 					handle_mouse();
 				} else if (is_modifier(code)) {
 					mod = code;
-				} else if ((key = keybinding(ERR, code))) {
+				} else if ((key = keybinding(NOMOD, code))) {
 					key->action.cmd(key->action.args);
 				} else if (sel && vt_copymode(sel->term)) {
 					vt_copymode_keypress(sel->term, code);
