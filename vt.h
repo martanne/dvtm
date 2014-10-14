@@ -55,7 +55,6 @@ typedef int (*vt_escseq_handler_t)(Vt *, char *es);
 
 enum {
 	VT_EVENT_TITLE,
-	VT_EVENT_COPY_TEXT,
 };
 
 typedef void (*vt_event_handler_t)(Vt *, int event, void *data);
@@ -72,7 +71,7 @@ void vt_set_default_colors(Vt *, unsigned attrs, short fg, short bg);
 Vt *vt_create(int rows, int cols, int scroll_buf_sz);
 void vt_resize(Vt *, int rows, int cols);
 void vt_destroy(Vt *);
-pid_t vt_forkpty(Vt *, const char *, const char *argv[], const char *cwd, const char *envp[], int *pty);
+pid_t vt_forkpty(Vt *, const char *p, const char *argv[], const char *cwd, const char *env[], int *to, int *from);
 int vt_getpty(Vt *);
 unsigned vt_cursor(Vt *t);
 
@@ -91,9 +90,7 @@ void vt_noscroll(Vt *);
 void vt_bell(Vt *, bool bell);
 void vt_togglebell(Vt *);
 
-void vt_copymode_enter(Vt *t);
-void vt_copymode_leave(Vt *t);
-unsigned vt_copymode(Vt *t);
-void vt_copymode_keypress(Vt *t, int keycode);
+pid_t vt_pid_get(Vt *t);
+size_t vt_content_get(Vt *t, char **s);
 
 #endif /* VT_VT_H */

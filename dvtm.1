@@ -158,13 +158,13 @@ Toggle bell (off by default).
 Toggle dvtm mouse grabbing.
 .TP
 .B Mod\-v
-Enter copy mode (see section below for navigation commands).
+Enter copy mode (see section below for further information).
 .TP
 .B Mod\-/
-Enter copy mode and start searching forward.
+Enter copy mode and start searching forward (assumes a vi-like editor).
 .TP
 .B Mod\-?
-Enter copy mode and start searching backwards.
+Enter copy mode and start searching backwards (assumes a vi-like editor).
 .TP
 .B Mod\-p
 Paste last copied text from copy mode at current cursor position.
@@ -202,68 +202,33 @@ Zoom/cycle current window to/from master area.
 .B Button3 click
 Toggle minimization of current window.
 .SS Copy mode
-Copy mode gives easy access to past output.
-The commands use vi style keybindings and support number prefixes as
-command multipliers.
-.TP
-.B Entering
-Copy mode can be entered with
-.BR Mod\-v .
-.TP
-.B Navigation
-Once in, navigation works with vi style keybindings
-.RB ( h , j , k , l , ^ , $ , g , H , M , L , G )
-as well as with the
-.BR Arrows / Home / End / Page-Down / Page-Up
-keys.
-.BR CTRL+u
-can be used as a synonym for
-.BR Page-Up
-and similarly
-.BR CTRL+d
-corresponds to a
-.BR Page-Down .
-.TP
-.B Searching
-Search forward with
-.B /
-and backwards with
-.BR ? .
-Jump forward to next match with
-.BR n .
-Jump backwards to next match with
-.BR N .
-.TP
-.B Selecting
-To start making a selection press
-.B v
-(similar to visual mode in vi).
-.TP
-.B Copying
-To copy the current selection use
-.BR y .
-If you haven't made a selection the current line is copied.
-Add a number prefix to copy n lines starting from the current line.
-This command leaves the copy mode.
-.TP
-.B Pasting
-The previously copied text can be pasted at the current cursor position
-with
-.BR Mod\-p .
-.TP
-.B Leaving
-Copy mode is automatically left upon copying something. To manually
-exit at any time press either
-.BR ESC ,
-.BR CTRL+c
-or
-.BR q .
+Copy mode gives easy access to past output by piping it to an editor. What
+ever the editor prints to stdout upon exiting will be stored in an internal
+register and can be pasted into other clients (via
+.B Mod\-p
+)
 .SH ENVIRONMENT VARIABLES
+.TP
+.B DVTM_TERM
 By default dvtm uses its own terminfo file and therefore sets
 .BR TERM=dvtm
 within the client windows. This can be overridden by setting the
 .BR DVTM_TERM
 environment variable to a valid terminal name before launching dvtm.
+.TP
+.B DVTM_EDITOR
+When entering the copymode dvtm pipes the whole scroll back buffer to
+.BR DVTM_EDITOR
+which is launched with
+.BR \-
+(indicating to read from stdin) as its only argument.
+If
+.BR DVTM_EDITOR
+is not set
+.BR EDITOR
+is checked, if this is also not set the default value specified in
+.BR config.h
+is used instead.
 .SH EXAMPLE
 See the
 .I dvtm-status

@@ -58,11 +58,13 @@ typedef struct Client Client;
 struct Client {
 	WINDOW *window;
 	Vt *term;
+	Vt *editor, *app;
+	int editor_fds[2];
+	bool editor_died;
 	const char *cmd;
 	char title[255];
 	int order;
 	pid_t pid;
-	int pty;
 	unsigned short int id;
 	unsigned short int x;
 	unsigned short int y;
@@ -144,6 +146,12 @@ typedef struct {
 	unsigned short int id;
 } CmdFifo;
 
+typedef struct {
+	char *data;
+	size_t len;
+	size_t size;
+} Buffer;
+
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define sstrlen(str) (sizeof(str) - 1)
 #define max(x, y) ((x) > (y) ? (x) : (y))
@@ -207,7 +215,7 @@ static Layout *layout = layouts;
 static StatusBar bar = { -1, BAR_POS, 1 };
 static CmdFifo cmdfifo = { -1 };
 static const char *shell;
-static char *copybuf;
+static Buffer copybuf;
 static volatile sig_atomic_t running = true;
 static bool runinall = false;
 
@@ -467,12 +475,6 @@ term_event_handler(Vt *term, int event, void *event_data) {
 			draw_border(c);
 		applycolorrules(c);
 		break;
-	case VT_EVENT_COPY_TEXT:
-		if (event_data) {
-			free(copybuf);
-			copybuf = event_data;
-		}
-		break;
 	}
 }
 
@@ -504,7 +506,9 @@ resize_client(Client *c, int w, int h) {
 	}
 	if (resize_window || c->has_title_line != has_title_line) {
 		c->has_title_line = has_title_line;
-		vt_resize(c->term, h - has_title_line, w);
+		vt_resize(c->app, h - has_title_line, w);
+		if (c->editor)
+			vt_resize(c->editor, h - has_title_line, w);
 	}
 }
 
@@ -512,15 +516,6 @@ static void
 resize(Client *c, int x, int y, int w, int h) {
 	resize_client(c, w, h);
 	move_client(c, x, y);
-}
-
-static Client*
-get_client_by_pid(pid_t pid) {
-	for (Client *c = clients; c; c = c->next) {
-		if (c->pid == pid)
-			return c;
-	}
-	return NULL;
 }
 
 static Client*
@@ -553,10 +548,19 @@ sigchld_handler(int sig) {
 			eprint("waitpid: %s\n", strerror(errno));
 			break;
 		}
+
 		debug("child with pid %d died\n", pid);
-		Client *c = get_client_by_pid(pid);
-		if (c)
-			c->died = true;
+
+		for (Client *c = clients; c; c = c->next) {
+			if (c->pid == pid) {
+				c->died = true;
+				break;
+			}
+			if (c->editor && vt_pid_get(c->editor) == pid) {
+				c->editor_died = true;
+				break;
+			}
+		}
 	}
 
 	errno = errsv;
@@ -720,6 +724,8 @@ setup(void) {
 	sigaction(SIGCHLD, &sa, NULL);
 	sa.sa_handler = sigterm_handler;
 	sigaction(SIGTERM, &sa, NULL);
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sa, NULL);
 }
 
 static void
@@ -757,7 +763,7 @@ cleanup(void) {
 		destroy(clients);
 	vt_shutdown();
 	endwin();
-	free(copybuf);
+	free(copybuf.data);
 	if (bar.fd > 0)
 		close(bar.fd);
 	if (bar.file)
@@ -799,7 +805,8 @@ create(const char *args[]) {
 	}
 
 	c->has_title_line = show_border();
-	if (!(c->term = vt_create(screen.h - c->has_title_line, screen.w, screen.history))) {
+	c->term = c->app = vt_create(screen.h - c->has_title_line, screen.w, screen.history);
+	if (!c->term) {
 		delwin(c->window);
 		free(c);
 		return;
@@ -812,7 +819,7 @@ create(const char *args[]) {
 	}
 	if (args && args[2])
 		cwd = !strcmp(args[2], "$CWD") ? getcwd_by_pid(sel) : (char*)args[2];
-	c->pid = vt_forkpty(c->term, "/bin/sh", pargs, cwd, env, &c->pty);
+	c->pid = vt_forkpty(c->term, "/bin/sh", pargs, cwd, env, NULL, NULL);
 	if (args && args[2] && !strcmp(args[2], "$CWD"))
 		free(cwd);
 	vt_set_data(c->term, c);
@@ -831,13 +838,52 @@ create(const char *args[]) {
 
 static void
 copymode(const char *args[]) {
-	if (!sel)
+	if (!sel || sel->editor)
 		return;
-	vt_copymode_enter(sel->term);
-	if (args[0]) {
-		vt_copymode_keypress(sel->term, args[0][0]);
-		draw(sel);
+	if (!(sel->editor = vt_create(sel->h, sel->w, 0)))
+		return;
+
+	char *ed = getenv("DVTM_EDITOR");
+	const char **argv = NULL;
+	if (!ed && !(ed = getenv("EDITOR"))) {
+		ed = editor;
+		argv = editor_args;
 	}
+	if (!argv)
+		argv = (const char*[]){ ed, "-", NULL };
+
+	const char *cwd = NULL;
+	const char *env[] = { "DVTM", VERSION, NULL };
+	int *to = &sel->editor_fds[0], *from = &sel->editor_fds[1];
+
+	if (vt_forkpty(sel->editor, ed, argv, cwd, env, to, from) < 0) {
+		vt_destroy(sel->editor);
+		sel->editor = NULL;
+		return;
+	}
+
+	sel->term = sel->editor;
+
+	if (sel->editor_fds[0] != -1) {
+		char *buf = NULL;
+		size_t len = vt_content_get(sel->app, &buf);
+		char *cur = buf;
+		while (len > 0) {
+			ssize_t res = write(sel->editor_fds[0], cur, len);
+			if (res < 0) {
+				if (errno == EAGAIN || errno == EINTR)
+					continue;
+				break;
+			}
+			cur += res;
+			len -= res;
+		}
+		free(buf);
+		close(sel->editor_fds[0]);
+	}
+
+	if (args[0])
+		vt_write(sel->editor, args[0], strlen(args[0]));
 }
 
 static void
@@ -916,8 +962,8 @@ killclient(const char *args[]) {
 
 static void
 paste(const char *args[]) {
-	if (sel && copybuf)
-		vt_write(sel->term, copybuf, strlen(copybuf));
+	if (sel && copybuf.data)
+		vt_write(sel->term, copybuf.data, copybuf.len);
 }
 
 static void
@@ -1272,6 +1318,35 @@ handle_statusbar(void) {
 	}
 }
 
+static void
+handle_editor(Client *c) {
+	if (!copybuf.data && (copybuf.data = malloc(screen.history)))
+		copybuf.size = screen.history;
+	copybuf.len = 0;
+	while (copybuf.len < copybuf.size) {
+		ssize_t len = read(c->editor_fds[1], copybuf.data + copybuf.len, copybuf.size - copybuf.len);
+		if (len == -1 && errno == EINTR)
+			continue;
+		if (len == 0)
+			break;
+		copybuf.len += len;
+		if (copybuf.len == copybuf.size) {
+			copybuf.size *= 2;
+			if (!(copybuf.data = realloc(copybuf.data, copybuf.size))) {
+				copybuf.size = 0;
+				copybuf.len = 0;
+			}
+		}
+	}
+	c->editor_died = false;
+	vt_destroy(c->editor);
+	c->editor = NULL;
+	c->term = c->app;
+	vt_dirty(c->term);
+	draw_content(c);
+	wnoutrefresh(c->window);
+}
+
 static int
 open_or_create_fifo(const char *name, const char **name_created) {
 	struct stat info;
@@ -1405,14 +1480,17 @@ main(int argc, char *argv[]) {
 		}
 
 		for (Client *c = clients; c; ) {
-			if (c->died) {
+			if (c->editor && c->editor_died)
+				handle_editor(c);
+			if (!c->editor && c->died) {
 				Client *t = c->next;
 				destroy(c);
 				c = t;
 				continue;
 			}
-			FD_SET(c->pty, &rd);
-			nfds = max(nfds, c->pty);
+			int pty = c->editor ? vt_getpty(c->editor) : vt_getpty(c->app);
+			FD_SET(pty, &rd);
+			nfds = max(nfds, pty);
 			c = c->next;
 		}
 
@@ -1446,12 +1524,7 @@ main(int argc, char *argv[]) {
 				} else {
 					key_index = 0;
 					memset(keys, 0, sizeof(keys));
-					if (sel && vt_copymode(sel->term)) {
-						vt_copymode_keypress(sel->term, code);
-						draw(sel);
-					} else {
-						keypress(code);
-					}
+					keypress(code);
 				}
 			}
 			if (r == 1) /* no data available on pty's */
@@ -1464,21 +1537,22 @@ main(int argc, char *argv[]) {
 		if (bar.fd != -1 && FD_ISSET(bar.fd, &rd))
 			handle_statusbar();
 
-		for (Client *c = clients; c; ) {
-			if (FD_ISSET(c->pty, &rd) && !vt_copymode(c->term)) {
-				if (vt_process(c->term) < 0 && errno == EIO) {
-					/* client probably terminated */
-					Client *t = c->next;
-					destroy(c);
-					c = t;
-					continue;
-				}
-				if (c != sel && is_content_visible(c)) {
-					draw_content(c);
-					wnoutrefresh(c->window);
-				}
+		for (Client *c = clients; c; c = c->next) {
+			bool ed = c->editor && FD_ISSET(vt_getpty(c->editor), &rd);
+			bool vt = FD_ISSET(vt_getpty(c->app), &rd);
+
+			if (ed && vt_process(c->editor) < 0 && errno == EIO) {
+				c->editor_died = true;
+				continue;
+			} else if (vt && vt_process(c->term) < 0 && errno == EIO) {
+				c->died = true;
+				continue;
 			}
-			c = c->next;
+
+			if ((ed || vt) && c != sel && is_content_visible(c)) {
+				draw_content(c);
+				wnoutrefresh(c->window);
+			}
 		}
 
 		if (is_content_visible(sel)) {
