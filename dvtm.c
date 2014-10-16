@@ -150,7 +150,7 @@ typedef struct {
 	char *data;
 	size_t len;
 	size_t size;
-} Buffer;
+} Register;
 
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define sstrlen(str) (sizeof(str) - 1)
@@ -215,7 +215,7 @@ static Layout *layout = layouts;
 static StatusBar bar = { -1, BAR_POS, 1 };
 static CmdFifo cmdfifo = { -1 };
 static const char *shell;
-static Buffer copybuf;
+static Register copyreg;
 static volatile sig_atomic_t running = true;
 static bool runinall = false;
 
@@ -763,7 +763,7 @@ cleanup(void) {
 		destroy(clients);
 	vt_shutdown();
 	endwin();
-	free(copybuf.data);
+	free(copyreg.data);
 	if (bar.fd > 0)
 		close(bar.fd);
 	if (bar.file)
@@ -962,8 +962,8 @@ killclient(const char *args[]) {
 
 static void
 paste(const char *args[]) {
-	if (sel && copybuf.data)
-		vt_write(sel->term, copybuf.data, copybuf.len);
+	if (sel && copyreg.data)
+		vt_write(sel->term, copyreg.data, copyreg.len);
 }
 
 static void
@@ -1320,21 +1320,21 @@ handle_statusbar(void) {
 
 static void
 handle_editor(Client *c) {
-	if (!copybuf.data && (copybuf.data = malloc(screen.history)))
-		copybuf.size = screen.history;
-	copybuf.len = 0;
-	while (copybuf.len < copybuf.size) {
-		ssize_t len = read(c->editor_fds[1], copybuf.data + copybuf.len, copybuf.size - copybuf.len);
+	if (!copyreg.data && (copyreg.data = malloc(screen.history)))
+		copyreg.size = screen.history;
+	copyreg.len = 0;
+	while (copyreg.len < copyreg.size) {
+		ssize_t len = read(c->editor_fds[1], copyreg.data + copyreg.len, copyreg.size - copyreg.len);
 		if (len == -1 && errno == EINTR)
 			continue;
 		if (len == 0)
 			break;
-		copybuf.len += len;
-		if (copybuf.len == copybuf.size) {
-			copybuf.size *= 2;
-			if (!(copybuf.data = realloc(copybuf.data, copybuf.size))) {
-				copybuf.size = 0;
-				copybuf.len = 0;
+		copyreg.len += len;
+		if (copyreg.len == copyreg.size) {
+			copyreg.size *= 2;
+			if (!(copyreg.data = realloc(copyreg.data, copyreg.size))) {
+				copyreg.size = 0;
+				copyreg.len = 0;
 			}
 		}
 	}
