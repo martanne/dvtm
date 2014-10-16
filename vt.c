@@ -20,7 +20,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <langinfo.h>
-#include <alloca.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdio.h>
@@ -37,9 +36,6 @@
 # include <libutil.h>
 #elif defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 # include <util.h>
-#endif
-#if defined(__CYGWIN__) || defined(_AIX) || defined(__sun)
-# include <alloca.h>
 #endif
 
 #include "vt.h"
@@ -246,8 +242,7 @@ static void row_roll(Row *start, Row *end, int count)
 		count += n;
 
 	if (count) {
-		Row *buf = alloca(count * sizeof(Row));
-
+		char buf[count * sizeof(Row)];
 		memcpy(buf, start, count * sizeof(Row));
 		memmove(start, start + count, (n - count) * sizeof(Row));
 		memcpy(end - count, buf, count * sizeof(Row));
