@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <langinfo.h>
+#include <alloca.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdio.h>
