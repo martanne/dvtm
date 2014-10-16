@@ -11,6 +11,7 @@
  * See LICENSE for details.
  */
 
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
@@ -1450,11 +1451,18 @@ main(int argc, char *argv[]) {
 	KeyCombo keys;
 	unsigned int key_index = 0;
 	memset(keys, 0, sizeof(keys));
+	sigset_t emptyset, blockset;
 
 	if (!parse_args(argc, argv)) {
 		setup();
 		startup(NULL);
 	}
+
+	sigemptyset(&emptyset);
+	sigemptyset(&blockset);
+	sigaddset(&blockset, SIGWINCH);
+	sigaddset(&blockset, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &blockset, NULL);
 
 	while (running) {
 		int r, nfds = 0;
@@ -1494,7 +1502,7 @@ main(int argc, char *argv[]) {
 		}
 
 		doupdate();
-		r = select(nfds + 1, &rd, NULL, NULL, NULL);
+		r = pselect(nfds + 1, &rd, NULL, NULL, NULL, &emptyset);
 
 		if (r == -1 && errno == EINTR)
 			continue;
