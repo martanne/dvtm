@@ -93,7 +93,7 @@ static char vt_term[32] = "dvtm";
 
 typedef struct {
 	wchar_t text;
-	uint16_t attr;
+	attr_t attr;
 	short fg;
 	short bg;
 } Cell;
@@ -115,7 +115,7 @@ typedef struct {
 	int scroll_above;
 	int scroll_below;
 	int rows, cols, maxcols;
-	unsigned curattrs, savattrs;
+	attr_t curattrs, savattrs;
 	int curs_col, curs_srow, curs_scol;
 	short curfg, curbg, savfg, savbg;
 } Buffer;
@@ -124,7 +124,7 @@ struct Vt {
 	Buffer buffer_normal;
 	Buffer buffer_alternate;
 	Buffer *buffer;
-	unsigned defattrs;
+	attr_t defattrs;
 	short deffg, defbg;
 	int pty;
 	pid_t childpid;
@@ -217,7 +217,7 @@ static void process_nonprinting(Vt *t, wchar_t wc);
 static void send_curs(Vt *t);
 
 __attribute__ ((const))
-static uint16_t build_attrs(unsigned curattrs)
+static attr_t build_attrs(attr_t curattrs)
 {
 	return ((curattrs & ~A_COLOR) | COLOR_PAIR(curattrs & 0xff))
 	    >> NCURSES_ATTR_SHIFT;
@@ -1192,7 +1192,7 @@ int vt_process(Vt *t)
 	return 0;
 }
 
-void vt_set_default_colors(Vt *t, unsigned attrs, short fg, short bg)
+void vt_set_default_colors(Vt *t, attr_t attrs, short fg, short bg)
 {
 	t->defattrs = attrs;
 	t->deffg = fg;
@@ -1411,7 +1411,7 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 					cell->fg = t->deffg;
 				if (cell->bg == -1)
 					cell->bg = t->defbg;
-				wattrset(win, (attr_t) cell->attr << NCURSES_ATTR_SHIFT);
+				wattrset(win, cell->attr << NCURSES_ATTR_SHIFT);
 				wcolor_set(win, vt_color_get(t, cell->fg, cell->bg), NULL);
 			}
 

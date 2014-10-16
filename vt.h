@@ -66,7 +66,7 @@ void vt_set_escseq_handler(Vt *, vt_escseq_handler_t);
 void vt_set_event_handler(Vt *, vt_event_handler_t);
 void vt_set_data(Vt *, void *);
 void *vt_get_data(Vt *);
-void vt_set_default_colors(Vt *, unsigned attrs, short fg, short bg);
+void vt_set_default_colors(Vt *, attr_t attrs, short fg, short bg);
 
 Vt *vt_create(int rows, int cols, int scroll_buf_sz);
 void vt_resize(Vt *, int rows, int cols);

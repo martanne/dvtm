@@ -447,7 +447,7 @@ static void
 applycolorrules(Client *c) {
 	const ColorRule *r = colorrules;
 	short fg = r->color->fg, bg = r->color->bg;
-	unsigned attrs = r->attrs;
+	attr_t attrs = r->attrs;
 
 	for (unsigned int i = 1; i < countof(colorrules); i++) {
 		r = &colorrules[i];
