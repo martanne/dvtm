@@ -11,7 +11,6 @@
  * See LICENSE for details.
  */
 
-#define _GNU_SOURCE
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
