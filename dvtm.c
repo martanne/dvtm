@@ -60,7 +60,7 @@ struct Client {
 	Vt *term;
 	Vt *editor, *app;
 	int editor_fds[2];
-	bool editor_died;
+	volatile sig_atomic_t editor_died;
 	const char *cmd;
 	char title[255];
 	int order;
@@ -72,7 +72,7 @@ struct Client {
 	unsigned short int h;
 	bool has_title_line;
 	bool minimized;
-	bool died;
+	volatile sig_atomic_t died;
 	Client *next;
 	Client *prev;
 };
