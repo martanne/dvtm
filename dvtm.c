@@ -1196,8 +1196,8 @@ handle_cmdfifo(void) {
 			if (*s && (cmd = get_cmd_by_name(s)) != NULL) {
 				bool quote = false;
 				int argc = 0;
-				/* XXX: initializer assumes MAX_ARGS == 2 use a initialization loop? */
-				const char *args[MAX_ARGS] = { NULL, NULL, NULL}, *arg;
+				const char *args[MAX_ARGS], *arg;
+				memset(args, 0, sizeof(args));
 				/* if arguments were specified in config.h ignore the one given via
 				 * the named pipe and thus skip everything until we find a new line
 				 */
