@@ -673,7 +673,6 @@ static bool
 checkshell(const char *shell) {
 	if (shell == NULL || *shell == '\0' || *shell != '/')
 		return false;
-	fprintf(stderr, "%s == %s\n", strrchr(shell, '/')+1, dvtm_name);
 	if (!strcmp(strrchr(shell, '/')+1, dvtm_name))
 		return false;
 	if (access(shell, X_OK))
