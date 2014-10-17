@@ -1,7 +1,7 @@
 /* specify a default editor and arguments which is used in case
  * neither $DVTM_EDITOR nor $EDITOR is set. */
-static char editor[] = "sandy";
-static const char *editor_args[] = { editor, "-d", "-", NULL };
+static char editor[] = "vis";
+static const char *editor_args[] = { editor, "-", NULL };
 
 /* valid curses attributes are listed below they can be ORed
  *
