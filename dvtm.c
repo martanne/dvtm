@@ -1324,8 +1324,11 @@ handle_editor(Client *c) {
 	copyreg.len = 0;
 	while (copyreg.len < copyreg.size) {
 		ssize_t len = read(c->editor_fds[1], copyreg.data + copyreg.len, copyreg.size - copyreg.len);
-		if (len == -1 && errno == EINTR)
-			continue;
+		if (len == -1) {
+			if (errno == EINTR)
+				continue;
+			break;
+		}
 		if (len == 0)
 			break;
 		copyreg.len += len;
