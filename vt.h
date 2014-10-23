@@ -32,17 +32,12 @@
 #endif
 
 typedef struct Vt Vt;
-
-enum {
-	VT_EVENT_TITLE,
-};
-
-typedef void (*vt_event_handler_t)(Vt *, int event, void *data);
+typedef void (*vt_title_handler_t)(Vt*, const char *data);
 
 void vt_init(void);
 void vt_set_keytable(char const * const keytable_overlay[], int count);
 void vt_shutdown(void);
-void vt_set_event_handler(Vt *, vt_event_handler_t);
+void vt_title_handler_set(Vt*, vt_title_handler_t);
 void vt_set_data(Vt *, void *);
 void *vt_get_data(Vt *);
 void vt_set_default_colors(Vt *, attr_t attrs, short fg, short bg);

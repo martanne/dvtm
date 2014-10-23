@@ -461,19 +461,15 @@ applycolorrules(Client *c) {
 }
 
 static void
-term_event_handler(Vt *term, int event, void *event_data) {
+term_title_handler(Vt *term, const char *title) {
 	Client *c = (Client *)vt_get_data(term);
-	switch (event) {
-	case VT_EVENT_TITLE:
-		if (event_data)
-			strncpy(c->title, event_data, sizeof(c->title) - 1);
-		c->title[event_data ? sizeof(c->title) - 1 : 0] = '\0';
-		settitle(c);
-		if (!isarrange(fullscreen) || sel == c)
-			draw_border(c);
-		applycolorrules(c);
-		break;
-	}
+	if (title)
+		strncpy(c->title, title, sizeof(c->title) - 1);
+	c->title[title ? sizeof(c->title) - 1 : 0] = '\0';
+	settitle(c);
+	if (!isarrange(fullscreen) || sel == c)
+		draw_border(c);
+	applycolorrules(c);
 }
 
 static void
@@ -820,7 +816,7 @@ create(const char *args[]) {
 	if (args && args[2] && !strcmp(args[2], "$CWD"))
 		free(cwd);
 	vt_set_data(c->term, c);
-	vt_set_event_handler(c->term, term_event_handler);
+	vt_title_handler_set(c->term, term_title_handler);
 	c->w = screen.w;
 	c->h = screen.h;
 	c->x = wax;

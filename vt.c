@@ -146,8 +146,7 @@ struct Vt {
 
 	/* xterm style window title */
 	char title[256];
-
-	vt_event_handler_t event_handler;
+	vt_title_handler_t title_handler;
 	void *data;
 };
 
@@ -883,12 +882,11 @@ static void interpret_osc(Vt *t)
 	char *data = NULL;
 	int command = strtoul(t->ebuf + 1, &data, 10);
 	if (data && *data == ';') {
-		++data;
 		switch (command) {
 		case 0: /* icon name and window title */
 		case 2: /* window title */
-			if (t->event_handler)
-				t->event_handler(t, VT_EVENT_TITLE, data);
+			if (t->title_handler)
+				t->title_handler(t, data+1);
 			break;
 		case 1: /* icon name */
 			break;
@@ -1723,9 +1721,9 @@ void vt_shutdown(void)
 	free(color2palette);
 }
 
-void vt_set_event_handler(Vt *t, vt_event_handler_t handler)
+void vt_title_handler_set(Vt *t, vt_title_handler_t handler)
 {
-	t->event_handler = handler;
+	t->title_handler = handler;
 }
 
 void vt_set_data(Vt *t, void *data)
