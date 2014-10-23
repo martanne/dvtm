@@ -834,7 +834,7 @@ static void
 copymode(const char *args[]) {
 	if (!sel || sel->editor)
 		return;
-	if (!(sel->editor = vt_create(sel->h, sel->w, 0)))
+	if (!(sel->editor = vt_create(sel->h - sel->has_title_line, sel->w, 0)))
 		return;
 
 	char *ed = getenv("DVTM_EDITOR");
@@ -1544,18 +1544,17 @@ main(int argc, char *argv[]) {
 			handle_statusbar();
 
 		for (Client *c = clients; c; c = c->next) {
-			bool ed = c->editor && FD_ISSET(vt_pty_get(c->editor), &rd);
-			bool vt = FD_ISSET(vt_pty_get(c->app), &rd);
-
-			if (ed && vt_process(c->editor) < 0 && errno == EIO) {
-				c->editor_died = true;
-				continue;
-			} else if (vt && vt_process(c->term) < 0 && errno == EIO) {
-				c->died = true;
-				continue;
+			if (FD_ISSET(vt_pty_get(c->term), &rd)) {
+				if (vt_process(c->term) < 0 && errno == EIO) {
+					if (c->editor)
+						c->editor_died = true;
+					else
+						c->died = true;
+					continue;
+				}
 			}
 
-			if ((ed || vt) && c != sel && is_content_visible(c)) {
+			if (c != sel && is_content_visible(c)) {
 				draw_content(c);
 				wnoutrefresh(c->window);
 			}
