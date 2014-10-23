@@ -199,8 +199,6 @@ extern Screen screen;
 static unsigned int waw, wah, wax, way;
 static Client *clients = NULL;
 static char *title;
-#define COLOR(c) COLOR_PAIR(colors[c].pair)
-#define NOMOD ERR
 
 #include "config.h"
 

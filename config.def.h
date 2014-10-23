@@ -26,6 +26,7 @@ static Color colors[] = {
 	[BLUE]    = { .fg = COLOR_BLUE, .bg = -1, .fg256 = 68, .bg256 = -1, },
 };
 
+#define COLOR(c)        COLOR_PAIR(colors[c].pair)
 /* curses attributes for the currently focused window */
 #define SELECTED_ATTR   (COLOR(BLUE) | A_NORMAL)
 /* curses attributes for normal (not selected) windows */
