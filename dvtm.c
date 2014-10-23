@@ -46,7 +46,7 @@ typedef struct {
 	int history;
 	int w;
 	int h;
-	bool need_resize;
+	volatile sig_atomic_t need_resize;
 } Screen;
 
 typedef struct {
