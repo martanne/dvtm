@@ -15,7 +15,9 @@
  * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
  * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -81,7 +83,6 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define sstrlen(str) (sizeof(str) - 1)
 
-#define COPYMODE_ATTR A_REVERSE
 static bool is_utf8, has_default_colors;
 static short color_pairs_reserved, color_pairs_max, color_pair_current;
 static short *color2palette, default_fg, default_bg;
@@ -1170,7 +1171,7 @@ int vt_process(Vt *t)
 	return 0;
 }
 
-void vt_set_default_colors(Vt *t, attr_t attrs, short fg, short bg)
+void vt_default_colors_set(Vt *t, attr_t attrs, short fg, short bg)
 {
 	t->defattrs = attrs;
 	t->deffg = fg;
@@ -1517,7 +1518,7 @@ pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *cwd, cons
 	return t->childpid = pid;
 }
 
-int vt_getpty(Vt *t)
+int vt_pty_get(Vt *t)
 {
 	return t->pty;
 }
@@ -1707,7 +1708,7 @@ void vt_init(void)
 		strncat(vt_term, color_suffix, sizeof(color_suffix) - 1);
 }
 
-void vt_set_keytable(const char * const keytable_overlay[], int count)
+void vt_keytable_set(const char * const keytable_overlay[], int count)
 {
 	for (int k = 0; k < count && k < KEY_MAX; k++) {
 		const char *keyseq = keytable_overlay[k];
@@ -1726,19 +1727,19 @@ void vt_title_handler_set(Vt *t, vt_title_handler_t handler)
 	t->title_handler = handler;
 }
 
-void vt_set_data(Vt *t, void *data)
+void vt_data_set(Vt *t, void *data)
 {
 	t->data = data;
 }
 
-void *vt_get_data(Vt *t)
+void *vt_data_get(Vt *t)
 {
 	return t->data;
 }
 
-unsigned vt_cursor(Vt *t)
+bool vt_cursor_visible(Vt *t)
 {
-	return t->buffer->scroll_below ? 0 : !t->curshid;
+	return t->buffer->scroll_below ? false : !t->curshid;
 }
 
 pid_t vt_pid_get(Vt *t) {

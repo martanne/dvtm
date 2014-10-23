@@ -10,7 +10,10 @@
  *
  * See LICENSE for details.
  */
-
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <wchar.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -438,7 +441,7 @@ focus(Client *c) {
 		draw_border(c);
 		wnoutrefresh(c->window);
 	}
-	curs_set(!c->minimized && vt_cursor(c->term));
+	curs_set(!c->minimized && vt_cursor_visible(c->term));
 }
 
 static void
@@ -457,12 +460,12 @@ applycolorrules(Client *c) {
 		}
 	}
 
-	vt_set_default_colors(c->term, attrs, fg, bg);
+	vt_default_colors_set(c->term, attrs, fg, bg);
 }
 
 static void
 term_title_handler(Vt *term, const char *title) {
-	Client *c = (Client *)vt_get_data(term);
+	Client *c = (Client *)vt_data_get(term);
 	if (title)
 		strncpy(c->title, title, sizeof(c->title) - 1);
 	c->title[title ? sizeof(c->title) - 1 : 0] = '\0';
@@ -697,7 +700,7 @@ setup(void) {
 	mouse_setup();
 	raw();
 	vt_init();
-	vt_set_keytable(keytable, countof(keytable));
+	vt_keytable_set(keytable, countof(keytable));
 	for (unsigned int i = 0; i < countof(colors); i++) {
 		if (COLORS == 256) {
 			if (colors[i].fg256)
@@ -815,7 +818,7 @@ create(const char *args[]) {
 	c->pid = vt_forkpty(c->term, "/bin/sh", pargs, cwd, env, NULL, NULL);
 	if (args && args[2] && !strcmp(args[2], "$CWD"))
 		free(cwd);
-	vt_set_data(c->term, c);
+	vt_data_set(c->term, c);
 	vt_title_handler_set(c->term, term_title_handler);
 	c->w = screen.w;
 	c->h = screen.h;
@@ -988,7 +991,7 @@ scrollback(const char *args[]) {
 		vt_scroll(sel->term,  sel->h/2);
 
 	draw(sel);
-	curs_set(vt_cursor(sel->term));
+	curs_set(vt_cursor_visible(sel->term));
 }
 
 static void
@@ -1491,7 +1494,7 @@ main(int argc, char *argv[]) {
 				c = t;
 				continue;
 			}
-			int pty = c->editor ? vt_getpty(c->editor) : vt_getpty(c->app);
+			int pty = c->editor ? vt_pty_get(c->editor) : vt_pty_get(c->app);
 			FD_SET(pty, &rd);
 			nfds = max(nfds, pty);
 			c = c->next;
@@ -1541,8 +1544,8 @@ main(int argc, char *argv[]) {
 			handle_statusbar();
 
 		for (Client *c = clients; c; c = c->next) {
-			bool ed = c->editor && FD_ISSET(vt_getpty(c->editor), &rd);
-			bool vt = FD_ISSET(vt_getpty(c->app), &rd);
+			bool ed = c->editor && FD_ISSET(vt_pty_get(c->editor), &rd);
+			bool vt = FD_ISSET(vt_pty_get(c->app), &rd);
 
 			if (ed && vt_process(c->editor) < 0 && errno == EIO) {
 				c->editor_died = true;
@@ -1560,7 +1563,7 @@ main(int argc, char *argv[]) {
 
 		if (is_content_visible(sel)) {
 			draw_content(sel);
-			curs_set(vt_cursor(sel->term));
+			curs_set(vt_cursor_visible(sel->term));
 			wnoutrefresh(sel->window);
 		}
 	}
