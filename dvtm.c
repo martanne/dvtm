@@ -107,8 +107,6 @@ typedef struct {
 
 typedef struct {
 	void (*cmd)(const char *args[]);
-	/* needed to avoid an error about initialization
-	 * of nested flexible array members */
 	const char *args[MAX_ARGS];
 } Action;
 
@@ -841,6 +839,10 @@ copymode(const char *args[]) {
 
 	char *ed = getenv("DVTM_EDITOR");
 	const char **argv;
+	const char *cwd = NULL;
+	const char *env[] = { "DVTM", VERSION, NULL };
+	int *to = &sel->editor_fds[0], *from = &sel->editor_fds[1];
+
 	if (ed || (ed = getenv("EDITOR"))) {
 		argv = (const char*[]){ ed, "-", NULL };
 	} else if ((ed = getenv("PAGER"))) {
@@ -849,9 +851,6 @@ copymode(const char *args[]) {
 		ed = editor;
 		argv = editor_args;
 	}
-	const char *cwd = NULL;
-	const char *env[] = { "DVTM", VERSION, NULL };
-	int *to = &sel->editor_fds[0], *from = &sel->editor_fds[1];
 
 	if (vt_forkpty(sel->editor, ed, argv, cwd, env, to, from) < 0) {
 		vt_destroy(sel->editor);
