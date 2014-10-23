@@ -204,14 +204,14 @@ static char *title;
 
 /* global variables */
 static const char *dvtm_name = "dvtm";
-Screen screen = { MFACT, SCROLL_HISTORY };
+Screen screen = { .mfact = MFACT, .history = SCROLL_HISTORY };
 static Client *sel = NULL;
 static Client *lastsel = NULL;
 static Client *msel = NULL;
 static bool mouse_events_enabled = ENABLE_MOUSE;
 static Layout *layout = layouts;
-static StatusBar bar = { -1, BAR_POS, 1 };
-static CmdFifo cmdfifo = { -1 };
+static StatusBar bar = { .fd = -1, .pos = BAR_POS, .h = 1 };
+static CmdFifo cmdfifo = { .fd = -1 };
 static const char *shell;
 static Register copyreg;
 static volatile sig_atomic_t running = true;
