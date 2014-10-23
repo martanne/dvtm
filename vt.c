@@ -124,7 +124,7 @@ struct Vt {
 	attr_t defattrs;
 	short deffg, defbg;
 	int pty;
-	pid_t childpid;
+	pid_t pid;
 
 	/* flags */
 	unsigned seen_input:1;
@@ -1078,7 +1078,7 @@ static void put_wc(Vt *t, wchar_t wc)
 
 	if (!t->seen_input) {
 		t->seen_input = 1;
-		kill(-t->childpid, SIGWINCH);
+		kill(-t->pid, SIGWINCH);
 	}
 
 	if (t->escaped) {
@@ -1340,7 +1340,7 @@ void vt_resize(Vt *t, int rows, int cols)
 	buffer_resize(&t->buffer_alternate, rows, cols);
 	clamp_cursor_to_bounds(t);
 	ioctl(t->pty, TIOCSWINSZ, &ws);
-	kill(-t->childpid, SIGWINCH);
+	kill(-t->pid, SIGWINCH);
 }
 
 void vt_destroy(Vt *t)
@@ -1515,7 +1515,7 @@ pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *cwd, cons
 		*from = ed2vt[0];
 	}
 
-	return t->childpid = pid;
+	return t->pid = pid;
 }
 
 int vt_pty_get(Vt *t)
@@ -1742,8 +1742,9 @@ bool vt_cursor_visible(Vt *t)
 	return t->buffer->scroll_below ? false : !t->curshid;
 }
 
-pid_t vt_pid_get(Vt *t) {
-	return t->childpid;
+pid_t vt_pid_get(Vt *t)
+{
+	return t->pid;
 }
 
 static void buffer_boundry(Buffer *b, Row **bs, Row **be, Row **as, Row **ae) {
