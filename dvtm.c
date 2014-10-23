@@ -840,14 +840,15 @@ copymode(const char *args[]) {
 		return;
 
 	char *ed = getenv("DVTM_EDITOR");
-	const char **argv = NULL;
-	if (!ed && !(ed = getenv("EDITOR"))) {
+	const char **argv;
+	if (ed || (ed = getenv("EDITOR"))) {
+		argv = (const char*[]){ ed, "-", NULL };
+	} else if ((ed = getenv("PAGER"))) {
+		argv = (const char*[]){ ed, NULL };
+	} else {
 		ed = editor;
 		argv = editor_args;
 	}
-	if (!argv)
-		argv = (const char*[]){ ed, "-", NULL };
-
 	const char *cwd = NULL;
 	const char *env[] = { "DVTM", VERSION, NULL };
 	int *to = &sel->editor_fds[0], *from = &sel->editor_fds[1];
