@@ -31,27 +31,7 @@
 #define mmask_t unsigned long
 #endif
 
-enum {
-    /* means escape sequence was handled */
-    VT_ESCSEQ_HANDLER_OK,
-    /* means the escape sequence was not  recognized yet, but
-     * there is hope that it still will once more characters
-     * arrive (i.e. it is not yet complete).
-     *
-     * The library will thus continue collecting characters
-     * and calling the handler as each character arrives until
-     * either OK or NOWAY is returned.
-     */
-    VT_ESCSEQ_HANDLER_NOTYET,
-    /* means the escape sequence was not recognized, and there
-     * is no chance that it will even if more characters  are
-     * added to it.
-     */
-    VT_ESCSEQ_HANDLER_NOWAY
-};
-
 typedef struct Vt Vt;
-typedef int (*vt_escseq_handler_t)(Vt *, char *es);
 
 enum {
 	VT_EVENT_TITLE,
@@ -62,7 +42,6 @@ typedef void (*vt_event_handler_t)(Vt *, int event, void *data);
 void vt_init(void);
 void vt_set_keytable(char const * const keytable_overlay[], int count);
 void vt_shutdown(void);
-void vt_set_escseq_handler(Vt *, vt_escseq_handler_t);
 void vt_set_event_handler(Vt *, vt_event_handler_t);
 void vt_set_data(Vt *, void *);
 void *vt_get_data(Vt *);

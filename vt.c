@@ -148,9 +148,6 @@ struct Vt {
 	char title[256];
 
 	vt_event_handler_t event_handler;
-
-	/* custom escape sequence handler */
-	vt_escseq_handler_t escseq_handler;
 	void *data;
 };
 
@@ -910,18 +907,6 @@ static void try_interpret_escape_seq(Vt *t)
 
 	if (!*t->ebuf)
 		return;
-
-	if (t->escseq_handler) {
-		switch ((*(t->escseq_handler)) (t, t->ebuf)) {
-		case VT_ESCSEQ_HANDLER_OK:
-			cancel_escape_sequence(t);
-			return;
-		case VT_ESCSEQ_HANDLER_NOTYET:
-			if (t->elen + 1 >= sizeof(t->ebuf))
-				goto cancel;
-			return;
-		}
-	}
 
 	switch (*t->ebuf) {
 	case '#': /* ignore DECDHL, DECSWL, DECDWL, DECHCP, DECFPP */
@@ -1736,11 +1721,6 @@ void vt_set_keytable(const char * const keytable_overlay[], int count)
 void vt_shutdown(void)
 {
 	free(color2palette);
-}
-
-void vt_set_escseq_handler(Vt *t, vt_escseq_handler_t handler)
-{
-	t->escseq_handler = handler;
 }
 
 void vt_set_event_handler(Vt *t, vt_event_handler_t handler)
