@@ -841,7 +841,8 @@ copymode(const char *args[]) {
 	const char **argv;
 	const char *cwd = NULL;
 	const char *env[] = { "DVTM", VERSION, NULL };
-	int *to = &sel->editor_fds[0], *from = &sel->editor_fds[1];
+	int *to = &sel->editor_fds[0], *from = NULL;
+	sel->editor_fds[0] = sel->editor_fds[1] = -1;
 
 	if (ed || (ed = getenv("EDITOR"))) {
 		argv = (const char*[]){ ed, "-", NULL };
@@ -851,7 +852,8 @@ copymode(const char *args[]) {
 		ed = editor;
 		argv = editor_args;
 	}
-
+	if (!strcmp(ed, "vis"))
+		from = &sel->editor_fds[1];
 	if (vt_forkpty(sel->editor, ed, argv, cwd, env, to, from) < 0) {
 		vt_destroy(sel->editor);
 		sel->editor = NULL;
@@ -876,6 +878,7 @@ copymode(const char *args[]) {
 		}
 		free(buf);
 		close(sel->editor_fds[0]);
+		sel->editor_fds[0] = -1;
 	}
 
 	if (args[0])
@@ -1319,7 +1322,7 @@ handle_editor(Client *c) {
 	if (!copyreg.data && (copyreg.data = malloc(screen.history)))
 		copyreg.size = screen.history;
 	copyreg.len = 0;
-	while (copyreg.len < copyreg.size) {
+	while (c->editor_fds[1] != -1 && copyreg.len < copyreg.size) {
 		ssize_t len = read(c->editor_fds[1], copyreg.data + copyreg.len, copyreg.size - copyreg.len);
 		if (len == -1) {
 			if (errno == EINTR)
@@ -1338,6 +1341,7 @@ handle_editor(Client *c) {
 		}
 	}
 	c->editor_died = false;
+	c->editor_fds[1] = -1;
 	vt_destroy(c->editor);
 	c->editor = NULL;
 	c->term = c->app;
