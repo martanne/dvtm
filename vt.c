@@ -1869,3 +1869,7 @@ size_t vt_content_get(Vt *t, char **buf) {
 
 	return s - *buf;
 }
+
+int vt_content_start(Vt *t) {
+	return t->buffer->scroll_above;
+}

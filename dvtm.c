@@ -837,7 +837,7 @@ copymode(const char *args[]) {
 	if (!(sel->editor = vt_create(sel->h - sel->has_title_line, sel->w, 0)))
 		return;
 
-	char *ed = getenv("DVTM_EDITOR");
+	char *ed = getenv("DVTM_EDITOR"), argline[32];
 	const char **argv;
 	const char *cwd = NULL;
 	const char *env[] = { "DVTM", VERSION, NULL };
@@ -851,6 +851,10 @@ copymode(const char *args[]) {
 	} else {
 		ed = editor;
 		argv = editor_args;
+	}
+	if (!strcmp(ed, "vis") || !strcmp(ed, "vim") || !strcmp(ed, "less")) {
+		snprintf(argline, sizeof(argline), "+%d", vt_content_start(sel->app));
+		argv = (const char*[]){ ed, argline, "-", NULL };
 	}
 	if (!strcmp(ed, "vis"))
 		from = &sel->editor_fds[1];

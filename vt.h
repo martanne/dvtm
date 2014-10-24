@@ -62,5 +62,6 @@ void vt_togglebell(Vt*);
 
 pid_t vt_pid_get(Vt*);
 size_t vt_content_get(Vt*, char **s);
+int vt_content_start(Vt*);
 
 #endif /* VT_H */
