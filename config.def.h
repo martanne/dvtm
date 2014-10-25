@@ -173,6 +173,7 @@ static char const * const keytable[] = {
  */
 static Editor editors[] = {
 	{ .name = "vis",  .argv = { "vis",  "+%d", NULL      }, .filter = true  },
+	{ .name = "sandy",.argv = { "sandy","-d",  "-", NULL }, .filter = true  },
 	{ .name = "vim",  .argv = { "vim",  "+%d", "-", NULL }, .filter = false },
 	{ .name = "less", .argv = { "less", "+%d", "-", NULL }, .filter = false },
 };
