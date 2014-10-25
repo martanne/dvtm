@@ -1277,7 +1277,7 @@ static void buffer_resize(Buffer *t, int rows, int cols)
 	Row *lines = t->lines;
 
 	if (t->rows != rows) {
-		if (t->curs_row > lines + rows) {
+		if (t->curs_row >= lines + rows) {
 			/* scroll up instead of simply chopping off bottom */
 			fill_scroll_buf(t, (t->curs_row - t->lines) - rows + 1);
 		}
