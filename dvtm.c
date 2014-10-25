@@ -153,6 +153,12 @@ typedef struct {
 	size_t size;
 } Register;
 
+typedef struct {
+	char *name;
+	const char *argv[4];
+	bool filter;
+} Editor;
+
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define sstrlen(str) (sizeof(str) - 1)
 #define max(x, y) ((x) > (y) ? (x) : (y))
@@ -837,27 +843,40 @@ copymode(const char *args[]) {
 	if (!(sel->editor = vt_create(sel->h - sel->has_title_line, sel->w, 0)))
 		return;
 
-	char *ed = getenv("DVTM_EDITOR"), argline[32];
-	const char **argv;
+	char *ed = getenv("DVTM_EDITOR");
 	const char *cwd = NULL;
 	const char *env[] = { "DVTM", VERSION, NULL };
 	int *to = &sel->editor_fds[0], *from = NULL;
 	sel->editor_fds[0] = sel->editor_fds[1] = -1;
 
-	if (ed || (ed = getenv("EDITOR"))) {
-		argv = (const char*[]){ ed, "-", NULL };
-	} else if ((ed = getenv("PAGER"))) {
-		argv = (const char*[]){ ed, NULL };
-	} else {
-		ed = editor;
-		argv = editor_args;
+	if (!ed)
+		ed = getenv("EDITOR");
+	if (!ed)
+		ed = getenv("PAGER");
+	if (!ed)
+		ed = editors[0].name;
+
+	const char **argv = (const char*[]){ ed, "-", NULL };
+
+	for (unsigned int i = 0; i < countof(editors); i++) {
+		if (!strcmp(editors[i].name, ed)) {
+			argv = (const char*[]){ ed, NULL, NULL, NULL, NULL, NULL, NULL };
+			for (int j = 1; editors[i].argv[j]; j++) {
+				if (strstr(editors[i].argv[j], "%d")) {
+					char argline[32];
+					int line = vt_content_start(sel->app);
+					snprintf(argline, sizeof(argline), "+%d", line);
+					argv[j] = argline;
+				} else {
+					argv[j] = editors[i].argv[j];
+				}
+			}
+			if (editors[i].filter)
+				from = &sel->editor_fds[1];
+			break;
+		}
 	}
-	if (!strcmp(ed, "vis") || !strcmp(ed, "vim") || !strcmp(ed, "less")) {
-		snprintf(argline, sizeof(argline), "+%d", vt_content_start(sel->app));
-		argv = (const char*[]){ ed, argline, "-", NULL };
-	}
-	if (!strcmp(ed, "vis"))
-		from = &sel->editor_fds[1];
+
 	if (vt_forkpty(sel->editor, ed, argv, cwd, env, to, from) < 0) {
 		vt_destroy(sel->editor);
 		sel->editor = NULL;

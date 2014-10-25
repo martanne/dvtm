@@ -1,8 +1,3 @@
-/* specify a default editor and arguments which is used in case
- * neither $DVTM_EDITOR nor $EDITOR is set. */
-static char editor[] = "vis";
-static const char *editor_args[] = { editor, "-", NULL };
-
 /* valid curses attributes are listed below they can be ORed
  *
  * A_NORMAL        Normal display (no highlight)
@@ -168,4 +163,16 @@ static Action actions[] = {
 
 static char const * const keytable[] = {
 	/* add your custom key escape sequences */
+};
+
+/* editor to use for copy mode. If neither of DVTM_EDITOR, EDITOR and PAGER is
+ * set the first entry is chosen. Otherwise the array is consulted for supported
+ * options. A %d in argv is replaced by the line number at which the file should
+ * be opened. If filter is true the editor is expected to work even if stdout is
+ * redirected (i.e. not a terminal).
+ */
+static Editor editors[] = {
+	{ .name = "vis",  .argv = { "vis",  "+%d", NULL      }, .filter = true  },
+	{ .name = "vim",  .argv = { "vim",  "+%d", "-", NULL }, .filter = false },
+	{ .name = "less", .argv = { "less", "+%d", "-", NULL }, .filter = false },
 };
