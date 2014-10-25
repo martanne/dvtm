@@ -398,6 +398,14 @@ static void interpret_csi_sgr(Vt *t, int param[], int pcount)
 		case 1:
 			b->curattrs |= A_BOLD;
 			break;
+		case 2:
+			b->curattrs |= A_DIM;
+			break;
+#ifdef A_ITALIC
+		case 3:
+			b->curattrs |= A_ITALIC;
+			break;
+#endif
 		case 4:
 			b->curattrs |= A_UNDERLINE;
 			break;
@@ -411,8 +419,13 @@ static void interpret_csi_sgr(Vt *t, int param[], int pcount)
 			b->curattrs |= A_INVIS;
 			break;
 		case 22:
-			b->curattrs &= ~A_BOLD;
+			b->curattrs &= ~(A_BOLD | A_DIM);
 			break;
+#ifdef A_ITALIC
+		case 23:
+			b->curattrs &= ~A_ITALIC;
+			break;
+#endif
 		case 24:
 			b->curattrs &= ~A_UNDERLINE;
 			break;
