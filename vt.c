@@ -1489,6 +1489,10 @@ pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *cwd, cons
 	if (pid == 0) {
 		setsid();
 
+		sigset_t emptyset;
+		sigemptyset(&emptyset);
+		sigprocmask(SIG_SETMASK, &emptyset, NULL);
+
 		if (to) {
 			close(vt2ed[1]);
 			dup2(vt2ed[0], STDIN_FILENO);
