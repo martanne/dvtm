@@ -3,7 +3,7 @@ VERSION = 0.12
 
 # Customize below to fit your system
 
-PREFIX = /usr/local
+PREFIX ?= /usr/local
 MANPREFIX = ${PREFIX}/share/man
 # specify your systems terminfo directory
 # leave empty to install into your home folder
