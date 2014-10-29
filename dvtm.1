@@ -228,6 +228,18 @@ register and can be pasted into other clients (via
 )
 .SH ENVIRONMENT VARIABLES
 .TP
+.B DVTM
+Each process spawned by dvtm will have this variable set to the dvtm version
+it is running under.
+.TP
+.B DVTM_WINDOW_ID
+Each process also has access to its constant and unique window id.
+.TP
+.B DVTM_CMD_FIFO
+If the -c command line argument was specified upon dvtm startup, this variable
+will be set to the file name of the named pipe. Thus allowing the process
+to send commands back to dvtm.
+.TP
 .B DVTM_TERM
 By default dvtm uses its own terminfo file and therefore sets
 .BR TERM=dvtm
