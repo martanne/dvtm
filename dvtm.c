@@ -988,7 +988,6 @@ create(const char *args[]) {
 	char buf[8], *cwd = NULL;
 	snprintf(buf, sizeof buf, "%d", c->id);
 	const char *env[] = {
-		"DVTM", VERSION,
 		"DVTM_WINDOW_ID", buf,
 		NULL
 	};
@@ -1037,8 +1036,6 @@ copymode(const char *args[]) {
 		return;
 
 	char *ed = getenv("DVTM_EDITOR");
-	const char *cwd = NULL;
-	const char *env[] = { "DVTM", VERSION, NULL };
 	int *to = &sel->editor_fds[0], *from = NULL;
 	sel->editor_fds[0] = sel->editor_fds[1] = -1;
 
@@ -1070,7 +1067,7 @@ copymode(const char *args[]) {
 		}
 	}
 
-	if (vt_forkpty(sel->editor, ed, argv, cwd, env, to, from) < 0) {
+	if (vt_forkpty(sel->editor, ed, argv, NULL, NULL, to, from) < 0) {
 		vt_destroy(sel->editor);
 		sel->editor = NULL;
 		return;
@@ -1679,6 +1676,7 @@ main(int argc, char *argv[]) {
 	memset(keys, 0, sizeof(keys));
 	sigset_t emptyset, blockset;
 
+	setenv("DVTM", VERSION, 1);
 	if (!parse_args(argc, argv)) {
 		setup();
 		startup(NULL);
