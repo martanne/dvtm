@@ -208,6 +208,7 @@ static const char *keytable[KEY_MAX+1] = {
 static void puttab(Vt *t, int count);
 static void process_nonprinting(Vt *t, wchar_t wc);
 static void send_curs(Vt *t);
+static void fill_scroll_buf(Buffer *t, int s);
 
 __attribute__ ((const))
 static attr_t build_attrs(attr_t curattrs)
@@ -247,6 +248,224 @@ static void row_roll(Row *start, Row *end, int count)
 			row->dirty = true;
 	}
 }
+
+
+static void buffer_free(Buffer *t)
+{
+	for (int i = 0; i < t->rows; i++)
+		free(t->lines[i].cells);
+	free(t->lines);
+	for (int i = 0; i < t->scroll_buf_size; i++)
+		free(t->scroll_buf[i].cells);
+	free(t->scroll_buf);
+	free(t->tabs);
+}
+
+static void buffer_resize(Buffer *t, int rows, int cols)
+{
+	Row *lines = t->lines;
+
+	if (t->rows != rows) {
+		if (t->curs_row >= lines + rows) {
+			/* scroll up instead of simply chopping off bottom */
+			fill_scroll_buf(t, (t->curs_row - t->lines) - rows + 1);
+		}
+		while (t->rows > rows) {
+			free(lines[t->rows - 1].cells);
+			t->rows--;
+		}
+
+		lines = realloc(lines, sizeof(Row) * rows);
+	}
+
+	if (t->maxcols < cols) {
+		for (int row = 0; row < t->rows; row++) {
+			lines[row].cells = realloc(lines[row].cells, sizeof(Cell) * cols);
+			if (t->cols < cols)
+				row_set(lines + row, t->cols, cols - t->cols, NULL);
+			lines[row].dirty = true;
+		}
+		Row *sbuf = t->scroll_buf;
+		for (int row = 0; row < t->scroll_buf_size; row++) {
+			sbuf[row].cells = realloc(sbuf[row].cells, sizeof(Cell) * cols);
+			if (t->cols < cols)
+				row_set(sbuf + row, t->cols, cols - t->cols, NULL);
+		}
+		t->tabs = realloc(t->tabs, sizeof(*t->tabs) * cols);
+		for (int col = t->cols; col < cols; col++)
+			t->tabs[col] = !(col & 7);
+		t->maxcols = cols;
+		t->cols = cols;
+	} else if (t->cols != cols) {
+		for (int row = 0; row < t->rows; row++)
+			lines[row].dirty = true;
+		t->cols = cols;
+	}
+
+	int deltarows = 0;
+	if (t->rows < rows) {
+		while (t->rows < rows) {
+			lines[t->rows].cells = calloc(t->maxcols, sizeof(Cell));
+			row_set(lines + t->rows, 0, t->maxcols, t);
+			t->rows++;
+		}
+
+		/* prepare for backfill */
+		if (t->curs_row >= t->scroll_bot - 1) {
+			deltarows = t->lines + rows - t->curs_row - 1;
+			if (deltarows > t->scroll_above)
+				deltarows = t->scroll_above;
+		}
+	}
+
+	t->curs_row += lines - t->lines;
+	t->scroll_top = lines;
+	t->scroll_bot = lines + rows;
+	t->lines = lines;
+
+	/* perform backfill */
+	if (deltarows > 0) {
+		fill_scroll_buf(t, -deltarows);
+		t->curs_row += deltarows;
+	}
+}
+
+static bool buffer_init(Buffer *t, int rows, int cols, int scroll_buf_size)
+{
+	Row *lines, *scroll_buf;
+	t->lines = lines = calloc(rows, sizeof(Row));
+	if (!lines)
+		return false;
+	t->curattrs = A_NORMAL;	/* white text over black background */
+	t->curfg = t->curbg = -1;
+	for (Row *row = lines, *end = lines + rows; row < end; row++) {
+		row->cells = malloc(cols * sizeof(Cell));
+		if (!row->cells) {
+			t->rows = row - lines;
+			goto fail;
+		}
+		row_set(row, 0, cols, NULL);
+	}
+	t->rows = rows;
+	if (scroll_buf_size < 0)
+		scroll_buf_size = 0;
+	t->scroll_buf = scroll_buf = calloc(scroll_buf_size, sizeof(Row));
+	if (!scroll_buf && scroll_buf_size)
+		goto fail;
+	for (Row *row = scroll_buf, *end = scroll_buf + scroll_buf_size; row < end; row++) {
+		row->cells = calloc(cols, sizeof(Cell));
+		if (!row->cells) {
+			t->scroll_buf_size = row - scroll_buf;
+			goto fail;
+		}
+	}
+	t->tabs = calloc(cols, sizeof(*t->tabs));
+	if (!t->tabs)
+		goto fail;
+	for (int col = 8; col < cols; col += 8)
+		t->tabs[col] = true;
+	t->curs_row = lines;
+	t->curs_col = 0;
+	/* initial scrolling area is the whole window */
+	t->scroll_top = lines;
+	t->scroll_bot = lines + rows;
+	t->scroll_buf_size = scroll_buf_size;
+	t->maxcols = t->cols = cols;
+	return true;
+
+fail:
+	buffer_free(t);
+	return false;
+}
+
+static void buffer_boundry(Buffer *b, Row **bs, Row **be, Row **as, Row **ae) {
+	if (bs)
+		*bs = NULL;
+	if (be)
+		*be = NULL;
+	if (as)
+		*as = NULL;
+	if (ae)
+		*ae = NULL;
+	if (!b->scroll_buf_size)
+		return;
+
+	if (b->scroll_above) {
+		if (bs)
+			*bs = &b->scroll_buf[(b->scroll_cur - b->scroll_above + b->scroll_buf_size) % b->scroll_buf_size];
+		if (be)
+			*be = &b->scroll_buf[(b->scroll_cur-1 + b->scroll_buf_size) % b->scroll_buf_size];
+	}
+	if (b->scroll_below) {
+		if (as)
+			*as = &b->scroll_buf[b->scroll_cur];
+		if (ae)
+			*ae = &b->scroll_buf[(b->scroll_cur + b->scroll_below-1) % b->scroll_buf_size];
+	}
+}
+
+static Row *buffer_row_first(Buffer *b) {
+	Row *bstart;
+	if (!b->scroll_buf_size || !b->scroll_above)
+		return b->lines;
+	buffer_boundry(b, &bstart, NULL, NULL, NULL);
+	return bstart;
+}
+
+static Row *buffer_row_last(Buffer *b) {
+	Row *aend;
+	if (!b->scroll_buf_size || !b->scroll_below)
+		return b->lines + b->rows - 1;
+	buffer_boundry(b, NULL, NULL, NULL, &aend);
+	return aend;
+}
+
+static Row *buffer_row_next(Buffer *b, Row *row)
+{
+	Row *before_start, *before_end, *after_start, *after_end;
+	Row *first = b->lines, *last = b->lines + b->rows - 1;
+
+	if (!row)
+		return NULL;
+
+	buffer_boundry(b, &before_start, &before_end, &after_start, &after_end);
+
+	if (row >= first && row < last)
+		return ++row;
+	if (row == last)
+		return after_start;
+	if (row == before_end)
+		return first;
+	if (row == after_end)
+		return NULL;
+	if (row == &b->scroll_buf[b->scroll_buf_size - 1])
+		return b->scroll_buf;
+	return ++row;
+}
+
+static Row *buffer_row_prev(Buffer *b, Row *row)
+{
+	Row *before_start, *before_end, *after_start, *after_end;
+	Row *first = b->lines, *last = b->lines + b->rows - 1;
+
+	if (!row)
+		return NULL;
+
+	buffer_boundry(b, &before_start, &before_end, &after_start, &after_end);
+
+	if (row > first && row <= last)
+		return --row;
+	if (row == first)
+		return before_end;
+	if (row == before_start)
+		return NULL;
+	if (row == after_start)
+		return last;
+	if (row == b->scroll_buf)
+		return &b->scroll_buf[b->scroll_buf_size - 1];
+	return --row;
+}
+
 
 static void clamp_cursor_to_bounds(Vt *t)
 {
@@ -1191,64 +1410,6 @@ void vt_default_colors_set(Vt *t, attr_t attrs, short fg, short bg)
 	t->defbg = bg;
 }
 
-static void buffer_free(Buffer *t)
-{
-	for (int i = 0; i < t->rows; i++)
-		free(t->lines[i].cells);
-	free(t->lines);
-	for (int i = 0; i < t->scroll_buf_size; i++)
-		free(t->scroll_buf[i].cells);
-	free(t->scroll_buf);
-	free(t->tabs);
-}
-
-static bool buffer_init(Buffer *t, int rows, int cols, int scroll_buf_size)
-{
-	Row *lines, *scroll_buf;
-	t->lines = lines = calloc(rows, sizeof(Row));
-	if (!lines)
-		return false;
-	t->curattrs = A_NORMAL;	/* white text over black background */
-	t->curfg = t->curbg = -1;
-	for (Row *row = lines, *end = lines + rows; row < end; row++) {
-		row->cells = malloc(cols * sizeof(Cell));
-		if (!row->cells) {
-			t->rows = row - lines;
-			goto fail;
-		}
-		row_set(row, 0, cols, NULL);
-	}
-	t->rows = rows;
-	if (scroll_buf_size < 0)
-		scroll_buf_size = 0;
-	t->scroll_buf = scroll_buf = calloc(scroll_buf_size, sizeof(Row));
-	if (!scroll_buf && scroll_buf_size)
-		goto fail;
-	for (Row *row = scroll_buf, *end = scroll_buf + scroll_buf_size; row < end; row++) {
-		row->cells = calloc(cols, sizeof(Cell));
-		if (!row->cells) {
-			t->scroll_buf_size = row - scroll_buf;
-			goto fail;
-		}
-	}
-	t->tabs = calloc(cols, sizeof(*t->tabs));
-	if (!t->tabs)
-		goto fail;
-	for (int col = 8; col < cols; col += 8)
-		t->tabs[col] = true;
-	t->curs_row = lines;
-	t->curs_col = 0;
-	/* initial scrolling area is the whole window */
-	t->scroll_top = lines;
-	t->scroll_bot = lines + rows;
-	t->scroll_buf_size = scroll_buf_size;
-	t->maxcols = t->cols = cols;
-	return true;
-
-fail:
-	buffer_free(t);
-	return false;
-}
 
 Vt *vt_create(int rows, int cols, int scroll_buf_size)
 {
@@ -1270,75 +1431,6 @@ Vt *vt_create(int rows, int cols, int scroll_buf_size)
 	}
 	t->buffer = &t->buffer_normal;
 	return t;
-}
-
-static void buffer_resize(Buffer *t, int rows, int cols)
-{
-	Row *lines = t->lines;
-
-	if (t->rows != rows) {
-		if (t->curs_row >= lines + rows) {
-			/* scroll up instead of simply chopping off bottom */
-			fill_scroll_buf(t, (t->curs_row - t->lines) - rows + 1);
-		}
-		while (t->rows > rows) {
-			free(lines[t->rows - 1].cells);
-			t->rows--;
-		}
-
-		lines = realloc(lines, sizeof(Row) * rows);
-	}
-
-	if (t->maxcols < cols) {
-		for (int row = 0; row < t->rows; row++) {
-			lines[row].cells = realloc(lines[row].cells, sizeof(Cell) * cols);
-			if (t->cols < cols)
-				row_set(lines + row, t->cols, cols - t->cols, NULL);
-			lines[row].dirty = true;
-		}
-		Row *sbuf = t->scroll_buf;
-		for (int row = 0; row < t->scroll_buf_size; row++) {
-			sbuf[row].cells = realloc(sbuf[row].cells, sizeof(Cell) * cols);
-			if (t->cols < cols)
-				row_set(sbuf + row, t->cols, cols - t->cols, NULL);
-		}
-		t->tabs = realloc(t->tabs, sizeof(*t->tabs) * cols);
-		for (int col = t->cols; col < cols; col++)
-			t->tabs[col] = !(col & 7);
-		t->maxcols = cols;
-		t->cols = cols;
-	} else if (t->cols != cols) {
-		for (int row = 0; row < t->rows; row++)
-			lines[row].dirty = true;
-		t->cols = cols;
-	}
-
-	int deltarows = 0;
-	if (t->rows < rows) {
-		while (t->rows < rows) {
-			lines[t->rows].cells = calloc(t->maxcols, sizeof(Cell));
-			row_set(lines + t->rows, 0, t->maxcols, t);
-			t->rows++;
-		}
-
-		/* prepare for backfill */
-		if (t->curs_row >= t->scroll_bot - 1) {
-			deltarows = t->lines + rows - t->curs_row - 1;
-			if (deltarows > t->scroll_above)
-				deltarows = t->scroll_above;
-		}
-	}
-
-	t->curs_row += lines - t->lines;
-	t->scroll_top = lines;
-	t->scroll_bot = lines + rows;
-	t->lines = lines;
-
-	/* perform backfill */
-	if (deltarows > 0) {
-		fill_scroll_buf(t, -deltarows);
-		t->curs_row += deltarows;
-	}
 }
 
 void vt_resize(Vt *t, int rows, int cols)
@@ -1762,94 +1854,6 @@ bool vt_cursor_visible(Vt *t)
 pid_t vt_pid_get(Vt *t)
 {
 	return t->pid;
-}
-
-static void buffer_boundry(Buffer *b, Row **bs, Row **be, Row **as, Row **ae) {
-	if (bs)
-		*bs = NULL;
-	if (be)
-		*be = NULL;
-	if (as)
-		*as = NULL;
-	if (ae)
-		*ae = NULL;
-	if (!b->scroll_buf_size)
-		return;
-
-	if (b->scroll_above) {
-		if (bs)
-			*bs = &b->scroll_buf[(b->scroll_cur - b->scroll_above + b->scroll_buf_size) % b->scroll_buf_size];
-		if (be)
-			*be = &b->scroll_buf[(b->scroll_cur-1 + b->scroll_buf_size) % b->scroll_buf_size];
-	}
-	if (b->scroll_below) {
-		if (as)
-			*as = &b->scroll_buf[b->scroll_cur];
-		if (ae)
-			*ae = &b->scroll_buf[(b->scroll_cur + b->scroll_below-1) % b->scroll_buf_size];
-	}
-}
-
-static Row *buffer_row_first(Buffer *b) {
-	Row *bstart;
-	if (!b->scroll_buf_size || !b->scroll_above)
-		return b->lines;
-	buffer_boundry(b, &bstart, NULL, NULL, NULL);
-	return bstart;
-}
-
-static Row *buffer_row_last(Buffer *b) {
-	Row *aend;
-	if (!b->scroll_buf_size || !b->scroll_below)
-		return b->lines + b->rows - 1;
-	buffer_boundry(b, NULL, NULL, NULL, &aend);
-	return aend;
-}
-
-static Row *buffer_row_next(Buffer *b, Row *row)
-{
-	Row *before_start, *before_end, *after_start, *after_end;
-	Row *first = b->lines, *last = b->lines + b->rows - 1;
-
-	if (!row)
-		return NULL;
-
-	buffer_boundry(b, &before_start, &before_end, &after_start, &after_end);
-
-	if (row >= first && row < last)
-		return ++row;
-	if (row == last)
-		return after_start;
-	if (row == before_end)
-		return first;
-	if (row == after_end)
-		return NULL;
-	if (row == &b->scroll_buf[b->scroll_buf_size - 1])
-		return b->scroll_buf;
-	return ++row;
-}
-
-static Row *buffer_row_prev(Buffer *b, Row *row)
-{
-	Row *before_start, *before_end, *after_start, *after_end;
-	Row *first = b->lines, *last = b->lines + b->rows - 1;
-
-	if (!row)
-		return NULL;
-
-	buffer_boundry(b, &before_start, &before_end, &after_start, &after_end);
-
-	if (row > first && row <= last)
-		return --row;
-	if (row == first)
-		return before_end;
-	if (row == before_start)
-		return NULL;
-	if (row == after_start)
-		return last;
-	if (row == b->scroll_buf)
-		return &b->scroll_buf[b->scroll_buf_size - 1];
-	return --row;
 }
 
 size_t vt_content_get(Vt *t, char **buf) {
