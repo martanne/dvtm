@@ -1016,12 +1016,8 @@ create(const char *args[]) {
 		free(cwd);
 	vt_data_set(c->term, c);
 	vt_title_handler_set(c->term, term_title_handler);
-	c->w = screen.w;
-	c->h = screen.h;
 	c->x = wax;
 	c->y = way;
-	c->order = 0;
-	c->minimized = false;
 	debug("client with pid %d forked\n", c->pid);
 	attach(c);
 	focus(c);
