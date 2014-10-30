@@ -100,32 +100,79 @@ typedef struct {
 	unsigned dirty:1;
 } Row;
 
+/* Buffer holding the current terminal window content (as an array) as well
+ * as the scroll back buffer content (as a circular/ring buffer).
+ *
+ * If new content is added to terminal the view port slides down and the
+ * previously top most line is moved into the scroll back buffer at postion
+ * scroll_index. This index will eventually wrap around and thus overwrite
+ * the oldest lines.
+ *
+ * In the scenerio below a scroll up has been performed. That is 'scroll_above'
+ * lines still lie above the current view port. Further scrolling up will show
+ * them. Similarly 'scroll_below' is the amount of lines below the current
+ * viewport.
+ *
+ * The function buffer_boundary sets the row pointers to the start/end range
+ * of the section delimiting the region before/after the viewport. The functions
+ * buffer_row_{first,last} return the first/last logical row. And
+ * buffer_row_{next,prev} allows to iterate over the logical lines in either
+ * direction.
+ *
+ *                                     scroll back buffer
+ *
+ *                      scroll_buf->+----------------+-----+
+ *                                  |                |     | ^  \
+ *                                  |     before     |     | |  |
+ *    current terminal content      |    viewport    |     | |  |
+ *                                  |                |     |    |
+ *    +----------------+-----+\     |                |     | s   > scroll_above
+ *  ^ |                |  i  | \    |                |  i  | c  |
+ *  | |                |  n  |  \   |                |  n  | r  |
+ *    |                |  v  |   \  |                |  v  | o  |
+ *  r |                |  i  |    \ |                |  i  | l  /
+ *  o |    viewport    |  s  |     >|<- scroll_index |  s  | l  \
+ *  w |                |  i  |    / |                |  i  |    |
+ *  s |                |  b  |   /  |     after      |  b  | s   > scroll_below
+ *    |                |  l  |  /   |    viewport    |  l  | i  |
+ *  v |                |  e  | /    |                |  e  | z  /
+ *    +----------------+-----+/     |     unused     |     | e
+ *     <-    maxcols      ->        |   scroll back  |     |
+ *     <-    cols    ->             |     buffer     |     | |
+ *                                  |                |     | |
+ *                                  |                |     | v
+ *          roll_buf + scroll_size->+----------------+-----+
+ *                                   <-    maxcols       ->
+ *                                   <-    cols    ->
+ */
 typedef struct {
-	Row *lines;
-	Row *curs_row;
-	Row *scroll_buf;
-	Row *scroll_top;
-	Row *scroll_bot;
-	bool *tabs;
-	int scroll_size;
-	int scroll_index;
-	int scroll_above;
-	int scroll_below;
-	int rows, cols, maxcols;
-	attr_t curattrs, savattrs;
-	int curs_col, curs_srow, curs_scol;
-	short curfg, curbg, savfg, savbg;
+	Row *lines;            /* array of Row pointers of size 'rows' */
+	Row *curs_row;         /* row on which the cursor currently resides */
+	Row *scroll_buf;       /* a ring buffer holding the scroll back content */
+	Row *scroll_top;       /* row in lines where scrolling region starts */
+	Row *scroll_bot;       /* row in lines where scrolling region ends */
+	bool *tabs;            /* a boolean flag for each column whether it is a tab */
+	int scroll_size;       /* maximal capacity of scroll back buffer (in lines) */
+	int scroll_index;      /* current index into the ring buffer */
+	int scroll_above;      /* number of lines above current viewport */
+	int scroll_below;      /* number of lines below current viewport */
+	int rows, cols;        /* current dimension of buffer */
+	int maxcols;           /* allocated cells (maximal cols over time) */
+	attr_t curattrs, savattrs; /* current and saved attributes for cells */
+	int curs_col;          /* current cursor column (zero based) */
+	int curs_srow, curs_scol; /* saved cursor row/colmn (zero based) */
+	short curfg, curbg;    /* current fore and background colors */
+	short savfg, savbg;    /* saved colors */
 } Buffer;
 
 struct Vt {
-	Buffer buffer_normal;
-	Buffer buffer_alternate;
-	Buffer *buffer;
-	attr_t defattrs;
-	short deffg, defbg;
-	int pty;
-	pid_t pid;
-
+	Buffer buffer_normal;    /* normal screen buffer */
+	Buffer buffer_alternate; /* alternate screen buffer */
+	Buffer *buffer;          /* currently active buffer (one of the above) */
+	attr_t defattrs;         /* attributes to use for normal/empty cells */
+	short deffg, defbg;      /* colors to use for back normal/empty cells (white/black) */
+	int pty;                 /* master side pty file descriptor */
+	pid_t pid;               /* process id of the process running in this vt */
 	/* flags */
 	unsigned seen_input:1;
 	unsigned insert:1;
@@ -142,13 +189,10 @@ struct Vt {
 	char rbuf[BUFSIZ];
 	char ebuf[BUFSIZ];
 	unsigned int rlen, elen;
-	/* last known start row, start column */
-	int srow, scol;
-
-	/* xterm style window title */
-	char title[256];
-	vt_title_handler_t title_handler;
-	void *data;
+	int srow, scol;          /* last known offset to display start row, start column */
+	char title[256];         /* xterm style window title */
+	vt_title_handler_t title_handler; /* hook which is called when title changes */
+	void *data;              /* user supplied data */
 };
 
 static const char *keytable[KEY_MAX+1] = {
