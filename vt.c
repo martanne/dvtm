@@ -208,7 +208,6 @@ static const char *keytable[KEY_MAX+1] = {
 static void puttab(Vt *t, int count);
 static void process_nonprinting(Vt *t, wchar_t wc);
 static void send_curs(Vt *t);
-static void fill_scroll_buf(Buffer *t, int s);
 
 __attribute__ ((const))
 static attr_t build_attrs(attr_t curattrs)
@@ -249,7 +248,6 @@ static void row_roll(Row *start, Row *end, int count)
 	}
 }
 
-
 static void buffer_free(Buffer *b)
 {
 	for (int i = 0; i < b->rows; i++)
@@ -261,6 +259,51 @@ static void buffer_free(Buffer *b)
 	free(b->tabs);
 }
 
+static void buffer_scroll(Buffer *b, int s)
+{
+	/* work in screenfuls */
+	int ssz = b->scroll_bot - b->scroll_top;
+	if (s > ssz) {
+		buffer_scroll(b, ssz);
+		buffer_scroll(b, s - ssz);
+		return;
+	}
+	if (s < -ssz) {
+		buffer_scroll(b, -ssz);
+		buffer_scroll(b, s + ssz);
+		return;
+	}
+
+	b->scroll_above += s;
+	if (b->scroll_above >= b->scroll_buf_size)
+		b->scroll_above = b->scroll_buf_size;
+
+	if (s > 0 && b->scroll_buf_size) {
+		for (int i = 0; i < s; i++) {
+			Row tmp = b->scroll_top[i];
+			b->scroll_top[i] = b->scroll_buf[b->scroll_cur];
+			b->scroll_buf[b->scroll_cur] = tmp;
+
+			b->scroll_cur++;
+			if (b->scroll_cur == b->scroll_buf_size)
+				b->scroll_cur = 0;
+		}
+	}
+	row_roll(b->scroll_top, b->scroll_bot, s);
+	if (s < 0 && b->scroll_buf_size) {
+		for (int i = (-s) - 1; i >= 0; i--) {
+			b->scroll_cur--;
+			if (b->scroll_cur == -1)
+				b->scroll_cur = b->scroll_buf_size - 1;
+
+			Row tmp = b->scroll_top[i];
+			b->scroll_top[i] = b->scroll_buf[b->scroll_cur];
+			b->scroll_buf[b->scroll_cur] = tmp;
+			b->scroll_top[i].dirty = true;
+		}
+	}
+}
+
 static void buffer_resize(Buffer *b, int rows, int cols)
 {
 	Row *lines = b->lines;
@@ -268,7 +311,7 @@ static void buffer_resize(Buffer *b, int rows, int cols)
 	if (b->rows != rows) {
 		if (b->curs_row >= lines + rows) {
 			/* scroll up instead of simply chopping off bottom */
-			fill_scroll_buf(b, (b->curs_row - b->lines) - rows + 1);
+			buffer_scroll(b, (b->curs_row - b->lines) - rows + 1);
 		}
 		while (b->rows > rows) {
 			free(lines[b->rows - 1].cells);
@@ -325,7 +368,7 @@ static void buffer_resize(Buffer *b, int rows, int cols)
 
 	/* perform backfill */
 	if (deltarows > 0) {
-		fill_scroll_buf(b, -deltarows);
+		buffer_scroll(b, -deltarows);
 		b->curs_row += deltarows;
 	}
 }
@@ -480,51 +523,6 @@ static void restore_attrs(Vt *t)
 	t->graphmode = t->savgraphmode;
 }
 
-static void fill_scroll_buf(Buffer *t, int s)
-{
-	/* work in screenfuls */
-	int ssz = t->scroll_bot - t->scroll_top;
-	if (s > ssz) {
-		fill_scroll_buf(t, ssz);
-		fill_scroll_buf(t, s - ssz);
-		return;
-	}
-	if (s < -ssz) {
-		fill_scroll_buf(t, -ssz);
-		fill_scroll_buf(t, s + ssz);
-		return;
-	}
-
-	t->scroll_above += s;
-	if (t->scroll_above >= t->scroll_buf_size)
-		t->scroll_above = t->scroll_buf_size;
-
-	if (s > 0 && t->scroll_buf_size) {
-		for (int i = 0; i < s; i++) {
-			Row tmp = t->scroll_top[i];
-			t->scroll_top[i] = t->scroll_buf[t->scroll_cur];
-			t->scroll_buf[t->scroll_cur] = tmp;
-
-			t->scroll_cur++;
-			if (t->scroll_cur == t->scroll_buf_size)
-				t->scroll_cur = 0;
-		}
-	}
-	row_roll(t->scroll_top, t->scroll_bot, s);
-	if (s < 0 && t->scroll_buf_size) {
-		for (int i = (-s) - 1; i >= 0; i--) {
-			t->scroll_cur--;
-			if (t->scroll_cur == -1)
-				t->scroll_cur = t->scroll_buf_size - 1;
-
-			Row tmp = t->scroll_top[i];
-			t->scroll_top[i] = t->scroll_buf[t->scroll_cur];
-			t->scroll_buf[t->scroll_cur] = tmp;
-			t->scroll_top[i].dirty = true;
-		}
-	}
-}
-
 static void cursor_line_down(Vt *t)
 {
 	Buffer *b = t->buffer;
@@ -536,7 +534,7 @@ static void cursor_line_down(Vt *t)
 	vt_noscroll(t);
 
 	b->curs_row = b->scroll_bot - 1;
-	fill_scroll_buf(b, 1);
+	buffer_scroll(b, 1);
 	row_set(b->curs_row, 0, b->cols, b);
 }
 
@@ -1500,7 +1498,7 @@ void vt_scroll(Vt *t, int rows)
 		if (rows > b->scroll_below)
 			rows = b->scroll_below;
 	}
-	fill_scroll_buf(b, rows);
+	buffer_scroll(b, rows);
 	b->scroll_below -= rows;
 }
 
