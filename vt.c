@@ -107,8 +107,8 @@ typedef struct {
 	Row *scroll_top;
 	Row *scroll_bot;
 	bool *tabs;
-	int scroll_buf_size;
-	int scroll_cur;
+	int scroll_size;
+	int scroll_index;
 	int scroll_above;
 	int scroll_below;
 	int rows, cols, maxcols;
@@ -253,7 +253,7 @@ static void buffer_free(Buffer *b)
 	for (int i = 0; i < b->rows; i++)
 		free(b->lines[i].cells);
 	free(b->lines);
-	for (int i = 0; i < b->scroll_buf_size; i++)
+	for (int i = 0; i < b->scroll_size; i++)
 		free(b->scroll_buf[i].cells);
 	free(b->scroll_buf);
 	free(b->tabs);
@@ -275,30 +275,30 @@ static void buffer_scroll(Buffer *b, int s)
 	}
 
 	b->scroll_above += s;
-	if (b->scroll_above >= b->scroll_buf_size)
-		b->scroll_above = b->scroll_buf_size;
+	if (b->scroll_above >= b->scroll_size)
+		b->scroll_above = b->scroll_size;
 
-	if (s > 0 && b->scroll_buf_size) {
+	if (s > 0 && b->scroll_size) {
 		for (int i = 0; i < s; i++) {
 			Row tmp = b->scroll_top[i];
-			b->scroll_top[i] = b->scroll_buf[b->scroll_cur];
-			b->scroll_buf[b->scroll_cur] = tmp;
+			b->scroll_top[i] = b->scroll_buf[b->scroll_index];
+			b->scroll_buf[b->scroll_index] = tmp;
 
-			b->scroll_cur++;
-			if (b->scroll_cur == b->scroll_buf_size)
-				b->scroll_cur = 0;
+			b->scroll_index++;
+			if (b->scroll_index == b->scroll_size)
+				b->scroll_index = 0;
 		}
 	}
 	row_roll(b->scroll_top, b->scroll_bot, s);
-	if (s < 0 && b->scroll_buf_size) {
+	if (s < 0 && b->scroll_size) {
 		for (int i = (-s) - 1; i >= 0; i--) {
-			b->scroll_cur--;
-			if (b->scroll_cur == -1)
-				b->scroll_cur = b->scroll_buf_size - 1;
+			b->scroll_index--;
+			if (b->scroll_index == -1)
+				b->scroll_index = b->scroll_size - 1;
 
 			Row tmp = b->scroll_top[i];
-			b->scroll_top[i] = b->scroll_buf[b->scroll_cur];
-			b->scroll_buf[b->scroll_cur] = tmp;
+			b->scroll_top[i] = b->scroll_buf[b->scroll_index];
+			b->scroll_buf[b->scroll_index] = tmp;
 			b->scroll_top[i].dirty = true;
 		}
 	}
@@ -329,7 +329,7 @@ static void buffer_resize(Buffer *b, int rows, int cols)
 			lines[row].dirty = true;
 		}
 		Row *sbuf = b->scroll_buf;
-		for (int row = 0; row < b->scroll_buf_size; row++) {
+		for (int row = 0; row < b->scroll_size; row++) {
 			sbuf[row].cells = realloc(sbuf[row].cells, sizeof(Cell) * cols);
 			if (b->cols < cols)
 				row_set(sbuf + row, b->cols, cols - b->cols, NULL);
@@ -373,15 +373,15 @@ static void buffer_resize(Buffer *b, int rows, int cols)
 	}
 }
 
-static bool buffer_init(Buffer *b, int rows, int cols, int scroll_buf_size)
+static bool buffer_init(Buffer *b, int rows, int cols, int scroll_size)
 {
 	b->curattrs = A_NORMAL;	/* white text over black background */
 	b->curfg = b->curbg = -1;
-	if (scroll_buf_size < 0)
-		scroll_buf_size = 0;
-	if (scroll_buf_size && !(b->scroll_buf = calloc(scroll_buf_size, sizeof(Row))))
+	if (scroll_size < 0)
+		scroll_size = 0;
+	if (scroll_size && !(b->scroll_buf = calloc(scroll_size, sizeof(Row))))
 		return false;
-	b->scroll_buf_size = scroll_buf_size;
+	b->scroll_size = scroll_size;
 	buffer_resize(b, rows, cols);
 	return true;
 }
@@ -395,26 +395,26 @@ static void buffer_boundry(Buffer *b, Row **bs, Row **be, Row **as, Row **ae) {
 		*as = NULL;
 	if (ae)
 		*ae = NULL;
-	if (!b->scroll_buf_size)
+	if (!b->scroll_size)
 		return;
 
 	if (b->scroll_above) {
 		if (bs)
-			*bs = &b->scroll_buf[(b->scroll_cur - b->scroll_above + b->scroll_buf_size) % b->scroll_buf_size];
+			*bs = &b->scroll_buf[(b->scroll_index - b->scroll_above + b->scroll_size) % b->scroll_size];
 		if (be)
-			*be = &b->scroll_buf[(b->scroll_cur-1 + b->scroll_buf_size) % b->scroll_buf_size];
+			*be = &b->scroll_buf[(b->scroll_index-1 + b->scroll_size) % b->scroll_size];
 	}
 	if (b->scroll_below) {
 		if (as)
-			*as = &b->scroll_buf[b->scroll_cur];
+			*as = &b->scroll_buf[b->scroll_index];
 		if (ae)
-			*ae = &b->scroll_buf[(b->scroll_cur + b->scroll_below-1) % b->scroll_buf_size];
+			*ae = &b->scroll_buf[(b->scroll_index + b->scroll_below-1) % b->scroll_size];
 	}
 }
 
 static Row *buffer_row_first(Buffer *b) {
 	Row *bstart;
-	if (!b->scroll_buf_size || !b->scroll_above)
+	if (!b->scroll_size || !b->scroll_above)
 		return b->lines;
 	buffer_boundry(b, &bstart, NULL, NULL, NULL);
 	return bstart;
@@ -422,7 +422,7 @@ static Row *buffer_row_first(Buffer *b) {
 
 static Row *buffer_row_last(Buffer *b) {
 	Row *aend;
-	if (!b->scroll_buf_size || !b->scroll_below)
+	if (!b->scroll_size || !b->scroll_below)
 		return b->lines + b->rows - 1;
 	buffer_boundry(b, NULL, NULL, NULL, &aend);
 	return aend;
@@ -446,7 +446,7 @@ static Row *buffer_row_next(Buffer *b, Row *row)
 		return first;
 	if (row == after_end)
 		return NULL;
-	if (row == &b->scroll_buf[b->scroll_buf_size - 1])
+	if (row == &b->scroll_buf[b->scroll_size - 1])
 		return b->scroll_buf;
 	return ++row;
 }
@@ -470,7 +470,7 @@ static Row *buffer_row_prev(Buffer *b, Row *row)
 	if (row == after_start)
 		return last;
 	if (row == b->scroll_buf)
-		return &b->scroll_buf[b->scroll_buf_size - 1];
+		return &b->scroll_buf[b->scroll_size - 1];
 	return --row;
 }
 
@@ -1373,7 +1373,7 @@ void vt_default_colors_set(Vt *t, attr_t attrs, short fg, short bg)
 }
 
 
-Vt *vt_create(int rows, int cols, int scroll_buf_size)
+Vt *vt_create(int rows, int cols, int scroll_size)
 {
 	Vt *t;
 
@@ -1386,7 +1386,7 @@ Vt *vt_create(int rows, int cols, int scroll_buf_size)
 
 	t->pty = -1;
 	t->deffg = t->defbg = -1;
-	if (!buffer_init(&t->buffer_normal, rows, cols, scroll_buf_size) ||
+	if (!buffer_init(&t->buffer_normal, rows, cols, scroll_size) ||
 	    !buffer_init(&t->buffer_alternate, rows, cols, 0)) {
 		free(t);
 		return NULL;
@@ -1489,7 +1489,7 @@ void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
 void vt_scroll(Vt *t, int rows)
 {
 	Buffer *b = t->buffer;
-	if (!b->scroll_buf_size)
+	if (!b->scroll_size)
 		return;
 	if (rows < 0) { /* scroll back */
 		if (rows < -b->scroll_above)
