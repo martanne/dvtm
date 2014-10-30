@@ -1156,7 +1156,7 @@ focusprevnm(const char *args[]) {
 			for (c = clients; c && c->next; c = c->next);
 			for (; c && !isvisible(c); c = c->prev);
 		}
-	} while (c->minimized && c != sel);
+	} while (c && c != sel && c->minimized);
 	focus(c);
 }
 
