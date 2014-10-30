@@ -330,52 +330,17 @@ static void buffer_resize(Buffer *b, int rows, int cols)
 	}
 }
 
-static bool buffer_init(Buffer *t, int rows, int cols, int scroll_buf_size)
+static bool buffer_init(Buffer *b, int rows, int cols, int scroll_buf_size)
 {
-	Row *lines, *scroll_buf;
-	t->lines = lines = calloc(rows, sizeof(Row));
-	if (!lines)
-		return false;
-	t->curattrs = A_NORMAL;	/* white text over black background */
-	t->curfg = t->curbg = -1;
-	for (Row *row = lines, *end = lines + rows; row < end; row++) {
-		row->cells = malloc(cols * sizeof(Cell));
-		if (!row->cells) {
-			t->rows = row - lines;
-			goto fail;
-		}
-		row_set(row, 0, cols, NULL);
-	}
-	t->rows = rows;
+	b->curattrs = A_NORMAL;	/* white text over black background */
+	b->curfg = b->curbg = -1;
 	if (scroll_buf_size < 0)
 		scroll_buf_size = 0;
-	t->scroll_buf = scroll_buf = calloc(scroll_buf_size, sizeof(Row));
-	if (!scroll_buf && scroll_buf_size)
-		goto fail;
-	for (Row *row = scroll_buf, *end = scroll_buf + scroll_buf_size; row < end; row++) {
-		row->cells = calloc(cols, sizeof(Cell));
-		if (!row->cells) {
-			t->scroll_buf_size = row - scroll_buf;
-			goto fail;
-		}
-	}
-	t->tabs = calloc(cols, sizeof(*t->tabs));
-	if (!t->tabs)
-		goto fail;
-	for (int col = 8; col < cols; col += 8)
-		t->tabs[col] = true;
-	t->curs_row = lines;
-	t->curs_col = 0;
-	/* initial scrolling area is the whole window */
-	t->scroll_top = lines;
-	t->scroll_bot = lines + rows;
-	t->scroll_buf_size = scroll_buf_size;
-	t->maxcols = t->cols = cols;
+	if (scroll_buf_size && !(b->scroll_buf = calloc(scroll_buf_size, sizeof(Row))))
+		return false;
+	b->scroll_buf_size = scroll_buf_size;
+	buffer_resize(b, rows, cols);
 	return true;
-
-fail:
-	buffer_free(t);
-	return false;
 }
 
 static void buffer_boundry(Buffer *b, Row **bs, Row **be, Row **as, Row **ae) {
