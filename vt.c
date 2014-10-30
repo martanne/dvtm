@@ -250,83 +250,83 @@ static void row_roll(Row *start, Row *end, int count)
 }
 
 
-static void buffer_free(Buffer *t)
+static void buffer_free(Buffer *b)
 {
-	for (int i = 0; i < t->rows; i++)
-		free(t->lines[i].cells);
-	free(t->lines);
-	for (int i = 0; i < t->scroll_buf_size; i++)
-		free(t->scroll_buf[i].cells);
-	free(t->scroll_buf);
-	free(t->tabs);
+	for (int i = 0; i < b->rows; i++)
+		free(b->lines[i].cells);
+	free(b->lines);
+	for (int i = 0; i < b->scroll_buf_size; i++)
+		free(b->scroll_buf[i].cells);
+	free(b->scroll_buf);
+	free(b->tabs);
 }
 
-static void buffer_resize(Buffer *t, int rows, int cols)
+static void buffer_resize(Buffer *b, int rows, int cols)
 {
-	Row *lines = t->lines;
+	Row *lines = b->lines;
 
-	if (t->rows != rows) {
-		if (t->curs_row >= lines + rows) {
+	if (b->rows != rows) {
+		if (b->curs_row >= lines + rows) {
 			/* scroll up instead of simply chopping off bottom */
-			fill_scroll_buf(t, (t->curs_row - t->lines) - rows + 1);
+			fill_scroll_buf(b, (b->curs_row - b->lines) - rows + 1);
 		}
-		while (t->rows > rows) {
-			free(lines[t->rows - 1].cells);
-			t->rows--;
+		while (b->rows > rows) {
+			free(lines[b->rows - 1].cells);
+			b->rows--;
 		}
 
 		lines = realloc(lines, sizeof(Row) * rows);
 	}
 
-	if (t->maxcols < cols) {
-		for (int row = 0; row < t->rows; row++) {
+	if (b->maxcols < cols) {
+		for (int row = 0; row < b->rows; row++) {
 			lines[row].cells = realloc(lines[row].cells, sizeof(Cell) * cols);
-			if (t->cols < cols)
-				row_set(lines + row, t->cols, cols - t->cols, NULL);
+			if (b->cols < cols)
+				row_set(lines + row, b->cols, cols - b->cols, NULL);
 			lines[row].dirty = true;
 		}
-		Row *sbuf = t->scroll_buf;
-		for (int row = 0; row < t->scroll_buf_size; row++) {
+		Row *sbuf = b->scroll_buf;
+		for (int row = 0; row < b->scroll_buf_size; row++) {
 			sbuf[row].cells = realloc(sbuf[row].cells, sizeof(Cell) * cols);
-			if (t->cols < cols)
-				row_set(sbuf + row, t->cols, cols - t->cols, NULL);
+			if (b->cols < cols)
+				row_set(sbuf + row, b->cols, cols - b->cols, NULL);
 		}
-		t->tabs = realloc(t->tabs, sizeof(*t->tabs) * cols);
-		for (int col = t->cols; col < cols; col++)
-			t->tabs[col] = !(col & 7);
-		t->maxcols = cols;
-		t->cols = cols;
-	} else if (t->cols != cols) {
-		for (int row = 0; row < t->rows; row++)
+		b->tabs = realloc(b->tabs, sizeof(*b->tabs) * cols);
+		for (int col = b->cols; col < cols; col++)
+			b->tabs[col] = !(col & 7);
+		b->maxcols = cols;
+		b->cols = cols;
+	} else if (b->cols != cols) {
+		for (int row = 0; row < b->rows; row++)
 			lines[row].dirty = true;
-		t->cols = cols;
+		b->cols = cols;
 	}
 
 	int deltarows = 0;
-	if (t->rows < rows) {
-		while (t->rows < rows) {
-			lines[t->rows].cells = calloc(t->maxcols, sizeof(Cell));
-			row_set(lines + t->rows, 0, t->maxcols, t);
-			t->rows++;
+	if (b->rows < rows) {
+		while (b->rows < rows) {
+			lines[b->rows].cells = calloc(b->maxcols, sizeof(Cell));
+			row_set(lines + b->rows, 0, b->maxcols, b);
+			b->rows++;
 		}
 
 		/* prepare for backfill */
-		if (t->curs_row >= t->scroll_bot - 1) {
-			deltarows = t->lines + rows - t->curs_row - 1;
-			if (deltarows > t->scroll_above)
-				deltarows = t->scroll_above;
+		if (b->curs_row >= b->scroll_bot - 1) {
+			deltarows = b->lines + rows - b->curs_row - 1;
+			if (deltarows > b->scroll_above)
+				deltarows = b->scroll_above;
 		}
 	}
 
-	t->curs_row += lines - t->lines;
-	t->scroll_top = lines;
-	t->scroll_bot = lines + rows;
-	t->lines = lines;
+	b->curs_row += lines - b->lines;
+	b->scroll_top = lines;
+	b->scroll_bot = lines + rows;
+	b->lines = lines;
 
 	/* perform backfill */
 	if (deltarows > 0) {
-		fill_scroll_buf(t, -deltarows);
-		t->curs_row += deltarows;
+		fill_scroll_buf(b, -deltarows);
+		b->curs_row += deltarows;
 	}
 }
 
@@ -465,7 +465,6 @@ static Row *buffer_row_prev(Buffer *b, Row *row)
 		return &b->scroll_buf[b->scroll_buf_size - 1];
 	return --row;
 }
-
 
 static void clamp_cursor_to_bounds(Vt *t)
 {
