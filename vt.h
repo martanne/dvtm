@@ -47,7 +47,7 @@ bool vt_cursor_visible(Vt*);
 
 int vt_process(Vt *);
 void vt_keypress(Vt *, int keycode);
-int vt_write(Vt*, const char *buf, int len);
+ssize_t vt_write(Vt*, const char *buf, size_t len);
 void vt_mouse(Vt*, int x, int y, mmask_t mask);
 void vt_dirty(Vt*);
 void vt_draw(Vt*, WINDOW *win, int startrow, int startcol);

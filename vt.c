@@ -1635,17 +1635,16 @@ int vt_pty_get(Vt *t)
 	return t->pty;
 }
 
-int vt_write(Vt *t, const char *buf, int len)
+ssize_t vt_write(Vt *t, const char *buf, size_t len)
 {
-	int ret = len;
+	ssize_t ret = len;
 
 	while (len > 0) {
-		int res = write(t->pty, buf, len);
+		ssize_t res = write(t->pty, buf, len);
 		if (res < 0) {
 			if (errno != EAGAIN && errno != EINTR)
 				return -1;
-			else
-				continue;
+			continue;
 		}
 		buf += res;
 		len -= res;
