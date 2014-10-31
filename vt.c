@@ -518,7 +518,7 @@ static Row *buffer_row_prev(Buffer *b, Row *row)
 	return --row;
 }
 
-static void clamp_cursor_to_bounds(Vt *t)
+static void cursor_clamp(Vt *t)
 {
 	Buffer *b = t->buffer;
 	Row *lines = t->relposmode ? b->scroll_top : b->lines;
@@ -534,39 +534,6 @@ static void clamp_cursor_to_bounds(Vt *t)
 		b->curs_col = b->cols - 1;
 }
 
-static void save_curs(Vt *t)
-{
-	Buffer *b = t->buffer;
-	b->curs_srow = b->curs_row - b->lines;
-	b->curs_scol = b->curs_col;
-}
-
-static void restore_curs(Vt *t)
-{
-	Buffer *b = t->buffer;
-	b->curs_row = b->lines + b->curs_srow;
-	b->curs_col = b->curs_scol;
-	clamp_cursor_to_bounds(t);
-}
-
-static void save_attrs(Vt *t)
-{
-	Buffer *b = t->buffer;
-	b->savattrs = b->curattrs;
-	b->savfg = b->curfg;
-	b->savbg = b->curbg;
-	t->savgraphmode = t->graphmode;
-}
-
-static void restore_attrs(Vt *t)
-{
-	Buffer *b = t->buffer;
-	b->curattrs = b->savattrs;
-	b->curfg = b->savfg;
-	b->curbg = b->savbg;
-	t->graphmode = t->savgraphmode;
-}
-
 static void cursor_line_down(Vt *t)
 {
 	Buffer *b = t->buffer;
@@ -580,6 +547,39 @@ static void cursor_line_down(Vt *t)
 	b->curs_row = b->scroll_bot - 1;
 	buffer_scroll(b, 1);
 	row_set(b->curs_row, 0, b->cols, b);
+}
+
+static void cursor_save(Vt *t)
+{
+	Buffer *b = t->buffer;
+	b->curs_srow = b->curs_row - b->lines;
+	b->curs_scol = b->curs_col;
+}
+
+static void cursor_restore(Vt *t)
+{
+	Buffer *b = t->buffer;
+	b->curs_row = b->lines + b->curs_srow;
+	b->curs_col = b->curs_scol;
+	cursor_clamp(t);
+}
+
+static void attributes_save(Vt *t)
+{
+	Buffer *b = t->buffer;
+	b->savattrs = b->curattrs;
+	b->savfg = b->curfg;
+	b->savbg = b->curbg;
+	t->savgraphmode = t->graphmode;
+}
+
+static void attributes_restore(Vt *t)
+{
+	Buffer *b = t->buffer;
+	b->curattrs = b->savattrs;
+	b->curfg = b->savfg;
+	b->curbg = b->savbg;
+	t->graphmode = t->savgraphmode;
 }
 
 static void new_escape_sequence(Vt *t)
@@ -705,7 +705,7 @@ static void interpret_csi_ed(Vt *t, int param[], int pcount)
 	Row *row, *start, *end;
 	Buffer *b = t->buffer;
 
-	save_attrs(t);
+	attributes_save(t);
 	b->curattrs = A_NORMAL;
 	b->curfg = b->curbg = -1;
 
@@ -725,7 +725,7 @@ static void interpret_csi_ed(Vt *t, int param[], int pcount)
 	for (row = start; row < end; row++)
 		row_set(row, 0, b->cols, b);
 
-	restore_attrs(t);
+	attributes_restore(t);
 }
 
 /* interprets a 'move cursor' (CUP) escape sequence */
@@ -745,7 +745,7 @@ static void interpret_csi_cup(Vt *t, int param[], int pcount)
 		b->curs_col = param[1] - 1;
 	}
 
-	clamp_cursor_to_bounds(t);
+	cursor_clamp(t);
 }
 
 /* Interpret the 'relative mode' sequences: CUU, CUD, CUF, CUB, CNL,
@@ -787,7 +787,7 @@ static void interpret_csi_c(Vt *t, char verb, int param[], int pcount)
 		break;
 	}
 
-	clamp_cursor_to_bounds(t);
+	cursor_clamp(t);
 }
 
 /* Interpret the 'erase line' escape sequence */
@@ -1059,10 +1059,10 @@ static void interpret_csi(Vt *t)
 		interpret_csi_decstbm(t, csiparam, param_count);
 		break;
 	case 's': /* save cursor location */
-		save_curs(t);
+		cursor_save(t);
 		break;
 	case 'u': /* restore cursor location */
-		restore_curs(t);
+		cursor_restore(t);
 		break;
 	case 'n': /* query cursor location */
 		if (param_count == 1 && csiparam[0] == 6)
@@ -1178,12 +1178,12 @@ static void try_interpret_escape_seq(Vt *t)
 		}
 		break;
 	case '7': /* DECSC: save cursor and attributes */
-		save_attrs(t);
-		save_curs(t);
+		attributes_save(t);
+		cursor_save(t);
 		goto handled;
 	case '8': /* DECRC: restore cursor and attributes */
-		restore_attrs(t);
-		restore_curs(t);
+		attributes_restore(t);
+		cursor_restore(t);
 		goto handled;
 	case 'D': /* IND: index */
 		interpret_csi_ind(t);
@@ -1416,7 +1416,6 @@ void vt_default_colors_set(Vt *t, attr_t attrs, short fg, short bg)
 	t->defbg = bg;
 }
 
-
 Vt *vt_create(int rows, int cols, int scroll_size)
 {
 	Vt *t;
@@ -1449,7 +1448,7 @@ void vt_resize(Vt *t, int rows, int cols)
 	vt_noscroll(t);
 	buffer_resize(&t->buffer_normal, rows, cols);
 	buffer_resize(&t->buffer_alternate, rows, cols);
-	clamp_cursor_to_bounds(t);
+	cursor_clamp(t);
 	ioctl(t->pty, TIOCSWINSZ, &ws);
 	kill(-t->pid, SIGWINCH);
 }
