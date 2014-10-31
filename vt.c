@@ -1223,8 +1223,7 @@ static void puttab(Vt *t, int count)
 {
 	Buffer *b = t->buffer;
 	int direction = count >= 0 ? 1 : -1;
-	int col = b->curs_col + direction;
-	while (count) {
+	for (int col = b->curs_col + direction; count; col += direction) {
 		if (col < 0) {
 			b->curs_col = 0;
 			break;
@@ -1237,7 +1236,6 @@ static void puttab(Vt *t, int count)
 			b->curs_col = col;
 			count -= direction;
 		}
-		col += direction;
 	}
 }
 
