@@ -1416,23 +1416,23 @@ void vt_default_colors_set(Vt *t, attr_t attrs, short fg, short bg)
 
 Vt *vt_create(int rows, int cols, int scroll_size)
 {
-	Vt *t;
-
 	if (rows <= 0 || cols <= 0)
 		return NULL;
 
-	t = calloc(1, sizeof(Vt));
+	Vt *t = calloc(1, sizeof(Vt));
 	if (!t)
 		return NULL;
 
 	t->pty = -1;
 	t->deffg = t->defbg = -1;
+	t->buffer = &t->buffer_normal;
+
 	if (!buffer_init(&t->buffer_normal, rows, cols, scroll_size) ||
 	    !buffer_init(&t->buffer_alternate, rows, cols, 0)) {
 		free(t);
 		return NULL;
 	}
-	t->buffer = &t->buffer_normal;
+
 	return t;
 }
 
