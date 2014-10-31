@@ -1468,7 +1468,7 @@ void vt_dirty(Vt *t)
 		row->dirty = true;
 }
 
-void vt_draw(Vt *t, WINDOW * win, int srow, int scol)
+void vt_draw(Vt *t, WINDOW *win, int srow, int scol)
 {
 	Buffer *b = t->buffer;
 
@@ -1858,7 +1858,8 @@ pid_t vt_pid_get(Vt *t)
 	return t->pid;
 }
 
-size_t vt_content_get(Vt *t, char **buf) {
+size_t vt_content_get(Vt *t, char **buf)
+{
 	Buffer *b = t->buffer;
 	int lines = b->scroll_above + b->scroll_below + b->rows + 1;
 	size_t size = lines * (b->cols * MB_CUR_MAX + 1);
@@ -1893,6 +1894,7 @@ size_t vt_content_get(Vt *t, char **buf) {
 	return s - *buf;
 }
 
-int vt_content_start(Vt *t) {
+int vt_content_start(Vt *t)
+{
 	return t->buffer->scroll_above;
 }
