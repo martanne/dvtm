@@ -3,6 +3,7 @@
 MOD="" # CTRL+g
 ESC="" # \e
 DVTM="./dvtm"
+DVTM_EDITOR="vis"
 LOG="dvtm.log"
 TEST_LOG="$0.log"
 UTF8_TEST_URL="http://www.cl.cam.ac.uk/~mgk25/ucs/examples/UTF-8-demo.txt"
@@ -24,15 +25,16 @@ sh_cmd() {
 	sleep 1
 }
 
-test_copymode() { # requires wget, diff, vi
+test_copymode() { # requires wget, diff, vis, vi
 	local FILENAME="UTF-8-demo.txt"
 	[ ! -e "$FILENAME" ] && (wget "$UTF8_TEST_URL" -O "$FILENAME" > /dev/null 2>&1 || return 1)
 	sleep 1
 	sh_cmd "cat $FILENAME"
-	dvtm_cmd 'v'
+	dvtm_cmd 'e'
 	dvtm_input "?UTF-8 encoded\n"
-	dvtm_input '^kvGk$'
-	dvtm_input 'y'
+	dvtm_input '^kvG2k$'
+	dvtm_input ":wq\n"
+	sleep 1
 	rm -f "$FILENAME.copy"
 	sh_cmd "vi $FILENAME.copy"
 	dvtm_input 'i'
@@ -42,9 +44,14 @@ test_copymode() { # requires wget, diff, vi
 	dvtm_cmd 'q'
 	diff -u "$FILENAME" "$FILENAME.copy" 1>&2
 	local RESULT=$?
-	rm "$FILENAME.copy"
+	#rm -f "$FILENAME.copy"
 	return $RESULT
 }
+
+if ! which vis > /dev/null 2>&1 ; then
+	echo "vis not found, skiping copymode test"
+	exit 0
+fi
 
 {
 	echo "Testing $DVTM" 1>&2
