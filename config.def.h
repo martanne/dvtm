@@ -212,8 +212,10 @@ static char const * const keytable[] = {
  * redirected (i.e. not a terminal).
  */
 static Editor editors[] = {
-	{ .name = "vis",  .argv = { "vis",  "+%d", NULL      }, .filter = true  },
-	{ .name = "sandy",.argv = { "sandy","-d",  "-", NULL }, .filter = true  },
-	{ .name = "vim",  .argv = { "vim",  "+%d", "-", NULL }, .filter = false },
-	{ .name = "less", .argv = { "less", "+%d", "-", NULL }, .filter = false },
+	{ .name = "vis",         .argv = { "vis", "+%d", "-", NULL  }, .filter = true  },
+	{ .name = "sandy",       .argv = { "sandy", "-d", "-", NULL }, .filter = true  },
+	{ .name = "dvtm-editor", .argv = { "dvtm-editor", "-", NULL }, .filter = true  },
+	{ .name = "vim",         .argv = { "vim", "+%d", "-", NULL  }, .filter = false },
+	{ .name = "less",        .argv = { "less", "+%d", NULL      }, .filter = false },
+	{ .name = "more",        .argv = { "more", "+%d", NULL      }, .filter = false },
 };
