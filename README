@@ -3,7 +3,8 @@ dvtm - dynamic virtual terminal manager
 
 dvtm brings dwm and it's concept of tiling window management to
 the console. See http://www.brain-dump.org/projects/dvtm for
-the latest version.
+the latest version. In combination with abduco it is a lightweight
+alternative to tmux and screen.
 
 Requirements
 ------------
@@ -32,6 +33,16 @@ If you want to display a one line status bar you can create a named
 pipe and pass it's name to dvtm via it's -s command line option.
 Make sure that the pipe remains open until dvtm is closed, see the
 included dvtm-status script as an example.
+
+Quickstart
+----------
+
+All dvtm commands are prefixed with a modifier key: CTRL+g by default
+(but run time configurable via the -m command line option). MOD+c creates
+a new window, MOD+{j,k} focuses the next/previous window, MOD+Enter
+zooms the current window, MOD+Space cycles through layouts.
+
+For the rest read the manual page (MOD+?).
 
 Configuration
 -------------
