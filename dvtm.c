@@ -726,14 +726,14 @@ bitoftag(const char *tag) {
 
 static void
 tagschanged() {
-	bool nm = false;
+	bool allminimized = true;
 	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
 		if (!c->minimized) {
-			nm = true;
+			allminimized = false;
 			break;
 		}
 	}
-	if (!nm && nextvisible(clients)) {
+	if (allminimized && nextvisible(clients)) {
 		focus(NULL);
 		toggleminimize(NULL);
 	}
@@ -883,14 +883,14 @@ setup(void) {
 
 static void
 destroy(Client *c) {
-	Client *t;
 	if (sel == c)
 		focusnextnm(NULL);
 	detach(c);
 	detachstack(c);
 	if (sel == c) {
-		if ((t = nextvisible(clients))) {
-			focus(t);
+		Client *next = nextvisible(clients);
+		if (next) {
+			focus(next);
 			toggleminimize(NULL);
 		} else {
 			sel = NULL;
@@ -937,22 +937,22 @@ static char *getcwd_by_pid(Client *c) {
 	return realpath(buf, NULL);
 }
 
-/* commands for use by keybindings */
 static void
 create(const char *args[]) {
-	Client *c = calloc(1, sizeof(Client));
-	if (!c)
-		return;
-	c->tags = tagset[seltags];
 	const char *cmd = (args && args[0]) ? args[0] : shell;
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
-	c->id = ++cmdfifo.id;
 	char buf[8], *cwd = NULL;
-	snprintf(buf, sizeof buf, "%d", c->id);
 	const char *env[] = {
 		"DVTM_WINDOW_ID", buf,
 		NULL
 	};
+
+	Client *c = calloc(1, sizeof(Client));
+	if (!c)
+		return;
+	c->tags = tagset[seltags];
+	c->id = ++cmdfifo.id;
+	snprintf(buf, sizeof buf, "%d", c->id);
 
 	if (!(c->window = newwin(wah, waw, way, wax))) {
 		free(c);
