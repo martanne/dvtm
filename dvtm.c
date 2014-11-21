@@ -79,7 +79,7 @@ struct Client {
 	Client *next;
 	Client *prev;
 	Client *snext;
-	bool tags[1];
+	unsigned int tags;
 };
 
 typedef struct {
@@ -165,6 +165,7 @@ typedef struct {
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define sstrlen(str) (sizeof(str) - 1)
 #define max(x, y) ((x) > (y) ? (x) : (y))
+#define TAGMASK      ((1 << countof(tags)) - 1)
 
 #ifdef NDEBUG
  #define debug(format, args...)
@@ -226,8 +227,8 @@ static Client *stack = NULL;
 static Client *sel = NULL;
 static Client *lastsel = NULL;
 static Client *msel = NULL;
-static bool seltags[countof(tags)] = {[0] = true};
-static bool prevtags[countof(tags)];
+static unsigned int seltags;
+static unsigned int tagset[2] = { 1, 1 };
 static bool mouse_events_enabled = ENABLE_MOUSE;
 static Layout *layout = layouts;
 static StatusBar bar = { .fd = -1, .pos = BAR_POS, .autohide = BAR_AUTOHIDE, .h = 1 };
@@ -261,10 +262,7 @@ isarrange(void (*func)()) {
 
 static bool
 isvisible(Client *c) {
-	for (unsigned int i = 0; i < countof(tags); i++)
-		if (c->tags[i] && seltags[i])
-			return true;
-	return false;
+	return c->tags & tagset[seltags];
 }
 
 static bool
@@ -280,32 +278,6 @@ static Client*
 nextvisible(Client *c) {
 	for (; c && !isvisible(c); c = c->next);
 	return c;
-}
-
-static Client*
-nextbytag(Client *c, int tag) {
-	for (; c && !c->tags[tag]; c = c->next);
-	return c;
-}
-
-bool
-isoccupied(unsigned int t) {
-	for (Client *c = clients; c; c = c->next)
-		if (c->tags[t])
-			return true;
-	return false;
-}
-
-static void
-reorder(int tag) {
-	Client *c;
-	uint8_t order = 0;
-	if (tag < 0)
-		for (c = nextvisible(clients); c; c = nextvisible(c->next))
-			c->order = ++order;
-	else
-		for (c = nextbytag(clients, tag); c; c = nextbytag(c->next, tag))
-			c->order = ++order;
 }
 
 static void
@@ -327,15 +299,21 @@ updatebarpos(void) {
 static void
 drawbar(void) {
 	int sx, sy, x = 0;
+	unsigned int occupied = 0;
 	if (bar.pos == BAR_OFF)
 		return;
+
+	for (Client *c = clients; c; c = c->next)
+		occupied |= c->tags;
+
 	getyx(stdscr, sy, sx);
 	attrset(BAR_ATTR);
 	move(bar.y, 0);
+
 	for (unsigned int i = 0; i < countof(tags); i++){
-		if (seltags[i])
+		if (tagset[seltags] & (1 << i))
 			attrset(TAG_SEL);
-		else if (isoccupied(i))
+		else if (occupied & (1 << i))
 			attrset(TAG_OCCUPIED);
 		else
 			attrset(TAG_NORMAL);
@@ -446,15 +424,15 @@ draw_all(void) {
 
 static void
 arrange(void) {
-	int m = 0;
-	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next))
+	int m = 0, n = 0;
+	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
+		c->order = ++n;
 		if (c->minimized)
 			m++;
+	}
 	erase();
 	attrset(NORMAL_ATTR);
 	if (bar.fd == -1 && bar.autohide) {
-		int n = 0;
-		for (Client *c = nextvisible(clients); c; c = nextvisible(c->next), n++);
 		if ((!clients || !clients->next) && n == 1)
 			bar.pos = BAR_OFF;
 		else
@@ -474,7 +452,6 @@ arrange(void) {
 		}
 		wah++;
 	}
-	reorder(-1);
 	focus(NULL);
 	wnoutrefresh(stdscr);
 	drawbar();
@@ -741,10 +718,10 @@ keybinding(KeyCombo keys) {
 }
 
 static unsigned int
-idxoftag(const char *tag) {
+bitoftag(const char *tag) {
 	unsigned int i;
 	for (i = 0; (i < countof(tags)) && (tags[i] != tag); i++);
-	return (i < countof(tags)) ? i : 0;
+	return (i < countof(tags)) ? (1 << i) : ~0;
 }
 
 static void
@@ -759,66 +736,51 @@ tagschanged() {
 	if (!nm && nextvisible(clients)) {
 		focus(NULL);
 		toggleminimize(NULL);
-	} else {
-		arrange();
 	}
+	arrange();
 }
 
 static void
 tag(const char *args[]) {
-	unsigned int i;
-
 	if (!sel)
 		return;
-	for (i = 0; i < countof(tags); i++)
-		sel->tags[i] = (NULL == args[0]);
-	i = idxoftag(args[0]);
-	sel->tags[i] = true;
-	reorder(i);
+	sel->tags = bitoftag(args[0]) & TAGMASK;
 	tagschanged();
 }
 
 static void
 toggletag(const char *args[]) {
-	unsigned int i, j;
-
 	if (!sel)
 		return;
-	i = idxoftag(args[0]);
-	sel->tags[i] = !sel->tags[i];
-	for (j = 0; j < countof(tags) && !sel->tags[j]; j++);
-	if (j == countof(tags))
-		sel->tags[i] = true; /* at least one tag must be enabled */
-	tagschanged();
+	unsigned int newtags = sel->tags ^ (bitoftag(args[0]) & TAGMASK);
+	if (newtags) {
+		sel->tags = newtags;
+		tagschanged();
+	}
 }
 
 static void
 toggleview(const char *args[]) {
-	unsigned int i, j;
-
-	i = idxoftag(args[0]);
-	seltags[i] = !seltags[i];
-	for (j = 0; j < countof(tags) && !seltags[j]; j++);
-	if (j == countof(tags))
-		seltags[i] = true; /* at least one tag must be viewed */
-	tagschanged();
+	unsigned int newtagset = tagset[seltags] ^ (bitoftag(args[0]) & TAGMASK);
+	if (newtagset) {
+		tagset[seltags] = newtagset;
+		tagschanged();
+	}
 }
 
 static void
 view(const char *args[]) {
-	memcpy(prevtags, seltags, sizeof seltags);
-	for (unsigned int i = 0; i < countof(tags); i++)
-		seltags[i] = (NULL == args[0]);
-	seltags[idxoftag(args[0])] = true;
-	tagschanged();
+	unsigned int newtagset = bitoftag(args[0]) & TAGMASK;
+	if (tagset[seltags] != newtagset && newtagset) {
+		seltags ^= 1; /* toggle sel tagset */
+		tagset[seltags] = newtagset;
+		tagschanged();
+	}
 }
 
 static void
 viewprevtag(const char *args[]) {
-	static bool tmp[countof(tags)];
-	memcpy(tmp, seltags, sizeof seltags);
-	memcpy(seltags, prevtags, sizeof seltags);
-	memcpy(prevtags, tmp, sizeof seltags);
+	seltags ^= 1;
 	tagschanged();
 }
 
@@ -978,10 +940,10 @@ static char *getcwd_by_pid(Client *c) {
 /* commands for use by keybindings */
 static void
 create(const char *args[]) {
-	Client *c = calloc(1, sizeof(Client) + sizeof(seltags));
+	Client *c = calloc(1, sizeof(Client));
 	if (!c)
 		return;
-	memcpy(c->tags, seltags, sizeof seltags);
+	c->tags = tagset[seltags];
 	const char *cmd = (args && args[0]) ? args[0] : shell;
 	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
 	c->id = ++cmdfifo.id;

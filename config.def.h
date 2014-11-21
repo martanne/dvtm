@@ -120,6 +120,7 @@ static KeyBinding bindings[] = {
 	{ { MOD, KEY_F(3),     }, { view,           { tags[2] }                 } },
 	{ { MOD, KEY_F(4),     }, { view,           { tags[3] }                 } },
 	{ { MOD, KEY_F(5),     }, { view,           { tags[4] }                 } },
+	{ { MOD, 'v', '0'      }, { view,           { NULL }                    } },
 	{ { MOD, 'v', '1'      }, { view,           { tags[0] }                 } },
 	{ { MOD, 'v', '2'      }, { view,           { tags[1] }                 } },
 	{ { MOD, 'v', '3'      }, { view,           { tags[2] }                 } },
