@@ -192,6 +192,7 @@ struct Vt {
 	int srow, scol;          /* last known offset to display start row, start column */
 	char title[256];         /* xterm style window title */
 	vt_title_handler_t title_handler; /* hook which is called when title changes */
+	vt_urgent_handler_t urgent_handler; /* hook which is called upon bell */
 	void *data;              /* user supplied data */
 };
 
@@ -1247,8 +1248,8 @@ static void process_nonprinting(Vt *t, wchar_t wc)
 		new_escape_sequence(t);
 		break;
 	case '\a': /* BEL */
-		if (t->bell)
-			beep();
+		if (t->urgent_handler)
+			t->urgent_handler(t);
 		break;
 	case '\b': /* BS */
 		if (b->curs_col > 0)
@@ -1550,16 +1551,6 @@ void vt_noscroll(Vt *t)
 		vt_scroll(t, scroll_below);
 }
 
-void vt_bell(Vt *t, bool bell)
-{
-	t->bell = bell;
-}
-
-void vt_togglebell(Vt *t)
-{
-	t->bell = !t->bell;
-}
-
 pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *cwd, const char *env[], int *to, int *from)
 {
 	int vt2ed[2], ed2vt[2];
@@ -1836,6 +1827,11 @@ void vt_shutdown(void)
 void vt_title_handler_set(Vt *t, vt_title_handler_t handler)
 {
 	t->title_handler = handler;
+}
+
+void vt_urgent_handler_set(Vt *t, vt_urgent_handler_t handler)
+{
+	t->urgent_handler = handler;
 }
 
 void vt_data_set(Vt *t, void *data)

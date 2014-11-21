@@ -26,6 +26,8 @@ static Color colors[] = {
 #define SELECTED_ATTR   (COLOR(BLUE) | A_NORMAL)
 /* curses attributes for normal (not selected) windows */
 #define NORMAL_ATTR     (COLOR(DEFAULT) | A_NORMAL)
+/* curses attributes for a window with pending urgent flag */
+#define URGENT_ATTR     NORMAL_ATTR
 /* curses attributes for the status bar */
 #define BAR_ATTR        (COLOR(BLUE) | A_NORMAL)
 /* status bar (command line option -s) position */
@@ -52,6 +54,8 @@ static Color colors[] = {
 #define TAG_NORMAL   (COLOR(DEFAULT) | A_NORMAL)
 /* curses attributes for not selected tags which contain windows */
 #define TAG_OCCUPIED (COLOR(BLUE) | A_NORMAL)
+/* curses attributes for not selected tags which with urgent windows */
+#define TAG_URGENT (COLOR(BLUE) | A_NORMAL | A_BLINK)
 
 const char tags[][8] = { "1", "2", "3", "4", "5" };
 
@@ -104,7 +108,6 @@ static KeyBinding bindings[] = {
 	{ { MOD, 'a',          }, { togglerunall,   { NULL }                    } },
 	{ { MOD, CTRL('L'),    }, { redraw,         { NULL }                    } },
 	{ { MOD, 'r',          }, { redraw,         { NULL }                    } },
-	{ { MOD, 'B',          }, { togglebell,     { NULL }                    } },
 	{ { MOD, 'e',          }, { copymode,       { NULL }                    } },
 	{ { MOD, '/',          }, { copymode,       { "/" }                     } },
 	{ { MOD, 'p',          }, { paste,          { NULL }                    } },

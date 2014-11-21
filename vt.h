@@ -27,7 +27,8 @@
 #endif
 
 typedef struct Vt Vt;
-typedef void (*vt_title_handler_t)(Vt*, const char *data);
+typedef void (*vt_title_handler_t)(Vt*, const char *title);
+typedef void (*vt_urgent_handler_t)(Vt*);
 
 void vt_init(void);
 void vt_shutdown(void);
@@ -35,6 +36,7 @@ void vt_shutdown(void);
 void vt_keytable_set(char const * const keytable_overlay[], int count);
 void vt_default_colors_set(Vt*, attr_t attrs, short fg, short bg);
 void vt_title_handler_set(Vt*, vt_title_handler_t);
+void vt_urgent_handler_set(Vt*, vt_urgent_handler_t);
 void vt_data_set(Vt*, void *);
 void *vt_data_get(Vt*);
 
@@ -56,9 +58,6 @@ short vt_color_reserve(short fg, short bg);
 
 void vt_scroll(Vt*, int rows);
 void vt_noscroll(Vt*);
-
-void vt_bell(Vt*, bool bell);
-void vt_togglebell(Vt*);
 
 pid_t vt_pid_get(Vt*);
 size_t vt_content_get(Vt*, char **s);

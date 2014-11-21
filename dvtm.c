@@ -75,6 +75,7 @@ struct Client {
 	unsigned short int h;
 	bool has_title_line;
 	bool minimized;
+	bool urgent;
 	volatile sig_atomic_t died;
 	Client *next;
 	Client *prev;
@@ -193,7 +194,6 @@ static void setmfact(const char *args[]);
 static void startup(const char *args[]);
 static void tag(const char *args[]);
 static void togglebar(const char *args[]);
-static void togglebell(const char *key[]);
 static void toggleminimize(const char *args[]);
 static void togglemouse(const char *args[]);
 static void togglerunall(const char *args[]);
@@ -299,12 +299,15 @@ updatebarpos(void) {
 static void
 drawbar(void) {
 	int sx, sy, x = 0;
-	unsigned int occupied = 0;
+	unsigned int occupied = 0, urgent = 0;
 	if (bar.pos == BAR_OFF)
 		return;
 
-	for (Client *c = clients; c; c = c->next)
+	for (Client *c = clients; c; c = c->next) {
 		occupied |= c->tags;
+		if (c->urgent)
+			urgent |= c->tags;
+	}
 
 	getyx(stdscr, sy, sx);
 	attrset(BAR_ATTR);
@@ -313,6 +316,8 @@ drawbar(void) {
 	for (unsigned int i = 0; i < LENGTH(tags); i++){
 		if (tagset[seltags] & (1 << i))
 			attrset(TAG_SEL);
+		else if (urgent & (1 << i))
+			attrset(TAG_URGENT);
 		else if (occupied & (1 << i))
 			attrset(TAG_OCCUPIED);
 		else
@@ -355,12 +360,17 @@ show_border(void) {
 
 static void
 draw_border(Client *c) {
+	char t = '\0';
+	int x, y, maxlen, attrs = NORMAL_ATTR;
+
 	if (!show_border())
 		return;
-	char t = '\0';
-	int x, y, maxlen;
+	if (sel == c || (runinall && !c->minimized))
+		attrs = SELECTED_ATTR;
+	if (sel != c && c->urgent)
+		attrs = URGENT_ATTR;
 
-	wattrset(c->window, (sel == c || (runinall && !c->minimized)) ? SELECTED_ATTR : NORMAL_ATTR);
+	wattrset(c->window, attrs);
 	getyx(c->window, y, x);
 	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
 	maxlen = c->w - (2 + STRLEN(TITLE) - STRLEN("%s%sd")  + STRLEN(SEPARATOR) + 2);
@@ -526,22 +536,25 @@ detachstack(Client *c) {
 
 static void
 focus(Client *c) {
-	Client *tmp = sel;
 	if (!c)
 		for (c = stack; c && !isvisible(c); c = c->snext);
 	if (sel == c)
 		return;
 	lastsel = sel;
 	sel = c;
-	if (tmp && !isarrange(fullscreen)) {
-		draw_border(tmp);
-		wnoutrefresh(tmp->window);
+	if (lastsel) {
+		lastsel->urgent = false;
+		if (!isarrange(fullscreen)) {
+			draw_border(lastsel);
+			wnoutrefresh(lastsel->window);
+		}
 	}
 
 	if (c) {
 		detachstack(c);
 		attachstack(c);
 		settitle(c);
+		c->urgent = false;
 		if (isarrange(fullscreen)) {
 			draw(c);
 		} else {
@@ -581,6 +594,15 @@ term_title_handler(Vt *term, const char *title) {
 	if (!isarrange(fullscreen) || sel == c)
 		draw_border(c);
 	applycolorrules(c);
+}
+
+static void
+term_urgent_handler(Vt *term) {
+	Client *c = (Client *)vt_data_get(term);
+	c->urgent = true;
+	printf("\a");
+	fflush(stdout);
+	drawbar();
 }
 
 static void
@@ -799,6 +821,7 @@ keypress(int code) {
 
 	for (Client *c = runinall ? nextvisible(clients) : sel; c; c = nextvisible(c->next)) {
 		if (is_content_visible(c)) {
+			c->urgent = false;
 			if (code == '\e')
 				vt_write(c->term, buf, len);
 			else
@@ -978,6 +1001,7 @@ create(const char *args[]) {
 		free(cwd);
 	vt_data_set(c->term, c);
 	vt_title_handler_set(c->term, term_title_handler);
+	vt_urgent_handler_set(c->term, term_urgent_handler);
 	c->x = wax;
 	c->y = way;
 	debug("client with pid %d forked\n", c->pid);
@@ -1235,11 +1259,6 @@ togglebar(const char *args[]) {
 	bar.autohide = false;
 	updatebarpos();
 	redraw(NULL);
-}
-
-static void
-togglebell(const char *args[]) {
-	vt_togglebell(sel->term);
 }
 
 static void
