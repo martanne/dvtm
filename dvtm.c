@@ -163,9 +163,9 @@ typedef struct {
 } Editor;
 
 #define LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
-#define sstrlen(str) (sizeof(str) - 1)
-#define max(x, y) ((x) > (y) ? (x) : (y))
-#define TAGMASK      ((1 << LENGTH(tags)) - 1)
+#define STRLEN(str) (sizeof(str) - 1)
+#define MAX(x, y)   ((x) > (y) ? (x) : (y))
+#define TAGMASK     ((1 << LENGTH(tags)) - 1)
 
 #ifdef NDEBUG
  #define debug(format, args...)
@@ -319,7 +319,7 @@ drawbar(void) {
 			attrset(TAG_NORMAL);
 		printw(TAG_SYMBOL, tags[i]);
 		/* -2 because we assume %s is contained in TAG_SYMBOL */
-		x += sstrlen(TAG_SYMBOL) - 2 + strlen(tags[i]);
+		x += STRLEN(TAG_SYMBOL) - 2 + strlen(tags[i]);
 	}
 	attrset(TAG_NORMAL);
 	addch('[');
@@ -363,7 +363,7 @@ draw_border(Client *c) {
 	wattrset(c->window, (sel == c || (runinall && !c->minimized)) ? SELECTED_ATTR : NORMAL_ATTR);
 	getyx(c->window, y, x);
 	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
-	maxlen = c->w - (2 + sstrlen(TITLE) - sstrlen("%s%sd")  + sstrlen(SEPARATOR) + 2);
+	maxlen = c->w - (2 + STRLEN(TITLE) - STRLEN("%s%sd")  + STRLEN(SEPARATOR) + 2);
 	if (maxlen < 0)
 		maxlen = 0;
 	if ((size_t)maxlen < sizeof(c->title)) {
@@ -1665,7 +1665,7 @@ main(int argc, char *argv[]) {
 
 		if (bar.fd != -1) {
 			FD_SET(bar.fd, &rd);
-			nfds = max(nfds, bar.fd);
+			nfds = MAX(nfds, bar.fd);
 		}
 
 		for (Client *c = clients; c; ) {
@@ -1679,7 +1679,7 @@ main(int argc, char *argv[]) {
 			}
 			int pty = c->editor ? vt_pty_get(c->editor) : vt_pty_get(c->app);
 			FD_SET(pty, &rd);
-			nfds = max(nfds, pty);
+			nfds = MAX(nfds, pty);
 			c = c->next;
 		}
 
