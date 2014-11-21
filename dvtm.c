@@ -162,10 +162,10 @@ typedef struct {
 	bool filter;
 } Editor;
 
-#define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
+#define LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define sstrlen(str) (sizeof(str) - 1)
 #define max(x, y) ((x) > (y) ? (x) : (y))
-#define TAGMASK      ((1 << countof(tags)) - 1)
+#define TAGMASK      ((1 << LENGTH(tags)) - 1)
 
 #ifdef NDEBUG
  #define debug(format, args...)
@@ -310,7 +310,7 @@ drawbar(void) {
 	attrset(BAR_ATTR);
 	move(bar.y, 0);
 
-	for (unsigned int i = 0; i < countof(tags); i++){
+	for (unsigned int i = 0; i < LENGTH(tags); i++){
 		if (tagset[seltags] & (1 << i))
 			attrset(TAG_SEL);
 		else if (occupied & (1 << i))
@@ -558,7 +558,7 @@ applycolorrules(Client *c) {
 	short fg = r->color->fg, bg = r->color->bg;
 	attr_t attrs = r->attrs;
 
-	for (unsigned int i = 1; i < countof(colorrules); i++) {
+	for (unsigned int i = 1; i < LENGTH(colorrules); i++) {
 		r = &colorrules[i];
 		if (strstr(c->title, r->title)) {
 			attrs = r->attrs;
@@ -706,7 +706,7 @@ keybinding(KeyCombo keys) {
 	unsigned int keycount = 0;
 	while (keycount < MAX_KEYS && keys[keycount])
 		keycount++;
-	for (unsigned int b = 0; b < countof(bindings); b++) {
+	for (unsigned int b = 0; b < LENGTH(bindings); b++) {
 		for (unsigned int k = 0; k < keycount; k++) {
 			if (keys[k] != bindings[b].keys[k])
 				break;
@@ -720,8 +720,8 @@ keybinding(KeyCombo keys) {
 static unsigned int
 bitoftag(const char *tag) {
 	unsigned int i;
-	for (i = 0; (i < countof(tags)) && (tags[i] != tag); i++);
-	return (i < countof(tags)) ? (1 << i) : ~0;
+	for (i = 0; (i < LENGTH(tags)) && (tags[i] != tag); i++);
+	return (i < LENGTH(tags)) ? (1 << i) : ~0;
 }
 
 static void
@@ -816,7 +816,7 @@ mouse_setup(void) {
 
 	if (mouse_events_enabled) {
 		mask = BUTTON1_CLICKED | BUTTON2_CLICKED;
-		for (unsigned int i = 0; i < countof(buttons); i++)
+		for (unsigned int i = 0; i < LENGTH(buttons); i++)
 			mask |= buttons[i].mask;
 	}
 	mousemask(mask, NULL);
@@ -857,8 +857,8 @@ setup(void) {
 	mouse_setup();
 	raw();
 	vt_init();
-	vt_keytable_set(keytable, countof(keytable));
-	for (unsigned int i = 0; i < countof(colors); i++) {
+	vt_keytable_set(keytable, LENGTH(keytable));
+	for (unsigned int i = 0; i < LENGTH(colors); i++) {
 		if (COLORS == 256) {
 			if (colors[i].fg256)
 				colors[i].fg = colors[i].fg256;
@@ -902,7 +902,7 @@ destroy(Client *c) {
 	wnoutrefresh(c->window);
 	vt_destroy(c->term);
 	delwin(c->window);
-	if (!clients && countof(actions)) {
+	if (!clients && LENGTH(actions)) {
 		if (!strcmp(c->cmd, shell))
 			quit(NULL);
 		else
@@ -1006,7 +1006,7 @@ copymode(const char *args[]) {
 
 	const char **argv = (const char*[]){ ed, "-", NULL };
 
-	for (unsigned int i = 0; i < countof(editors); i++) {
+	for (unsigned int i = 0; i < LENGTH(editors); i++) {
 		if (!strcmp(editors[i].name, ed)) {
 			argv = (const char*[]){ ed, NULL, NULL, NULL, NULL, NULL, NULL };
 			for (int j = 1; editors[i].argv[j]; j++) {
@@ -1185,13 +1185,13 @@ setlayout(const char *args[]) {
 	unsigned int i;
 
 	if (!args || !args[0]) {
-		if (++layout == &layouts[countof(layouts)])
+		if (++layout == &layouts[LENGTH(layouts)])
 			layout = &layouts[0];
 	} else {
-		for (i = 0; i < countof(layouts); i++)
+		for (i = 0; i < LENGTH(layouts); i++)
 			if (!strcmp(args[0], layouts[i].symbol))
 				break;
-		if (i == countof(layouts))
+		if (i == LENGTH(layouts))
 			return;
 		layout = &layouts[i];
 	}
@@ -1222,7 +1222,7 @@ setmfact(const char *args[]) {
 
 static void
 startup(const char *args[]) {
-	for (unsigned int i = 0; i < countof(actions); i++)
+	for (unsigned int i = 0; i < LENGTH(actions); i++)
 		actions[i].cmd(actions[i].args);
 }
 
@@ -1344,7 +1344,7 @@ mouse_zoom(const char *args[]) {
 
 static Cmd *
 get_cmd_by_name(const char *name) {
-	for (unsigned int i = 0; i < countof(commands); i++) {
+	for (unsigned int i = 0; i < LENGTH(commands); i++) {
 		if (!strcmp(name, commands[i].name))
 			return &commands[i];
 	}
@@ -1462,7 +1462,7 @@ handle_mouse(void) {
 
 	vt_mouse(msel->term, event.x - msel->x, event.y - msel->y, event.bstate);
 
-	for (i = 0; i < countof(buttons); i++) {
+	for (i = 0; i < LENGTH(buttons); i++) {
 		if (event.bstate & buttons[i].mask)
 			buttons[i].action.cmd(buttons[i].action.args);
 	}
@@ -1590,7 +1590,7 @@ parse_args(int argc, char *argv[]) {
 				char *mod = argv[++arg];
 				if (mod[0] == '^' && mod[1])
 					*mod = CTRL(mod[1]);
-				for (unsigned int b = 0; b < countof(bindings); b++)
+				for (unsigned int b = 0; b < LENGTH(bindings); b++)
 					if (bindings[b].keys[0] == MOD)
 						bindings[b].keys[0] = *mod;
 				break;
