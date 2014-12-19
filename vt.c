@@ -947,8 +947,16 @@ static void interpret_csi_priv_mode(Vt *t, int param[], int pcount, bool set)
 			t->curshid = !set;
 			break;
 		case 47: /* use alternate/normal screen buffer */
+		case 1047:
+		case 1049:
 			t->buffer = set ? &t->buffer_alternate : &t->buffer_normal;
 			vt_dirty(t);
+			break;
+		case 1048:
+			if (set)
+				cursor_save(t);
+			else
+				cursor_restore(t);
 			break;
 		case 1000: /* enable/disable normal mouse tracking */
 			t->mousetrack = set;
