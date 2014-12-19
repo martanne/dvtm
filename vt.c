@@ -86,7 +86,7 @@
 static bool is_utf8, has_default_colors;
 static short color_pairs_reserved, color_pairs_max, color_pair_current;
 static short *color2palette, default_fg, default_bg;
-static char vt_term[32] = "dvtm";
+static char vt_term[32];
 
 typedef struct {
 	wchar_t text;
@@ -1802,12 +1802,10 @@ void vt_init(void)
 {
 	init_colors();
 	is_utf8_locale();
-	char color_suffix[] = "-256color";
 	char *term = getenv("DVTM_TERM");
-	if (term)
-		strncpy(vt_term, term, sizeof(vt_term) - sizeof(color_suffix));
-	if (COLORS >= 256)
-		strncat(vt_term, color_suffix, sizeof(color_suffix) - 1);
+	if (!term)
+		term = "dvtm";
+	snprintf(vt_term, sizeof vt_term, "%s%s", term, COLORS >= 256 ? "-256color" : "");
 }
 
 void vt_keytable_set(const char * const keytable_overlay[], int count)
