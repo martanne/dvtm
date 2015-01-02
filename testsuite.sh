@@ -25,8 +25,9 @@ sh_cmd() {
 	sleep 1
 }
 
-test_copymode() { # requires wget, diff, vis, vi
+test_copymode() { # requires wget, diff, vis
 	local FILENAME="UTF-8-demo.txt"
+	local COPY="$FILENAME.copy"
 	[ ! -e "$FILENAME" ] && (wget "$UTF8_TEST_URL" -O "$FILENAME" > /dev/null 2>&1 || return 1)
 	sleep 1
 	sh_cmd "cat $FILENAME"
@@ -35,16 +36,16 @@ test_copymode() { # requires wget, diff, vis, vi
 	dvtm_input '^kvG2k$'
 	dvtm_input ":wq\n"
 	sleep 1
-	rm -f "$FILENAME.copy"
-	sh_cmd "vi $FILENAME.copy"
+	rm -f "$COPY"
+	sh_cmd "vis $COPY"
 	dvtm_input 'i'
 	dvtm_cmd 'p'
 	dvtm_input "${ESC}dd:wq\n"
-	sleep 1
+	while [ ! -r "$COPY" ]; do sleep 1; done;
 	dvtm_cmd 'q'
-	diff -u "$FILENAME" "$FILENAME.copy" 1>&2
+	diff -u "$FILENAME" "$COPY" 1>&2
 	local RESULT=$?
-	#rm -f "$FILENAME.copy"
+	rm -f "$COPY"
 	return $RESULT
 }
 
