@@ -137,7 +137,7 @@ enum { ALIGN_LEFT, ALIGN_RIGHT };
 
 typedef struct {
 	int fd;
-	int pos;
+	int pos, lastpos;
 	bool autohide;
 	unsigned short int h;
 	unsigned short int y;
@@ -194,6 +194,7 @@ static void setmfact(const char *args[]);
 static void startup(const char *args[]);
 static void tag(const char *args[]);
 static void togglebar(const char *args[]);
+static void togglebarpos(const char *args[]);
 static void toggleminimize(const char *args[]);
 static void togglemouse(const char *args[]);
 static void togglerunall(const char *args[]);
@@ -231,7 +232,7 @@ static unsigned int seltags;
 static unsigned int tagset[2] = { 1, 1 };
 static bool mouse_events_enabled = ENABLE_MOUSE;
 static Layout *layout = layouts;
-static StatusBar bar = { .fd = -1, .pos = BAR_POS, .autohide = BAR_AUTOHIDE, .h = 1 };
+static StatusBar bar = { .fd = -1, .lastpos = BAR_POS, .pos = BAR_POS, .autohide = BAR_AUTOHIDE, .h = 1 };
 static CmdFifo cmdfifo = { .fd = -1 };
 static const char *shell;
 static Register copyreg;
@@ -294,6 +295,20 @@ updatebarpos(void) {
 		wah -= bar.h;
 		bar.y = wah;
 	}
+}
+
+static void
+hidebar(void) {
+	if (bar.pos != BAR_OFF) {
+		bar.lastpos = bar.pos;
+		bar.pos = BAR_OFF;
+	}
+}
+
+static void
+showbar(void) {
+	if (bar.pos == BAR_OFF)
+		bar.pos = bar.lastpos;
 }
 
 static void
@@ -455,9 +470,9 @@ arrange(void) {
 	attrset(NORMAL_ATTR);
 	if (bar.fd == -1 && bar.autohide) {
 		if ((!clients || !clients->next) && n == 1)
-			bar.pos = BAR_OFF;
+			hidebar();
 		else
-			bar.pos = BAR_POS;
+			showbar();
 		updatebarpos();
 	}
 	if (m && !isarrange(fullscreen))
@@ -1264,10 +1279,24 @@ startup(const char *args[]) {
 static void
 togglebar(const char *args[]) {
 	if (bar.pos == BAR_OFF)
-		bar.pos = (BAR_POS == BAR_OFF) ? BAR_TOP : BAR_POS;
+		showbar();
 	else
-		bar.pos = BAR_OFF;
+		hidebar();
 	bar.autohide = false;
+	updatebarpos();
+	redraw(NULL);
+}
+
+static void
+togglebarpos(const char *args[]) {
+	switch (bar.pos == BAR_OFF ? bar.lastpos : bar.pos) {
+	case BAR_TOP:
+		bar.pos = BAR_BOTTOM;
+		break;
+	case BAR_BOTTOM:
+		bar.pos = BAR_TOP;
+		break;
+	}
 	updatebarpos();
 	redraw(NULL);
 }
