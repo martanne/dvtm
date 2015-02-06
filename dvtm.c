@@ -298,7 +298,7 @@ updatebarpos(void) {
 
 static void
 drawbar(void) {
-	int sx, sy, x = 0;
+	int sx, sy, x, y, width;
 	unsigned int occupied = 0, urgent = 0;
 	if (bar.pos == BAR_OFF)
 		return;
@@ -323,29 +323,39 @@ drawbar(void) {
 		else
 			attrset(TAG_NORMAL);
 		printw(TAG_SYMBOL, tags[i]);
-		/* -2 because we assume %s is contained in TAG_SYMBOL */
-		x += STRLEN(TAG_SYMBOL) - 2 + strlen(tags[i]);
 	}
+
 	attrset(TAG_NORMAL);
+
+	getyx(stdscr, y, x);
+	(void)y;
+	int maxwidth = screen.w - x - 2;
+
 	addch('[');
 	attrset(BAR_ATTR);
 
 	wchar_t wbuf[sizeof bar.text];
-	int w, maxwidth = screen.w - x - 2;
+	size_t numchars = mbstowcs(wbuf, bar.text, sizeof bar.text);
 
-	if (mbstowcs(wbuf, bar.text, sizeof bar.text) == (size_t)-1)
-		return;
-	if ((w = wcswidth(wbuf, maxwidth)) == -1)
-		return;
-	if (BAR_ALIGN == ALIGN_RIGHT) {
-		for (int i = 0; i + w < maxwidth; i++)
-			addch(' ');
+	if (numchars != (size_t)-1 && (width = wcswidth(wbuf, maxwidth)) != -1) {
+		int pos = 0;
+		if (BAR_ALIGN == ALIGN_RIGHT) {
+			while (pos + width < maxwidth) {
+				addch(' ');
+				pos++;
+			}
+		}
+
+		for (size_t i = 0; i < numchars; i++) {
+			pos += wcwidth(wbuf[i]);
+			if (pos > maxwidth)
+				break;
+			addnwstr(wbuf+i, 1);
+		}
+
+		clrtoeol();
 	}
-	addstr(bar.text);
-	if (BAR_ALIGN == ALIGN_LEFT) {
-		for (; w < maxwidth; w++)
-			addch(' ');
-	}
+
 	attrset(TAG_NORMAL);
 	mvaddch(bar.y, screen.w - 1, ']');
 	attrset(NORMAL_ATTR);
