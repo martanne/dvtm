@@ -326,6 +326,7 @@ drawbar(void) {
 	}
 
 	attrset(TAG_NORMAL);
+	addstr(layout->symbol);
 
 	getyx(stdscr, y, x);
 	(void)y;
