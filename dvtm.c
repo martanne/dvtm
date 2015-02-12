@@ -134,7 +134,6 @@ typedef struct {
 } Cmd;
 
 enum { BAR_TOP, BAR_BOTTOM, BAR_OFF };
-enum { ALIGN_LEFT, ALIGN_RIGHT };
 
 typedef struct {
 	int fd;
@@ -357,13 +356,9 @@ drawbar(void) {
 	size_t numchars = mbstowcs(wbuf, bar.text, sizeof bar.text);
 
 	if (numchars != (size_t)-1 && (width = wcswidth(wbuf, maxwidth)) != -1) {
-		int pos = 0;
-		if (BAR_ALIGN == ALIGN_RIGHT) {
-			while (pos + width < maxwidth) {
-				addch(' ');
-				pos++;
-			}
-		}
+		int pos;
+		for (pos = 0; pos + width < maxwidth; pos++)
+			addch(' ');
 
 		for (size_t i = 0; i < numchars; i++) {
 			pos += wcwidth(wbuf[i]);
