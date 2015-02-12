@@ -46,6 +46,7 @@ int ESCDELAY;
 
 typedef struct {
 	float mfact;
+	unsigned int nmaster;
 	int history;
 	int w;
 	int h;
@@ -166,6 +167,7 @@ typedef struct {
 #define LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define STRLEN(str) (sizeof(str) - 1)
 #define MAX(x, y)   ((x) > (y) ? (x) : (y))
+#define MIN(x, y)   ((x) < (y) ? (x) : (y))
 #define TAGMASK     ((1 << LENGTH(tags)) - 1)
 
 #ifdef NDEBUG
@@ -190,6 +192,7 @@ static void redraw(const char *args[]);
 static void scrollback(const char *args[]);
 static void send(const char *args[]);
 static void setlayout(const char *args[]);
+static void incnmaster(const char *args[]);
 static void setmfact(const char *args[]);
 static void startup(const char *args[]);
 static void tag(const char *args[]);
@@ -223,7 +226,7 @@ static char *title;
 
 /* global variables */
 static const char *dvtm_name = "dvtm";
-Screen screen = { .mfact = MFACT, .history = SCROLL_HISTORY };
+Screen screen = { .mfact = MFACT, .nmaster = NMASTER, .history = SCROLL_HISTORY };
 static Client *stack = NULL;
 static Client *sel = NULL;
 static Client *lastsel = NULL;
@@ -1244,6 +1247,26 @@ setlayout(const char *args[]) {
 		if (i == LENGTH(layouts))
 			return;
 		layout = &layouts[i];
+	}
+	arrange();
+}
+
+static void
+incnmaster(const char *args[]) {
+	int delta;
+
+	if (isarrange(fullscreen) || isarrange(grid))
+		return;
+	/* arg handling, manipulate nmaster */
+	if (args[0] == NULL) {
+		screen.nmaster = NMASTER;
+	} else if (1 == sscanf(args[0], "%d", &delta)) {
+		if (args[0][0] == '+' || args[0][0] == '-')
+			screen.nmaster += delta;
+		else
+			screen.nmaster = delta;
+		if (screen.nmaster < 1)
+			screen.nmaster = 1;
 	}
 	arrange();
 }

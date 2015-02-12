@@ -44,6 +44,8 @@ static Color colors[] = {
 #define TITLE "[%s%s#%d]"
 /* master width factor [0.1 .. 0.9] */
 #define MFACT 0.5
+/* number of clients in master area */
+#define NMASTER 1
 /* scroll back buffer size in lines */
 #define SCROLL_HISTORY 500
 /* printf format string for the tag in the status bar */
@@ -83,11 +85,13 @@ static KeyBinding bindings[] = {
 	{ { MOD, 'J',          }, { focusnextnm,    { NULL }                    } },
 	{ { MOD, 'K',          }, { focusprevnm,    { NULL }                    } },
 	{ { MOD, 'k',          }, { focusprev,      { NULL }                    } },
-	{ { MOD, 'd',          }, { setlayout,      { "[]=" }                   } },
+	{ { MOD, 'f',          }, { setlayout,      { "[]=" }                   } },
 	{ { MOD, 'g',          }, { setlayout,      { "+++" }                   } },
 	{ { MOD, 'b',          }, { setlayout,      { "TTT" }                   } },
 	{ { MOD, 'm',          }, { setlayout,      { "[ ]" }                   } },
 	{ { MOD, ' ',          }, { setlayout,      { NULL }                    } },
+	{ { MOD, 'i',          }, { incnmaster,     { "+1" }                    } },
+	{ { MOD, 'd',          }, { incnmaster,     { "-1" }                    } },
 	{ { MOD, 'h',          }, { setmfact,       { "-0.05" }                 } },
 	{ { MOD, 'l',          }, { setmfact,       { "+0.05" }                 } },
 	{ { MOD, '.',          }, { toggleminimize, { NULL }                    } },

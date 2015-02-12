@@ -1,39 +1,49 @@
 static void tile(void)
 {
-	unsigned int i, n, nx, ny, nw, nh, mw, th;
+	unsigned int i, n, nx, ny, nw, nh, m, mw, mh, th;
 	Client *c;
 
 	for (n = 0, c = nextvisible(clients); c; c = nextvisible(c->next))
 		if (!c->minimized)
 			n++;
 
-	mw = n <= 1 ? waw : screen.mfact * waw;
-	th = n <= 1 ? 0 : wah / (n - 1);
+	m  = MAX(1, MIN(n, screen.nmaster));
+	mw = n == m ? waw : screen.mfact * waw;
+	mh = wah / m;
+	th = n == m ? 0 : wah / (n - m);
 	nx = wax;
 	ny = way;
 
 	for (i = 0, c = nextvisible(clients); c; c = nextvisible(c->next)) {
 		if (c->minimized)
 			continue;
-		if (i == 0) {	/* master */
+		if (i < m) {	/* master */
 			nw = mw;
-			nh = wah;
+			nh = (i < m - 1) ? mh : (way + wah) - ny;
 		} else {	/* tile window */
-			if (i == 1) {
+			if (i == m) {
 				ny = way;
 				nx += mw;
-				nw = waw - mw;
 				mvvline(ny, nx, ACS_VLINE, wah);
 				mvaddch(ny, nx, ACS_TTEE);
-				nx++, nw--;
+				nx++;
+				nw = waw - mw -1;
 			}
 			nh = (i < n - 1) ? th : (way + wah) - ny;
-			if (i > 1)
+			if (i > m)
 				mvaddch(ny, nx - 1, ACS_LTEE);
 		}
 		resize(c, nx, ny, nw, nh);
-		if (i > 0)
-			ny += nh;
+		ny += nh;
 		i++;
+	}
+
+	/* Fill in nmaster intersections */
+	if (n > m) {
+		ny = way + mh;
+		for (i = 1; i < m; i++) {
+			mvaddch(ny, nx - 1, ((ny - 1) % th ? ACS_RTEE : ACS_PLUS));
+			ny += mh;
+		}
 	}
 }
