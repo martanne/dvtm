@@ -197,7 +197,8 @@ struct Vt {
 };
 
 static const char *keytable[KEY_MAX+1] = {
-	['\n']          = "\r",
+	[KEY_ENTER]     = "\r",
+	['\n']          = "\n",
 	/* for the arrow keys the CSI / SS3 sequences are not stored here
 	 * because they depend on the current cursor terminal mode
 	 */

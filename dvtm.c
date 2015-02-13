@@ -900,6 +900,7 @@ setup(void) {
 	initscr();
 	start_color();
 	noecho();
+	nonl();
 	keypad(stdscr, TRUE);
 	mouse_setup();
 	raw();
