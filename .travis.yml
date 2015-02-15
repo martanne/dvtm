@@ -3,6 +3,22 @@ compiler:
   - gcc
   - clang
 env:
-  - DEBUG=
-  - DEBUG=debug
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "D4zVNKdFgWCbYsLHz4qgM1ZtFYZvek5EK7rRwfeae7rjpeUj3RVbmyYyN+errd+PNEEiKVkcT2UJjVGDg9ypb0ouOdII83artFBU1Qq5DgczDKH4bPpwR9oLkW0dJvta7hKNTMWq1PdmzP2R4ZgV3SlxlBufQw80tYhc0X7V4Vc="
+  matrix:
+   - DEBUG=
+   - DEBUG=debug
+
 script: make $DEBUG
+
+addons:
+  coverity_scan:
+    project:
+      name: "martanne/dvtm"
+      description: "Build submitted via Travis CI"
+    notification_email: mat@brain-dump.org
+    build_command_prepend:
+    build_command: "make"
+    branch_pattern: coverity_scan
