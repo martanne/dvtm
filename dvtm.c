@@ -164,7 +164,6 @@ typedef struct {
 } Editor;
 
 #define LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
-#define STRLEN(str) (sizeof(str) - 1)
 #define MAX(x, y)   ((x) > (y) ? (x) : (y))
 #define MIN(x, y)   ((x) < (y) ? (x) : (y))
 #define TAGMASK     ((1 << LENGTH(tags)) - 1)
@@ -397,7 +396,7 @@ draw_border(Client *c) {
 	wattrset(c->window, attrs);
 	getyx(c->window, y, x);
 	mvwhline(c->window, 0, 0, ACS_HLINE, c->w);
-	maxlen = c->w - (2 + STRLEN(TITLE) - STRLEN("%s%sd")  + STRLEN(SEPARATOR) + 2);
+	maxlen = c->w - 10;
 	if (maxlen < 0)
 		maxlen = 0;
 	if ((size_t)maxlen < sizeof(c->title)) {
@@ -405,9 +404,9 @@ draw_border(Client *c) {
 		c->title[maxlen] = '\0';
 	}
 
-	mvwprintw(c->window, 0, 2, TITLE,
+	mvwprintw(c->window, 0, 2, "[%s%s#%d]",
 	          *c->title ? c->title : "",
-	          *c->title ? SEPARATOR : "",
+	          *c->title ? " | " : "",
 	          c->order);
 	if (t)
 		c->title[maxlen] = t;

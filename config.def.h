@@ -34,12 +34,6 @@ static Color colors[] = {
 #define BAR_POS         BAR_TOP /* BAR_BOTTOM, BAR_OFF */
 /* whether status bar should be hidden if only one client exists */
 #define BAR_AUTOHIDE    true
-/* separator between window title and window number */
-#define SEPARATOR " | "
-/* printf format string for the window title, first %s
- * is replaced by the title, second %s is replaced by
- * the SEPARATOR, %d stands for the window number */
-#define TITLE "[%s%s#%d]"
 /* master width factor [0.1 .. 0.9] */
 #define MFACT 0.5
 /* number of clients in master area */
