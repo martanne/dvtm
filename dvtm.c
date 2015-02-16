@@ -1255,7 +1255,7 @@ incnmaster(const char *args[]) {
 	/* arg handling, manipulate nmaster */
 	if (args[0] == NULL) {
 		screen.nmaster = NMASTER;
-	} else if (1 == sscanf(args[0], "%d", &delta)) {
+	} else if (sscanf(args[0], "%d", &delta) == 1) {
 		if (args[0][0] == '+' || args[0][0] == '-')
 			screen.nmaster += delta;
 		else
@@ -1275,7 +1275,7 @@ setmfact(const char *args[]) {
 	/* arg handling, manipulate mfact */
 	if (args[0] == NULL) {
 		screen.mfact = MFACT;
-	} else if (1 == sscanf(args[0], "%f", &delta)) {
+	} else if (sscanf(args[0], "%f", &delta) == 1) {
 		if (args[0][0] == '+' || args[0][0] == '-')
 			screen.mfact += delta;
 		else
