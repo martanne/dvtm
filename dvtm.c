@@ -457,7 +457,7 @@ draw_all(void) {
 
 static void
 arrange(void) {
-	int m = 0, n = 0;
+	unsigned int m = 0, n = 0;
 	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
 		c->order = ++n;
 		if (c->minimized)
@@ -476,10 +476,10 @@ arrange(void) {
 		wah--;
 	layout->arrange();
 	if (m && !isarrange(fullscreen)) {
-		int nw = waw / m, nx = wax;
+		unsigned int i = 0, nw = waw / m, nx = wax;
 		for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
 			if (c->minimized) {
-				resize(c, nx, way+wah, nw, 1);
+				resize(c, nx, way+wah, ++i == m ? waw - nx : nw, 1);
 				nx += nw;
 			}
 		}
