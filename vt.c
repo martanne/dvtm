@@ -81,7 +81,7 @@
 
 #define IS_CONTROL(ch) !((ch) & 0xffffff60UL)
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define sstrlen(str) (sizeof(str) - 1)
+#define LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 static bool is_utf8, has_default_colors;
 static short color_pairs_reserved, color_pairs_max, color_pair_current;
@@ -968,9 +968,9 @@ static void interpret_csi_priv_mode(Vt *t, int param[], int pcount, bool set)
 
 static void interpret_csi(Vt *t)
 {
-	static int csiparam[BUFSIZ];
 	Buffer *b = t->buffer;
-	int param_count = 0;
+	int csiparam[16];
+	unsigned int param_count = 0;
 	const char *p = t->ebuf + 1;
 	char verb = t->ebuf[t->elen - 1];
 
@@ -979,7 +979,7 @@ static void interpret_csi(Vt *t)
 		if (IS_CONTROL(*p)) {
 			process_nonprinting(t, *p);
 		} else if (*p == ';') {
-			if (param_count >= (int)sizeof(csiparam))
+			if (param_count >= LENGTH(csiparam))
 				return;	/* too long! */
 			csiparam[param_count++] = 0;
 		} else if (isdigit((unsigned char)*p)) {
