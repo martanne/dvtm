@@ -1065,6 +1065,7 @@ static void interpret_csi(Vt *t)
 			memset(b->tabs, 0, sizeof(*b->tabs) * b->maxcols);
 			break;
 		}
+		break;
 	case 'r': /* set scrolling region */
 		interpret_csi_decstbm(t, csiparam, param_count);
 		break;
