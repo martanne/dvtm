@@ -1052,14 +1052,13 @@ copymode(const char *args[]) {
 	if (!ed)
 		ed = editors[0].name;
 
-	const char **argv = (const char*[]){ ed, "-", NULL };
+	const char **argv = (const char*[]){ ed, "-", NULL, NULL };
+	char argline[32];
 
 	for (unsigned int i = 0; i < LENGTH(editors); i++) {
 		if (!strcmp(editors[i].name, ed)) {
-			argv = (const char*[]){ ed, NULL, NULL, NULL, NULL, NULL, NULL };
 			for (int j = 1; editors[i].argv[j]; j++) {
 				if (strstr(editors[i].argv[j], "%d")) {
-					char argline[32];
 					int line = vt_content_start(sel->app);
 					snprintf(argline, sizeof(argline), "+%d", line);
 					argv[j] = argline;
