@@ -782,10 +782,10 @@ static void interpret_csi_c(Vt *t, char verb, int param[], int pcount)
 		break;
 	case 'G':
 	case '`':
-		b->curs_col = param[0] - 1;
+		b->curs_col = n - 1;
 		break;
 	case 'd':
-		b->curs_row = b->lines + param[0] - 1;
+		b->curs_row = b->lines + n - 1;
 		break;
 	}
 
