@@ -1057,7 +1057,7 @@ static void interpret_csi(Vt *t)
 		puttab(t, param_count ? -csiparam[0] : -1);
 		break;
 	case 'g': /* TBC: tabulation clear */
-		switch (csiparam[0]) {
+		switch (param_count ? csiparam[0] : 0) {
 		case 0:
 			b->tabs[b->curs_col] = false;
 			break;
