@@ -1,6 +1,6 @@
 include config.mk
 
-SRC += dvtm.c vt.c
+SRC = dvtm.c vt.c
 OBJ = ${SRC:.c=.o}
 
 all: clean options dvtm
