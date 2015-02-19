@@ -1,7 +1,7 @@
 /*
  * The initial "port" of dwm to curses was done by
  *
- * © 2007-2014 Marc André Tanner <mat at brain-dump dot org>
+ * © 2007-2015 Marc André Tanner <mat at brain-dump dot org>
  *
  * It is highly inspired by the original X11 dwm and
  * reuses some code of it which is mostly
@@ -1657,7 +1657,7 @@ parse_args(int argc, char *argv[]) {
 			usage();
 		switch (argv[arg][1]) {
 			case 'v':
-				puts("dvtm-"VERSION" © 2007-2014 Marc André Tanner");
+				puts("dvtm-"VERSION" © 2007-2015 Marc André Tanner");
 				exit(EXIT_SUCCESS);
 			case 'M':
 				mouse_events_enabled = !mouse_events_enabled;
