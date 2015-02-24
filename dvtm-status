@@ -2,16 +2,15 @@
 
 FIFO="/tmp/dvtm-status.$$"
 
-[ -e "$FIFO" ] || mkfifo "$FIFO"
-chmod 600 $FIFO
+[ -p "$FIFO" ] || mkfifo -m 600 "$FIFO" || exit 1
 
 while true; do
 	date +%H:%M
 	sleep 60
-done > $FIFO &
+done > "$FIFO" &
 
 STATUS_PID=$!
-dvtm -s $FIFO "$@" 2> /dev/null
+dvtm -s "$FIFO" "$@" 2> /dev/null
 kill $STATUS_PID
 wait $STATUS_PID 2> /dev/null
-rm $FIFO
+rm -f "$FIFO"
