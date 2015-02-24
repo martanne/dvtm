@@ -13,4 +13,5 @@ done > $FIFO &
 STATUS_PID=$!
 dvtm -s $FIFO "$@" 2> /dev/null
 kill $STATUS_PID
+wait $STATUS_PID 2> /dev/null
 rm $FIFO
