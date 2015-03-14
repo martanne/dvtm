@@ -50,7 +50,7 @@ programs.
 ## Download
 
 Either Download the latest source tarball
-[dvtm-0.14.tar.gz](http://www.brain-dump.org/projects/dvtm/dvtm-0.01.tar.gz)
+[dvtm-0.14.tar.gz](http://www.brain-dump.org/projects/dvtm/dvtm-0.14.tar.gz)
 with sha1sum
 
     205a2165e70455309f7ed6a6f11b3072fb9b13c3  dvtm-0.14.tar.gz
@@ -194,7 +194,7 @@ dvtm doesn't have session support built in. Use
 
     $ abduco -c dvtm-session
 
-Detach using `CTRL-\`. An later reattach with
+Detach using `CTRL-\` and later reattach with
 
     $ abduco -a dvtm-session
 
@@ -207,6 +207,14 @@ run dvtm with the `-M` command line argument, disable it at run
 time with `MOD+M` or modify `config.def.h` to disable it completely
 at compile time. You will however no longer be able to perform
 other mouse actions like selecting windows etc.
+
+### How to change the key bindings?
+
+The configuration of dvtm is done by creating a custom `config.h`
+and (re)compiling the source code. See the default `config.def.h`
+as an example, adapting it to your preference should be straightforward.
+You basically define a set of layouts and keys which dvtm will use.
+There are some pre defined macros to ease configuration.
 
 ### WARNING: terminal is not fully functional
 
