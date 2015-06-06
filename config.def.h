@@ -67,6 +67,11 @@ static Layout layouts[] = {
 };
 
 #define MOD  CTRL('g')
+#define TAGKEYS(KEY,TAG) \
+	{ { MOD, 'v', KEY,     }, { view,           { tags[TAG] }               } }, \
+	{ { MOD, 't', KEY,     }, { tag,            { tags[TAG] }               } }, \
+	{ { MOD, 'V', KEY,     }, { toggleview,     { tags[TAG] }               } }, \
+	{ { MOD, 'T', KEY,     }, { toggletag,      { tags[TAG] }               } },
 
 /* you can at most specifiy MAX_ARGS (3) number of arguments */
 static KeyBinding bindings[] = {
@@ -122,28 +127,13 @@ static KeyBinding bindings[] = {
 	{ { MOD, KEY_F(4),     }, { view,           { tags[3] }                 } },
 	{ { MOD, KEY_F(5),     }, { view,           { tags[4] }                 } },
 	{ { MOD, 'v', '0'      }, { view,           { NULL }                    } },
-	{ { MOD, 'v', '1'      }, { view,           { tags[0] }                 } },
-	{ { MOD, 'v', '2'      }, { view,           { tags[1] }                 } },
-	{ { MOD, 'v', '3'      }, { view,           { tags[2] }                 } },
-	{ { MOD, 'v', '4'      }, { view,           { tags[3] }                 } },
-	{ { MOD, 'v', '5'      }, { view,           { tags[4] }                 } },
 	{ { MOD, 'v', '\t',    }, { viewprevtag,    { NULL }                    } },
 	{ { MOD, 't', '0'      }, { tag,            { NULL }                    } },
-	{ { MOD, 't', '1'      }, { tag,            { tags[0] }                 } },
-	{ { MOD, 't', '2'      }, { tag,            { tags[1] }                 } },
-	{ { MOD, 't', '3'      }, { tag,            { tags[2] }                 } },
-	{ { MOD, 't', '4'      }, { tag,            { tags[3] }                 } },
-	{ { MOD, 't', '5'      }, { tag,            { tags[4] }                 } },
-	{ { MOD, 'V', '1'      }, { toggleview,     { tags[0] }                 } },
-	{ { MOD, 'V', '2'      }, { toggleview,     { tags[1] }                 } },
-	{ { MOD, 'V', '3'      }, { toggleview,     { tags[2] }                 } },
-	{ { MOD, 'V', '4'      }, { toggleview,     { tags[3] }                 } },
-	{ { MOD, 'V', '5'      }, { toggleview,     { tags[4] }                 } },
-	{ { MOD, 'T', '1'      }, { toggletag,      { tags[0] }                 } },
-	{ { MOD, 'T', '2'      }, { toggletag,      { tags[1] }                 } },
-	{ { MOD, 'T', '3'      }, { toggletag,      { tags[2] }                 } },
-	{ { MOD, 'T', '4'      }, { toggletag,      { tags[3] }                 } },
-	{ { MOD, 'T', '5'      }, { toggletag,      { tags[4] }                 } },
+	TAGKEYS( '1',                              0)
+	TAGKEYS( '2',                              1)
+	TAGKEYS( '3',                              2)
+	TAGKEYS( '4',                              3)
+	TAGKEYS( '5',                              4)
 };
 
 static const ColorRule colorrules[] = {
