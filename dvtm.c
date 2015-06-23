@@ -1776,6 +1776,7 @@ main(int argc, char *argv[]) {
 				keys[key_index++] = code;
 				KeyBinding *binding = NULL;
 				if (code == KEY_MOUSE) {
+					key_index = 0;
 					handle_mouse();
 				} else if ((binding = keybinding(keys))) {
 					unsigned int key_length = 0;
