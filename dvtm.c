@@ -987,7 +987,7 @@ static char *getcwd_by_pid(Client *c) {
 static void
 create(const char *args[]) {
 	const char *cmd = (args && args[0]) ? args[0] : shell;
-	const char *pargs[] = { "/bin/sh", "-c", cmd, NULL };
+	const char *pargs[] = { shell, "-c", cmd, NULL };
 	char buf[8], *cwd = NULL;
 	const char *env[] = {
 		"DVTM_WINDOW_ID", buf,
@@ -1020,7 +1020,7 @@ create(const char *args[]) {
 	}
 	if (args && args[2])
 		cwd = !strcmp(args[2], "$CWD") ? getcwd_by_pid(sel) : (char*)args[2];
-	c->pid = vt_forkpty(c->term, "/bin/sh", pargs, cwd, env, NULL, NULL);
+	c->pid = vt_forkpty(c->term, shell, pargs, cwd, env, NULL, NULL);
 	if (args && args[2] && !strcmp(args[2], "$CWD"))
 		free(cwd);
 	vt_data_set(c->term, c);
