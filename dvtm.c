@@ -348,7 +348,7 @@ drawbar(void) {
 	(void)y;
 	int maxwidth = screen.w - x - 2;
 
-	addch('[');
+	addch(BAR_BEGIN);
 	attrset(BAR_ATTR);
 
 	wchar_t wbuf[sizeof bar.text];
@@ -370,7 +370,7 @@ drawbar(void) {
 	}
 
 	attrset(TAG_NORMAL);
-	mvaddch(bar.y, screen.w - 1, ']');
+	mvaddch(bar.y, screen.w - 1, BAR_END);
 	attrset(NORMAL_ATTR);
 	move(sy, sx);
 	wnoutrefresh(stdscr);
