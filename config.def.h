@@ -77,7 +77,7 @@ static Layout layouts[] = {
 static KeyBinding bindings[] = {
 	{ { MOD, 'c',          }, { create,         { NULL }                    } },
 	{ { MOD, 'C',          }, { create,         { NULL, NULL, "$CWD" }      } },
-	{ { MOD, 'x',          }, { killclient,     { NULL }                    } },
+	{ { MOD, 'x', 'x',     }, { killclient,     { NULL }                    } },
 	{ { MOD, 'j',          }, { focusnext,      { NULL }                    } },
 	{ { MOD, 'J',          }, { focusnextnm,    { NULL }                    } },
 	{ { MOD, 'K',          }, { focusprevnm,    { NULL }                    } },
@@ -107,7 +107,7 @@ static KeyBinding bindings[] = {
 	{ { MOD, '8',          }, { focusn,         { "8" }                     } },
 	{ { MOD, '9',          }, { focusn,         { "9" }                     } },
 	{ { MOD, '\t',         }, { focuslast,      { NULL }                    } },
-	{ { MOD, 'q',          }, { quit,           { NULL }                    } },
+	{ { MOD, 'q', 'q',     }, { quit,           { NULL }                    } },
 	{ { MOD, 'a',          }, { togglerunall,   { NULL }                    } },
 	{ { MOD, CTRL('L'),    }, { redraw,         { NULL }                    } },
 	{ { MOD, 'r',          }, { redraw,         { NULL }                    } },

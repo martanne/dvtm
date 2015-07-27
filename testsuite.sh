@@ -42,7 +42,7 @@ test_copymode() { # requires wget, diff, vis
 	dvtm_cmd 'p'
 	dvtm_input "${ESC}dd:wq\n"
 	while [ ! -r "$COPY" ]; do sleep 1; done;
-	dvtm_cmd 'q'
+	dvtm_input "exit\n"
 	diff -u "$FILENAME" "$COPY" 1>&2
 	local RESULT=$?
 	rm -f "$COPY"
