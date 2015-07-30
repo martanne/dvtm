@@ -294,6 +294,24 @@ static void row_roll(Row *start, Row *end, int count)
 	}
 }
 
+static void buffer_clear(Buffer *b)
+{
+	Cell cell = {
+		.text = L'\0',
+		.attr = A_NORMAL,
+		.fg = -1,
+		.bg = -1,
+	};
+
+	for (int i = 0; i < b->rows; i++) {
+		Row *row = b->lines + i;
+		for (int j = 0; j < b->cols; j++) {
+			row->cells[i] = cell;
+			row->dirty = true;
+		}
+	}
+}
+
 static void buffer_free(Buffer *b)
 {
 	for (int i = 0; i < b->rows; i++)
@@ -947,13 +965,17 @@ static void interpret_csi_priv_mode(Vt *t, int param[], int pcount, bool set)
 		case 25: /* make cursor visible/invisible (DECCM) */
 			t->curshid = !set;
 			break;
-		case 47: /* use alternate/normal screen buffer */
+		case 1049: /* combine 1047 + 1048 */
+		case 47:   /* use alternate/normal screen buffer */
 		case 1047:
-		case 1049:
+			if (!set)
+				buffer_clear(&t->buffer_alternate);
 			t->buffer = set ? &t->buffer_alternate : &t->buffer_normal;
 			vt_dirty(t);
-			break;
-		case 1048:
+			if (param[i] != 1049)
+				break;
+			/* fall through */
+		case 1048: /* save/restore cursor */
 			if (set)
 				cursor_save(t);
 			else
