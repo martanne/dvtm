@@ -306,7 +306,7 @@ static void buffer_clear(Buffer *b)
 	for (int i = 0; i < b->rows; i++) {
 		Row *row = b->lines + i;
 		for (int j = 0; j < b->cols; j++) {
-			row->cells[i] = cell;
+			row->cells[j] = cell;
 			row->dirty = true;
 		}
 	}
