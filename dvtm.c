@@ -161,6 +161,7 @@ typedef struct {
 	char *name;
 	const char *argv[4];
 	bool filter;
+	bool color;
 } Editor;
 
 #define LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -1056,6 +1057,7 @@ copymode(const char *args[]) {
 
 	const char **argv = (const char*[]){ ed, "-", NULL, NULL };
 	char argline[32];
+	bool colored = false;
 
 	for (unsigned int i = 0; i < LENGTH(editors); i++) {
 		if (!strcmp(editors[i].name, ed)) {
@@ -1070,6 +1072,7 @@ copymode(const char *args[]) {
 			}
 			if (editors[i].filter)
 				from = &sel->editor_fds[1];
+			colored = editors[i].color;
 			break;
 		}
 	}
@@ -1084,7 +1087,7 @@ copymode(const char *args[]) {
 
 	if (sel->editor_fds[0] != -1) {
 		char *buf = NULL;
-		size_t len = vt_content_get(sel->app, &buf);
+		size_t len = vt_content_get(sel->app, &buf, colored);
 		char *cur = buf;
 		while (len > 0) {
 			ssize_t res = write(sel->editor_fds[0], cur, len);

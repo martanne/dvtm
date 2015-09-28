@@ -204,13 +204,14 @@ static char const * const keytable[] = {
  * set the first entry is chosen. Otherwise the array is consulted for supported
  * options. A %d in argv is replaced by the line number at which the file should
  * be opened. If filter is true the editor is expected to work even if stdout is
- * redirected (i.e. not a terminal).
+ * redirected (i.e. not a terminal). If color is true then color escape sequences
+ * are generated in the output.
  */
 static Editor editors[] = {
-	{ .name = "vis",         .argv = { "vis", "+%d", "-", NULL  }, .filter = true  },
-	{ .name = "sandy",       .argv = { "sandy", "-d", "-", NULL }, .filter = true  },
-	{ .name = "dvtm-editor", .argv = { "dvtm-editor", "-", NULL }, .filter = true  },
-	{ .name = "vim",         .argv = { "vim", "+%d", "-", NULL  }, .filter = false },
-	{ .name = "less",        .argv = { "less", "+%d", NULL      }, .filter = false },
-	{ .name = "more",        .argv = { "more", "+%d", NULL      }, .filter = false },
+	{ .name = "vis",         .argv = { "vis", "+%d", "-", NULL   }, .filter = true,  .color = false },
+	{ .name = "sandy",       .argv = { "sandy", "-d", "-", NULL  }, .filter = true,  .color = false },
+	{ .name = "dvtm-editor", .argv = { "dvtm-editor", "-", NULL  }, .filter = true,  .color = false },
+	{ .name = "vim",         .argv = { "vim", "+%d", "-", NULL   }, .filter = false, .color = false },
+	{ .name = "less",        .argv = { "less", "-R", "+%d", NULL }, .filter = false, .color = true  },
+	{ .name = "more",        .argv = { "more", "+%d", NULL       }, .filter = false, .color = false },
 };

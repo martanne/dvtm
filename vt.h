@@ -60,7 +60,7 @@ void vt_scroll(Vt*, int rows);
 void vt_noscroll(Vt*);
 
 pid_t vt_pid_get(Vt*);
-size_t vt_content_get(Vt*, char **s);
+size_t vt_content_get(Vt*, char **s, bool colored);
 int vt_content_start(Vt*);
 
 #endif /* VT_H */
