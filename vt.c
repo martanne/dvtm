@@ -1903,39 +1903,39 @@ size_t vt_content_get(Vt *t, char **buf, bool colored)
 		char *last_non_space = s;
 		for (int col = 0; col < b->cols; col++) {
 			Cell *cell = row->cells + col;
-			if (cell->text) {
-				if (colored) {
-					int esclen = 0;
-					if (!prev_cell || cell->attr != prev_cell->attr) {
-						attr_t attr = cell->attr << NCURSES_ATTR_SHIFT;
-						esclen = sprintf(s, "\033[0%s%s%s%s%s%sm",
-							attr & A_BOLD ? ";1" : "",
-							attr & A_DIM ? ";2" : "",
-							attr & A_UNDERLINE ? ";4" : "",
-							attr & A_BLINK ? ";5" : "",
-							attr & A_REVERSE ? ";7" : "",
-							attr & A_INVIS ? ";8" : "");
-						if (esclen > 0)
-							s += esclen;
-					}
-					if (!prev_cell || cell->fg != prev_cell->fg || cell->attr != prev_cell->attr) {
-						if (cell->fg == -1)
-							esclen = sprintf(s, "\033[39m");
-						else
-							esclen = sprintf(s, "\033[38;5;%dm", cell->fg);
-						if (esclen > 0)
-							s += esclen;
-					}
-					if (!prev_cell || cell->bg != prev_cell->bg || cell->attr != prev_cell->attr) {
-						if (cell->bg == -1)
-							esclen = sprintf(s, "\033[49m");
-						else
-							esclen = sprintf(s, "\033[48;5;%dm", cell->bg);
-						if (esclen > 0)
-							s += esclen;
-					}
-					prev_cell = cell;
+			if (colored) {
+				int esclen = 0;
+				if (!prev_cell || cell->attr != prev_cell->attr) {
+					attr_t attr = cell->attr << NCURSES_ATTR_SHIFT;
+					esclen = sprintf(s, "\033[0%s%s%s%s%s%sm",
+						attr & A_BOLD ? ";1" : "",
+						attr & A_DIM ? ";2" : "",
+						attr & A_UNDERLINE ? ";4" : "",
+						attr & A_BLINK ? ";5" : "",
+						attr & A_REVERSE ? ";7" : "",
+						attr & A_INVIS ? ";8" : "");
+					if (esclen > 0)
+						s += esclen;
 				}
+				if (!prev_cell || cell->fg != prev_cell->fg || cell->attr != prev_cell->attr) {
+					if (cell->fg == -1)
+						esclen = sprintf(s, "\033[39m");
+					else
+						esclen = sprintf(s, "\033[38;5;%dm", cell->fg);
+					if (esclen > 0)
+						s += esclen;
+				}
+				if (!prev_cell || cell->bg != prev_cell->bg || cell->attr != prev_cell->attr) {
+					if (cell->bg == -1)
+						esclen = sprintf(s, "\033[49m");
+					else
+						esclen = sprintf(s, "\033[48;5;%dm", cell->bg);
+					if (esclen > 0)
+						s += esclen;
+				}
+				prev_cell = cell;
+			}
+			if (cell->text) {
 				len = wcrtomb(s, cell->text, &ps);
 				if (len > 0)
 					s += len;
