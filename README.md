@@ -185,6 +185,14 @@ the case include [sandy](http://tools.suckless.org/sandy) and
 
     $ echo Hello World | vis - | cat
 
+## Patches
+
+There exist a number of out of tree patches which customize dvtm's
+behaviour:
+
+ - [pertag](http://waxandwane.org/dvtm.html) (see also the corresponding
+   [mailing list post](http://lists.suckless.org/hackers/1510/8186.html))
+
 ## FAQ
 
 ### Detach / reattach functionality
