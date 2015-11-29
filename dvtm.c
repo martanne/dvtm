@@ -989,8 +989,7 @@ static char *getcwd_by_pid(Client *c) {
 
 static void
 create(const char *args[]) {
-	const char *cmd;
-	const char *pargs[4];
+	const char *pargs[4] = { shell, NULL };
 	char buf[8], *cwd = NULL;
 	const char *env[] = {
 		"DVTM_WINDOW_ID", buf,
@@ -998,15 +997,9 @@ create(const char *args[]) {
 	};
 
 	if (args && args[0]) {
-		cmd = args[0];
-		pargs[0] = shell;
 		pargs[1] = "-c";
-		pargs[2] = cmd;
+		pargs[2] = args[0];
 		pargs[3] = NULL;
-	} else {
-		cmd = shell;
-		pargs[0] = cmd;
-		pargs[1] = NULL;
 	}
 	Client *c = calloc(1, sizeof(Client));
 	if (!c)
@@ -1027,7 +1020,7 @@ create(const char *args[]) {
 		return;
 	}
 
-	c->cmd = cmd;
+	c->cmd = (args && args[0]) ? args[0] : shell;
 	if (args && args[1]) {
 		strncpy(c->title, args[1], sizeof(c->title) - 1);
 		c->title[sizeof(c->title) - 1] = '\0';
