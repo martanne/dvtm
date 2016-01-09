@@ -33,14 +33,14 @@ test_copymode() { # requires wget, diff, vis
 	sh_cmd "cat $FILENAME"
 	dvtm_cmd 'e'
 	dvtm_input "?UTF-8 encoded\n"
-	dvtm_input '^kvG2k$'
+	dvtm_input '^kvG1k$'
 	dvtm_input ":wq\n"
 	sleep 1
 	rm -f "$COPY"
 	sh_cmd "vis $COPY"
 	dvtm_input 'i'
 	dvtm_cmd 'p'
-	dvtm_input "${ESC}dd:wq\n"
+	dvtm_input "dd:wq\n"
 	while [ ! -r "$COPY" ]; do sleep 1; done;
 	dvtm_input "exit\n"
 	diff -u "$FILENAME" "$COPY" 1>&2
