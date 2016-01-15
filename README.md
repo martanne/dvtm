@@ -10,6 +10,8 @@ programs.
 
 ## News
 
+- [dvtm-0.15](http://www.brain-dump.org/projects/dvtm/dvtm-0.15.tar.gz)
+  [released](http://lists.suckless.org/dev/1601/28095.html) (09.01.2016)
 - [dvtm-0.14](http://www.brain-dump.org/projects/dvtm/dvtm-0.14.tar.gz)
   [released](http://lists.suckless.org/dev/1502/25558.html) (19.02.2015)
 - [dvtm-0.13](http://www.brain-dump.org/projects/dvtm/dvtm-0.13.tar.gz)
@@ -50,10 +52,10 @@ programs.
 ## Download
 
 Either Download the latest source tarball
-[dvtm-0.14.tar.gz](http://www.brain-dump.org/projects/dvtm/dvtm-0.14.tar.gz)
+[dvtm-0.15.tar.gz](http://www.brain-dump.org/projects/dvtm/dvtm-0.15.tar.gz)
 with sha1sum
 
-    205a2165e70455309f7ed6a6f11b3072fb9b13c3  dvtm-0.14.tar.gz
+    9bcec7af79b2adfead88c5513fa19b53dad6e134  dvtm-0.15.tar.gz
 
 compile (you will need curses headers) and install it
 
