@@ -1827,6 +1827,14 @@ static void init_colors(void)
 	color_pairs_max = MIN(COLOR_PAIRS, MAX_COLOR_PAIRS);
 	if (COLORS)
 		color2palette = calloc((COLORS + 2) * (COLORS + 2), sizeof(short));
+	/*
+	 * XXX: On undefined color-pairs NetBSD curses pair_content() set fg
+	 *      and bg to default colors while ncurses set them respectively to
+	 *      0 and 0. Initialize all color-pairs in order to have consistent
+	 *      behaviour despite the implementation used.
+	 */
+	for (short i = 1; i < COLOR_PAIRS; i++)
+		init_pair(i, 0, 0);
 	vt_color_reserve(COLOR_WHITE, COLOR_BLACK);
 }
 
