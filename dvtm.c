@@ -389,10 +389,10 @@ draw_border(Client *c) {
 
 	if (!show_border())
 		return;
-	if (sel == c || (runinall && !c->minimized))
-		attrs = SELECTED_ATTR;
 	if (sel != c && c->urgent)
 		attrs = URGENT_ATTR;
+	if (sel == c || (runinall && !c->minimized))
+		attrs = SELECTED_ATTR;
 
 	wattrset(c->window, attrs);
 	getyx(c->window, y, x);
