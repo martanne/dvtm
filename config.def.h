@@ -14,11 +14,13 @@
 enum {
 	DEFAULT,
 	BLUE,
+	RED,
 };
 
 static Color colors[] = {
 	[DEFAULT] = { .fg = -1,         .bg = -1, .fg256 = -1, .bg256 = -1, },
 	[BLUE]    = { .fg = COLOR_BLUE, .bg = -1, .fg256 = 68, .bg256 = -1, },
+	[RED]     = { .fg = COLOR_RED,  .bg = -1, .fg256 = 1,  .bg256 = -1, },
 };
 
 #define COLOR(c)        COLOR_PAIR(colors[c].pair)
@@ -27,7 +29,7 @@ static Color colors[] = {
 /* curses attributes for normal (not selected) windows */
 #define NORMAL_ATTR     (COLOR(DEFAULT) | A_NORMAL)
 /* curses attributes for a window with pending urgent flag */
-#define URGENT_ATTR     NORMAL_ATTR
+#define URGENT_ATTR     (COLOR(RED) | A_NORMAL)
 /* curses attributes for the status bar */
 #define BAR_ATTR        (COLOR(BLUE) | A_NORMAL)
 /* characters for beginning and end of status bar message */
