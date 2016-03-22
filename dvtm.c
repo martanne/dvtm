@@ -919,6 +919,7 @@ setup(void) {
 	}
 	resize_screen();
 	struct sigaction sa;
+	memset(&sa, 0, sizeof sa);
 	sa.sa_flags = 0;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_handler = sigwinch_handler;
