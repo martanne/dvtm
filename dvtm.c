@@ -721,6 +721,7 @@ sigchld_handler(int sig) {
 
 static void
 sigwinch_handler(int sig) {
+	keypad(stdscr, TRUE);
 	screen.need_resize = true;
 }
 
