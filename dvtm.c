@@ -750,10 +750,7 @@ resize_screen(void) {
 }
 
 static KeyBinding*
-keybinding(KeyCombo keys) {
-	unsigned int keycount = 0;
-	while (keycount < MAX_KEYS && keys[keycount])
-		keycount++;
+keybinding(KeyCombo keys, unsigned int keycount) {
 	for (unsigned int b = 0; b < LENGTH(bindings); b++) {
 		for (unsigned int k = 0; k < keycount; k++) {
 			if (keys[k] != bindings[b].keys[k])
@@ -1788,10 +1785,10 @@ main(int argc, char *argv[]) {
 				if (code == KEY_MOUSE) {
 					key_index = 0;
 					handle_mouse();
-				} else if ((binding = keybinding(keys))) {
-					unsigned int key_length = 0;
-					while (key_length < MAX_KEYS && binding->keys[key_length])
-						key_length++;
+				} else if ((binding = keybinding(keys, key_index))) {
+					unsigned int key_length = MAX_KEYS;
+					while (key_length > 1 && !binding->keys[key_length-1])
+						key_length--;
 					if (key_index == key_length) {
 						binding->action.cmd(binding->action.args);
 						key_index = 0;
