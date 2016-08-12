@@ -342,10 +342,7 @@ drawbar(void) {
 		printw(TAG_SYMBOL, tags[i]);
 	}
 
-	if (runinall)
-		attrset(TAG_SEL);
-	else
-		attrset(TAG_NORMAL);
+	attrset(runinall ? TAG_SEL : TAG_NORMAL);
 	addstr(layout->symbol);
 	attrset(TAG_NORMAL);
 
