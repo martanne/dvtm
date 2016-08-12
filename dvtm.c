@@ -348,11 +348,12 @@ drawbar(void) {
 
 	if(keys) {
 		unsigned int keycount = 0;
-		while (keycount < MAX_KEYS && keys[keycount])
+		while (keycount < MAX_KEYS && keys[keycount]) {
 			if (keys[keycount] < ' ')
 				printw("^%c", 'a' - 1 + keys[keycount++]);
 			else
 				printw("%c", keys[keycount++]);
+		}
 	}
 
 	getyx(stdscr, y, x);
