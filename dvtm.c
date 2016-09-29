@@ -342,8 +342,9 @@ drawbar(void) {
 		printw(TAG_SYMBOL, tags[i]);
 	}
 
-	attrset(TAG_NORMAL);
+	attrset(runinall ? TAG_SEL : TAG_NORMAL);
 	addstr(layout->symbol);
+	attrset(TAG_NORMAL);
 
 	getyx(stdscr, y, x);
 	(void)y;
@@ -1376,6 +1377,7 @@ togglemouse(const char *args[]) {
 static void
 togglerunall(const char *args[]) {
 	runinall = !runinall;
+	drawbar();
 	draw_all();
 }
 
