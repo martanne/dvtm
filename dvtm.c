@@ -547,8 +547,10 @@ settitle(Client *c) {
 	char *term, *t = title;
 	if (!t && sel == c && *c->title)
 		t = c->title;
-	if (t && (term = getenv("TERM")) && !strstr(term, "linux"))
+	if (t && (term = getenv("TERM")) && !strstr(term, "linux")) {
 		printf("\033]0;%s\007", t);
+		fflush(stdout);
+	}
 }
 
 static void
