@@ -1443,90 +1443,90 @@ handle_cmdfifo(void) {
 	int r;
 	char *p, *s, cmdbuf[512], c;
 	Cmd *cmd;
-	switch (r = read(cmdfifo.fd, cmdbuf, sizeof cmdbuf - 1)) {
-	case -1:
-	case 0:
+
+	r = read(cmdfifo.fd, cmdbuf, sizeof cmdbuf - 1);
+	if (r <= 0) {
 		cmdfifo.fd = -1;
-		break;
-	default:
-		cmdbuf[r] = '\0';
-		p = cmdbuf;
-		while (*p) {
-			/* find the command name */
-			for (; *p == ' ' || *p == '\n'; p++);
-			for (s = p; *p && *p != ' ' && *p != '\n'; p++);
-			if ((c = *p))
-				*p++ = '\0';
-			if (*s && (cmd = get_cmd_by_name(s)) != NULL) {
-				bool quote = false;
-				int argc = 0;
-				const char *args[MAX_ARGS], *arg;
-				memset(args, 0, sizeof(args));
-				/* if arguments were specified in config.h ignore the one given via
-				 * the named pipe and thus skip everything until we find a new line
-				 */
-				if (cmd->action.args[0] || c == '\n') {
-					debug("execute %s", s);
-					cmd->action.cmd(cmd->action.args);
-					while (*p && *p != '\n')
-						p++;
-					continue;
-				}
-				/* no arguments were given in config.h so we parse the command line */
-				while (*p == ' ')
+		return;
+	}
+
+	cmdbuf[r] = '\0';
+	p = cmdbuf;
+	while (*p) {
+		/* find the command name */
+		for (; *p == ' ' || *p == '\n'; p++);
+		for (s = p; *p && *p != ' ' && *p != '\n'; p++);
+		if ((c = *p))
+			*p++ = '\0';
+		if (*s && (cmd = get_cmd_by_name(s)) != NULL) {
+			bool quote = false;
+			int argc = 0;
+			const char *args[MAX_ARGS], *arg;
+			memset(args, 0, sizeof(args));
+			/* if arguments were specified in config.h ignore the one given via
+			 * the named pipe and thus skip everything until we find a new line
+			 */
+			if (cmd->action.args[0] || c == '\n') {
+				debug("execute %s", s);
+				cmd->action.cmd(cmd->action.args);
+				while (*p && *p != '\n')
 					p++;
-				arg = p;
-				for (; (c = *p); p++) {
-					switch (*p) {
-					case '\\':
-						/* remove the escape character '\\' move every
-						 * following character to the left by one position
-						 */
-						switch (p[1]) {
-							case '\\':
-							case '\'':
-							case '\"': {
-								char *t = p+1;
-								do {
-									t[-1] = *t;
-								} while (*t++);
-							}
+				continue;
+			}
+			/* no arguments were given in config.h so we parse the command line */
+			while (*p == ' ')
+				p++;
+			arg = p;
+			for (; (c = *p); p++) {
+				switch (*p) {
+				case '\\':
+					/* remove the escape character '\\' move every
+					 * following character to the left by one position
+					 */
+					switch (p[1]) {
+						case '\\':
+						case '\'':
+						case '\"': {
+							char *t = p+1;
+							do {
+								t[-1] = *t;
+							} while (*t++);
 						}
-						break;
-					case '\'':
-					case '\"':
-						quote = !quote;
-						break;
-					case ' ':
-						if (!quote) {
-					case '\n':
-							/* remove trailing quote if there is one */
-							if (*(p - 1) == '\'' || *(p - 1) == '\"')
-								*(p - 1) = '\0';
-							*p++ = '\0';
-							/* remove leading quote if there is one */
-							if (*arg == '\'' || *arg == '\"')
-								arg++;
-							if (argc < MAX_ARGS)
-								args[argc++] = arg;
-
-							while (*p == ' ')
-								++p;
-							arg = p--;
-						}
-						break;
 					}
+					break;
+				case '\'':
+				case '\"':
+					quote = !quote;
+					break;
+				case ' ':
+					if (!quote) {
+				case '\n':
+						/* remove trailing quote if there is one */
+						if (*(p - 1) == '\'' || *(p - 1) == '\"')
+							*(p - 1) = '\0';
+						*p++ = '\0';
+						/* remove leading quote if there is one */
+						if (*arg == '\'' || *arg == '\"')
+							arg++;
+						if (argc < MAX_ARGS)
+							args[argc++] = arg;
 
-					if (c == '\n' || *p == '\n') {
-						if (!*p)
-							p++;
-						debug("execute %s", s);
-						for(int i = 0; i < argc; i++)
-							debug(" %s", args[i]);
-						debug("\n");
-						cmd->action.cmd(args);
-						break;
+						while (*p == ' ')
+							++p;
+						arg = p--;
 					}
+					break;
+				}
+
+				if (c == '\n' || *p == '\n') {
+					if (!*p)
+						p++;
+					debug("execute %s", s);
+					for(int i = 0; i < argc; i++)
+						debug(" %s", args[i]);
+					debug("\n");
+					cmd->action.cmd(args);
+					break;
 				}
 			}
 		}
