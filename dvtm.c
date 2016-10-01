@@ -179,6 +179,7 @@ typedef struct {
 static void create(const char *args[]);
 static void copymode(const char *args[]);
 static void focusn(const char *args[]);
+static void focusid(const char *args[]);
 static void focusnext(const char *args[]);
 static void focusnextnm(const char *args[]);
 static void focusprev(const char *args[]);
@@ -1117,6 +1118,22 @@ static void
 focusn(const char *args[]) {
 	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
 		if (c->order == atoi(args[0])) {
+			focus(c);
+			if (c->minimized)
+				toggleminimize(NULL);
+			return;
+		}
+	}
+}
+
+static void
+focusid(const char *args[]) {
+	if (!args[0])
+		return;
+
+	const int win_id = atoi(args[0]);
+	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
+		if (c->id == win_id) {
 			focus(c);
 			if (c->minimized)
 				toggleminimize(NULL);

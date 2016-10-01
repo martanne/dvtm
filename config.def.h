@@ -189,6 +189,7 @@ static Button buttons[] = {
 
 static Cmd commands[] = {
 	{ "create", { create,	{ NULL } } },
+	{ "focus", { focusid,	{ NULL } } },
 };
 
 /* gets executed when dvtm is started */
