@@ -196,6 +196,7 @@ static void incnmaster(const char *args[]);
 static void setmfact(const char *args[]);
 static void startup(const char *args[]);
 static void tag(const char *args[]);
+static void tagid(const char *args[]);
 static void togglebar(const char *args[]);
 static void togglebarpos(const char *args[]);
 static void toggleminimize(const char *args[]);
@@ -769,7 +770,7 @@ keybinding(KeyCombo keys, unsigned int keycount) {
 static unsigned int
 bitoftag(const char *tag) {
 	unsigned int i;
-	for (i = 0; (i < LENGTH(tags)) && (tags[i] != tag); i++);
+	for (i = 0; (i < LENGTH(tags)) && (*tags[i] != *tag); i++);
 	return (i < LENGTH(tags)) ? (1 << i) : ~0;
 }
 
@@ -795,6 +796,21 @@ tag(const char *args[]) {
 		return;
 	sel->tags = bitoftag(args[0]) & TAGMASK;
 	tagschanged();
+}
+
+static void
+tagid(const char *args[]) {
+	if (!args[0] || !args[1] || !atoi(args[1]))
+		return;
+
+	const int win_id = atoi(args[0]);
+	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
+		if (c->id == win_id) {
+			c->tags = bitoftag(args[1]) & TAGMASK;
+			tagschanged();
+			return;
+		}
+	}
 }
 
 static void
