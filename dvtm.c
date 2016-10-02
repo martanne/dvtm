@@ -770,7 +770,7 @@ keybinding(KeyCombo keys, unsigned int keycount) {
 static unsigned int
 bitoftag(const char *tag) {
 	unsigned int i;
-	for (i = 0; (i < LENGTH(tags)) && (*tags[i] != *tag); i++);
+	for (i = 0; (i < LENGTH(tags)) && strcmp(tags[i], tag); i++);
 	return (i < LENGTH(tags)) ? (1 << i) : ~0;
 }
 
@@ -804,7 +804,7 @@ tagid(const char *args[]) {
 		return;
 
 	const int win_id = atoi(args[0]);
-	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
+	for (Client *c = clients; c; c = c->next) {
 		if (c->id == win_id) {
 			c->tags = bitoftag(args[1]) & TAGMASK;
 			tagschanged();
