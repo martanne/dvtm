@@ -188,8 +188,11 @@ static Button buttons[] = {
 #endif /* CONFIG_MOUSE */
 
 static Cmd commands[] = {
+	/* create [ cmd ]: create a new window, run `cmd` in the shell if specified */
 	{ "create", { create,	{ NULL } } },
+	/* focus <win_id>: focus the visible window whose `DVTM_WINDOW_ID` is `win_id` */
 	{ "focus",  { focusid,	{ NULL } } },
+	/* tag <win_id> <tag>: assign the given `tag` to the window whose `DVTM_WINDOW_ID` is `win_id` */
 	{ "tag",    { tagid,	{ NULL } } },
 };
 
