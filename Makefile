@@ -37,7 +37,7 @@ dist: clean
 	@cp -R LICENSE Makefile README.md testsuite.sh config.def.h config.mk \
 		${SRC} vt.h forkpty-aix.c forkpty-sunos.c tile.c bstack.c \
 		tstack.c vstack.c grid.c fullscreen.c fibonacci.c \
-		dvtm-status dvtm.info dvtm.1 dvtm-${VERSION}
+		dvtm-status dvtm-cmd dvtm.info dvtm-cmd.1 dvtm.1 dvtm-${VERSION}
 	@tar -cf dvtm-${VERSION}.tar dvtm-${VERSION}
 	@gzip dvtm-${VERSION}.tar
 	@rm -rf dvtm-${VERSION}
@@ -51,10 +51,14 @@ install: dvtm
 	@chmod 755 ${DESTDIR}${PREFIX}/bin/dvtm
 	@cp -f dvtm-status ${DESTDIR}${PREFIX}/bin
 	@chmod 755 ${DESTDIR}${PREFIX}/bin/dvtm-status
-	@echo installing manual page to ${DESTDIR}${MANPREFIX}/man1
+	@cp -f dvtm-cmd ${DESTDIR}${PREFIX}/bin
+	@chmod 755 ${DESTDIR}${PREFIX}/bin/dvtm-cmd
+	@echo installing manual pages to ${DESTDIR}${MANPREFIX}/man1
 	@mkdir -p ${DESTDIR}${MANPREFIX}/man1
 	@sed "s/VERSION/${VERSION}/g" < dvtm.1 > ${DESTDIR}${MANPREFIX}/man1/dvtm.1
 	@chmod 644 ${DESTDIR}${MANPREFIX}/man1/dvtm.1
+	@cp -f dvtm-cmd.1 ${DESTDIR}${MANPREFIX}/man1/dvtm-cmd.1
+	@chmod 644 ${DESTDIR}${MANPREFIX}/man1/dvtm-cmd.1
 	@echo installing terminfo description
 	@TERMINFO=${TERMINFO} tic -s dvtm.info
 
@@ -62,7 +66,9 @@ uninstall:
 	@echo removing executable file from ${DESTDIR}${PREFIX}/bin
 	@rm -f ${DESTDIR}${PREFIX}/bin/dvtm
 	@rm -f ${DESTDIR}${PREFIX}/bin/dvtm-status
-	@echo removing manual page from ${DESTDIR}${MANPREFIX}/man1
+	@rm -f ${DESTDIR}${PREFIX}/bin/dvtm-cmd
+	@echo removing manual pages from ${DESTDIR}${MANPREFIX}/man1
 	@rm -f ${DESTDIR}${MANPREFIX}/man1/dvtm.1
+	@rm -f ${DESTDIR}${MANPREFIX}/man1/dvtm-cmd.1
 
 .PHONY: all options clean dist install uninstall debug

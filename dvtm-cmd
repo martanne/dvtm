@@ -1,0 +1,74 @@
+#!/bin/sh
+
+DVTM_CMD_FIFO='/tmp/dvtm.fifo'
+
+# Print a message on the standard error and quit the script
+fatal() {
+    printf %s\\n "$@" 1>&2
+    exit 1
+}
+
+# Print a usage string and exit the script
+usage() {
+    printf %s\\n "Usage: $0 [-h] [ -c <cmd_fifo> ] command [ args ... ]"
+    echo
+    echo "The following commands are supported, refer to the dvtm-cmd(1) manpage for more information:"
+    printf ' - %s %s\n' "create [cmd]            " "Create a new client and optionally run a command in it"
+    printf ' - %s %s\n' "focus <win_id>          " "Focus the given window"
+    printf ' - %s %s\n' "tag <win_id> <tag> ...  " "Assign tags to the given window"
+    printf ' - %s %s\n' "untag <win_id> <tag> ..." "Remove tags from the given window"
+    exit
+}
+
+# Send a command to the command FIFO
+send_command() {
+    printf %s\\n "$*" > "${DVTM_CMD_FIFO}"
+}
+
+main() {
+    ## Get CLI option values
+    while getopts hc: o; do
+        case $o in
+            c) DVTM_CMD_FIFO="${OPTARG}";;
+            ?) usage;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    ## Check the arguments passed
+    if [ $# -lt 1 ]; then
+        fatal "No command passed"
+    elif [ ! -p "${DVTM_CMD_FIFO}" ]; then
+        fatal "No such named pipe: ${DVTM_CMD_FIFO}"
+    fi
+
+    ## Execute the command
+    command="$1"; shift
+    case "${command}" in
+        create)
+            if [ $# -ge 1 ]; then
+                send_command "create" "'$*'"
+            else
+                send_command "create"
+            fi
+        ;;
+        focus)
+            if [ $# -eq 1 ]; then
+                send_command "${command}" "$1"
+            else
+                fatal "Not enough arguments (expected 1)"
+            fi
+        ;;
+        untag|tag)
+            if [ $# -ge 2 ]; then
+                win_id="$1"; shift
+                send_command "${command}" "${win_id}" "$@"
+            else
+                fatal "Not enough arguments (expected at least 2)"
+            fi
+        ;;
+        *) fatal "Invalid command: ${command}";;
+    esac
+}
+
+main "$@"
