@@ -197,6 +197,7 @@ static void setmfact(const char *args[]);
 static void startup(const char *args[]);
 static void tag(const char *args[]);
 static void tagid(const char *args[]);
+static void untagid(const char *args[]);
 static void togglebar(const char *args[]);
 static void togglebarpos(const char *args[]);
 static void toggleminimize(const char *args[]);
@@ -810,6 +811,23 @@ tagid(const char *args[]) {
 			c->tags = 0;
 			for (i = 1; i < MAX_ARGS && args[i]; i++)
 				c->tags |= bitoftag(args[i]) & TAGMASK;
+			tagschanged();
+			return;
+		}
+	}
+}
+
+static void
+untagid(const char *args[]) {
+	if (!args[0] || !args[1])
+		return;
+
+	const int win_id = atoi(args[0]);
+	for (Client *c = clients; c; c = c->next) {
+		if (c->id == win_id) {
+			unsigned int i;
+			for (i = 1; i < MAX_ARGS && args[i]; i++)
+				c->tags &= ~(bitoftag(args[i]) & TAGMASK);
 			tagschanged();
 			return;
 		}
