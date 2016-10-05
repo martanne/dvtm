@@ -800,13 +800,16 @@ tag(const char *args[]) {
 
 static void
 tagid(const char *args[]) {
-	if (!args[0] || !args[1] || !atoi(args[1]))
+	if (!args[0] || !args[1])
 		return;
 
 	const int win_id = atoi(args[0]);
 	for (Client *c = clients; c; c = c->next) {
 		if (c->id == win_id) {
-			c->tags = bitoftag(args[1]) & TAGMASK;
+			unsigned int i;
+			c->tags = 0;
+			for (i = 1; i < MAX_ARGS && args[i]; i++)
+				c->tags |= bitoftag(args[i]) & TAGMASK;
 			tagschanged();
 			return;
 		}
@@ -1148,11 +1151,15 @@ focusid(const char *args[]) {
 		return;
 
 	const int win_id = atoi(args[0]);
-	for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
+	for (Client *c = clients; c; c = c->next) {
 		if (c->id == win_id) {
 			focus(c);
 			if (c->minimized)
 				toggleminimize(NULL);
+			if (!isvisible(c)) {
+				c->tags |= tagset[seltags];
+				tagschanged();
+			}
 			return;
 		}
 	}
