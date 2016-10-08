@@ -559,7 +559,7 @@ settitle(Client *c) {
 static void
 detachstack(Client *c) {
 	Client **tc;
-	for (tc=&stack; *tc && *tc != c; tc=&(*tc)->snext);
+	for (tc = &stack; *tc && *tc != c; tc = &(*tc)->snext);
 	*tc = c->snext;
 }
 
