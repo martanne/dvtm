@@ -446,9 +446,8 @@ draw_all(void) {
 
 	if (!isarrange(fullscreen)) {
 		for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
-			if (c == sel)
-				continue;
-			draw(c);
+			if (c != sel)
+				draw(c);
 		}
 	}
 	/* as a last step the selected window is redrawn,
@@ -1824,10 +1823,9 @@ main(int argc, char *argv[]) {
 		doupdate();
 		r = pselect(nfds + 1, &rd, NULL, NULL, NULL, &emptyset);
 
-		if (r == -1 && errno == EINTR)
-			continue;
-
 		if (r < 0) {
+			if (errno == EINTR)
+				continue;
 			perror("select()");
 			exit(EXIT_FAILURE);
 		}
