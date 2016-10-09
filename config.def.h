@@ -192,7 +192,7 @@ static Cmd commands[] = {
 	{ "create", { create,	{ NULL } } },
 	/* focus <win_id>: focus the window whose `DVTM_WINDOW_ID` is `win_id` */
 	{ "focus",  { focusid,	{ NULL } } },
-	/* tag <win_id> <tag> [tag ...]: replace the tags of the window with the given identifier */
+	/* tag <win_id> <tag> [tag ...]: add +tag, remove -tag or set tag of the window with the given identifier */
 	{ "tag",    { tagid,	{ NULL } } },
 };
 
