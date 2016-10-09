@@ -107,11 +107,11 @@ typedef struct {
 #endif
 #define CTRL_ALT(k) ((k) + (129 - 'a'))
 
-#define MAX_ARGS 3
+#define MAX_ARGS 8
 
 typedef struct {
 	void (*cmd)(const char *args[]);
-	const char *args[MAX_ARGS];
+	const char *args[3];
 } Action;
 
 #define MAX_KEYS 3
