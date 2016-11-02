@@ -132,6 +132,10 @@ static KeyBinding bindings[] = {
 	{ { MOD, 'v', '0'      }, { view,           { NULL }                    } },
 	{ { MOD, 'v', '\t',    }, { viewprevtag,    { NULL }                    } },
 	{ { MOD, 't', '0'      }, { tag,            { NULL }                    } },
+  { { CTRL('j')          }, { focusdown,      { NULL }                    } },
+  { { CTRL('k')          }, { focusup,        { NULL }                    } },
+  { { CTRL('h')          }, { focusleft,      { NULL }                    } },
+  { { CTRL('l')          }, { focusright,     { NULL }                    } },
 	TAGKEYS( '1',                              0)
 	TAGKEYS( '2',                              1)
 	TAGKEYS( '3',                              2)
@@ -193,7 +197,12 @@ static Cmd commands[] = {
 	/* focus <win_id>: focus the window whose `DVTM_WINDOW_ID` is `win_id` */
 	{ "focus",  { focusid,	{ NULL } } },
 	/* tag <win_id> <tag> [tag ...]: add +tag, remove -tag or set tag of the window with the given identifier */
-	{ "tag",    { tagid,	{ NULL } } },
+	{ "tag",           { tagid,	    { NULL } } },
+  /* for control by editors and things */
+	{ "focusup",       { focusup,	    { NULL } } },
+	{ "focusdown",     { focusdown,	  { NULL } } },
+	{ "focusleft",     { focusleft,	  { NULL } } },
+	{ "focusright",    { focusright,	{ NULL } } },
 };
 
 /* gets executed when dvtm is started */
