@@ -194,6 +194,8 @@ static Cmd commands[] = {
 	{ "focus",  { focusid,	{ NULL } } },
 	/* tag <win_id> <tag> [tag ...]: add +tag, remove -tag or set tag of the window with the given identifier */
 	{ "tag",    { tagid,	{ NULL } } },
+	/* untag <win_id> <tag> [tag ...]: remove the tags of the window with the given identifier */
+	{ "untag",  { untagid,  { NULL } } },
 };
 
 /* gets executed when dvtm is started */
