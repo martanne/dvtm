@@ -1064,6 +1064,7 @@ create(const char *args[]) {
 	vt_data_set(c->term, c);
 	vt_title_handler_set(c->term, term_title_handler);
 	vt_urgent_handler_set(c->term, term_urgent_handler);
+	applycolorrules(c);
 	c->x = wax;
 	c->y = way;
 	debug("client with pid %d forked\n", c->pid);
