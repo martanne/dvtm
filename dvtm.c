@@ -334,6 +334,8 @@ drawbar(void) {
 	attrset(BAR_ATTR);
 	move(bar.y, 0);
 
+	attrset(BAR_ATTR);
+	printw(TAG_START);
 	for (unsigned int i = 0; i < LENGTH(tags); i++){
 		if (tagset[seltags] & (1 << i))
 			attrset(TAG_SEL);
@@ -344,7 +346,14 @@ drawbar(void) {
 		else
 			attrset(TAG_NORMAL);
 		printw(TAG_SYMBOL, tags[i]);
+
+		if (i < LENGTH(tags) - 1) {
+			attrset(BAR_ATTR);
+			printw(TAG_SEP);
+		}
 	}
+	attrset(BAR_ATTR);
+	printw(TAG_STOP);
 
 	attrset(runinall ? TAG_SEL : TAG_NORMAL);
 	addstr(layout->symbol);
