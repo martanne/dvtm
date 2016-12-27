@@ -1,0 +1,77 @@
+.Dd $Mdocdate: December 27 2016 $
+.Dt DVTM_CMD 1
+.Os
+.Sh NAME
+.Nm dvtm-cmd
+.Nd an external wrapper script to interact with dvtm
+.
+.
+.Sh SYNOPSIS
+.
+.Nm
+.Op Fl h
+.Op Fl c Ar cmd_fifo
+.Ar command
+.Op Ar args ...
+.
+.
+.Sh DESCRIPTION
+.
+The
+.Nm
+utility is a shell script that allows interacting with and controlling the
+.Xr dvtm 1
+terminal multiplexer. The commands are formatted in a format understand by
+.Xr dvtm 1
+and sent over the
+.Pa cmd_fifo
+file.
+.
+.
+.Sh ENVIRONMENT
+.
+New windows created by
+.Xr dvtm 1
+automatically spawn a shell (unless a command has been passed,
+.Fl c
+, the COMMANDS section of this document), which will contain the following variables:
+.
+.Bl -tag
+.It Ev DVTM (version)
+version of the currently running
+.Xr dvtm 1
+session
+.
+.Pp
+.It Ev DVTM_WINDOW_ID (integer)
+identifier of the current window
+.
+.It Ev DVTM_CMD_FIFO (file path)
+path to the command FIFO that was passed to the currently running
+.Xr dvtm 1
+session. If no such path was passed when
+.Xr dvtm 1
+was started, this variable is undefined
+.El
+.
+.
+.Sh COMMANDS
+.
+Due to technical limitations, the maximum amount of arguments a command can take is limited to 4.
+.Bl -tag
+.It Ic create Op Ar command
+Create a new window in the current session, and pass
+.Ar command
+to the shell
+.Fl c
+flag if specified
+.
+.It Ic focus Ar window_id
+Focus the window whose identifier is
+.Ar window_id
+.
+.It Ic tag Ar window_id Ar tag ...
+Assign the given tags to the window whose identifier is
+.Ar window_id
+(the tags previously assigned will be overwritten)
+.El
