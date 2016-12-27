@@ -36,13 +36,12 @@ automatically spawn a shell (unless a command has been passed,
 .Fl c
 , the COMMANDS section of this document), which will contain the following variables:
 .
-.Bl -tag
+.Bl -tag -width 8
 .It Ev DVTM (version)
 version of the currently running
 .Xr dvtm 1
 session
 .
-.Pp
 .It Ev DVTM_WINDOW_ID (integer)
 identifier of the current window
 .
@@ -58,7 +57,7 @@ was started, this variable is undefined
 .Sh COMMANDS
 .
 Due to technical limitations, the maximum amount of arguments a command can take is limited to 4.
-.Bl -tag
+.Bl -tag -width 8
 .It Ic create Op Ar command
 Create a new window in the current session, and pass
 .Ar command
