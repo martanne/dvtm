@@ -44,9 +44,9 @@ static Color colors[] = {
 /* scroll back buffer size in lines */
 #define SCROLL_HISTORY 500
 /* printf format string for the tag in the status bar */
-#define TAG_SYMBOL   " %s "
-#define TAG_START   "["
-#define TAG_STOP    "]"
+#define TAG_SYMBOL  " %s "
+#define TAG_BEGIN   "["
+#define TAG_END     "]"
 #define TAG_SEP     "|"
 /* curses attributes for the currently selected tags */
 #define TAG_SEL      (COLOR(BLUE) | A_BOLD)
