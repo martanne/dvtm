@@ -14,6 +14,8 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <wchar.h>
+#include <limits.h>
+#include <libgen.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -107,11 +109,11 @@ typedef struct {
 #endif
 #define CTRL_ALT(k) ((k) + (129 - 'a'))
 
-#define MAX_ARGS 3
+#define MAX_ARGS 8
 
 typedef struct {
 	void (*cmd)(const char *args[]);
-	const char *args[MAX_ARGS];
+	const char *args[3];
 } Action;
 
 #define MAX_KEYS 3
@@ -179,6 +181,7 @@ typedef struct {
 static void create(const char *args[]);
 static void copymode(const char *args[]);
 static void focusn(const char *args[]);
+static void focusid(const char *args[]);
 static void focusnext(const char *args[]);
 static void focusnextnm(const char *args[]);
 static void focusprev(const char *args[]);
@@ -195,6 +198,7 @@ static void incnmaster(const char *args[]);
 static void setmfact(const char *args[]);
 static void startup(const char *args[]);
 static void tag(const char *args[]);
+static void tagid(const char *args[]);
 static void togglebar(const char *args[]);
 static void togglebarpos(const char *args[]);
 static void toggleminimize(const char *args[]);
@@ -346,8 +350,9 @@ drawbar(void) {
 		printw(TAG_SYMBOL, tags[i]);
 	}
 
-	attrset(TAG_NORMAL);
+	attrset(runinall ? TAG_SEL : TAG_NORMAL);
 	addstr(layout->symbol);
+	attrset(TAG_NORMAL);
 
 	getyx(stdscr, y, x);
 	(void)y;
@@ -447,9 +452,8 @@ draw_all(void) {
 
 	if (!isarrange(fullscreen)) {
 		for (Client *c = nextvisible(clients); c; c = nextvisible(c->next)) {
-			if (c == sel)
-				continue;
-			draw(c);
+			if (c != sel)
+				draw(c);
 		}
 	}
 	/* as a last step the selected window is redrawn,
@@ -551,14 +555,16 @@ settitle(Client *c) {
 	char *term, *t = title;
 	if (!t && sel == c && *c->title)
 		t = c->title;
-	if (t && (term = getenv("TERM")) && !strstr(term, "linux"))
+	if (t && (term = getenv("TERM")) && !strstr(term, "linux")) {
 		printf("\033]0;%s\007", t);
+		fflush(stdout);
+	}
 }
 
 static void
 detachstack(Client *c) {
 	Client **tc;
-	for (tc=&stack; *tc && *tc != c; tc=&(*tc)->snext);
+	for (tc = &stack; *tc && *tc != c; tc = &(*tc)->snext);
 	*tc = c->snext;
 }
 
@@ -795,8 +801,10 @@ keybinding(KeyCombo keys, unsigned int keycount) {
 static unsigned int
 bitoftag(const char *tag) {
 	unsigned int i;
-	for (i = 0; (i < LENGTH(tags)) && (tags[i] != tag); i++);
-	return (i < LENGTH(tags)) ? (1 << i) : ~0;
+	if (!tag)
+		return ~0;
+	for (i = 0; (i < LENGTH(tags)) && strcmp(tags[i], tag); i++);
+	return (i < LENGTH(tags)) ? (1 << i) : 0;
 }
 
 static void
@@ -821,6 +829,33 @@ tag(const char *args[]) {
 		return;
 	sel->tags = bitoftag(args[0]) & TAGMASK;
 	tagschanged();
+}
+
+static void
+tagid(const char *args[]) {
+	if (!args[0] || !args[1])
+		return;
+
+	const int win_id = atoi(args[0]);
+	for (Client *c = clients; c; c = c->next) {
+		if (c->id == win_id) {
+			unsigned int ntags = c->tags;
+			for (unsigned int i = 1; i < MAX_ARGS && args[i]; i++) {
+				if (args[i][0] == '+')
+					ntags |= bitoftag(args[i]+1);
+				else if (args[i][0] == '-')
+					ntags &= ~bitoftag(args[i]+1);
+				else
+					ntags = bitoftag(args[i]);
+			}
+			ntags &= TAGMASK;
+			if (ntags) {
+				c->tags = ntags;
+				tagschanged();
+			}
+			return;
+		}
+	}
 }
 
 static void
@@ -1048,11 +1083,20 @@ create(const char *args[]) {
 		return;
 	}
 
-	c->cmd = (args && args[0]) ? args[0] : shell;
-	if (args && args[1]) {
-		strncpy(c->title, args[1], sizeof(c->title) - 1);
-		c->title[sizeof(c->title) - 1] = '\0';
+	if (args && args[0]) {
+		c->cmd = args[0];
+		char name[PATH_MAX];
+		strncpy(name, args[0], sizeof(name));
+		name[sizeof(name)-1] = '\0';
+		strncpy(c->title, basename(name), sizeof(c->title));
+	} else {
+		c->cmd = shell;
 	}
+
+	if (args && args[1])
+		strncpy(c->title, args[1], sizeof(c->title));
+	c->title[sizeof(c->title)-1] = '\0';
+
 	if (args && args[2])
 		cwd = !strcmp(args[2], "$CWD") ? getcwd_by_pid(sel) : (char*)args[2];
 	c->pid = vt_forkpty(c->term, shell, pargs, cwd, env, NULL, NULL);
@@ -1061,6 +1105,7 @@ create(const char *args[]) {
 	vt_data_set(c->term, c);
 	vt_title_handler_set(c->term, term_title_handler);
 	vt_urgent_handler_set(c->term, term_urgent_handler);
+	applycolorrules(c);
 	c->x = wax;
 	c->y = way;
 	debug("client with pid %d forked\n", c->pid);
@@ -1147,6 +1192,26 @@ focusn(const char *args[]) {
 			focus(c);
 			if (c->minimized)
 				toggleminimize(NULL);
+			return;
+		}
+	}
+}
+
+static void
+focusid(const char *args[]) {
+	if (!args[0])
+		return;
+
+	const int win_id = atoi(args[0]);
+	for (Client *c = clients; c; c = c->next) {
+		if (c->id == win_id) {
+			focus(c);
+			if (c->minimized)
+				toggleminimize(NULL);
+			if (!isvisible(c)) {
+				c->tags |= tagset[seltags];
+				tagschanged();
+			}
 			return;
 		}
 	}
@@ -1404,6 +1469,7 @@ togglemouse(const char *args[]) {
 static void
 togglerunall(const char *args[]) {
 	runinall = !runinall;
+	drawbar();
 	draw_all();
 }
 
@@ -1437,10 +1503,7 @@ mouse_focus(const char *args[]) {
 static void
 mouse_fullscreen(const char *args[]) {
 	mouse_focus(NULL);
-	if (isarrange(fullscreen))
-		setlayout(NULL);
-	else
-		setlayout(args);
+	setlayout(isarrange(fullscreen) ? NULL : args);
 }
 
 static void
@@ -1487,90 +1550,90 @@ handle_cmdfifo(void) {
 	int r;
 	char *p, *s, cmdbuf[512], c;
 	Cmd *cmd;
-	switch (r = read(cmdfifo.fd, cmdbuf, sizeof cmdbuf - 1)) {
-	case -1:
-	case 0:
+
+	r = read(cmdfifo.fd, cmdbuf, sizeof cmdbuf - 1);
+	if (r <= 0) {
 		cmdfifo.fd = -1;
-		break;
-	default:
-		cmdbuf[r] = '\0';
-		p = cmdbuf;
-		while (*p) {
-			/* find the command name */
-			for (; *p == ' ' || *p == '\n'; p++);
-			for (s = p; *p && *p != ' ' && *p != '\n'; p++);
-			if ((c = *p))
-				*p++ = '\0';
-			if (*s && (cmd = get_cmd_by_name(s)) != NULL) {
-				bool quote = false;
-				int argc = 0;
-				const char *args[MAX_ARGS], *arg;
-				memset(args, 0, sizeof(args));
-				/* if arguments were specified in config.h ignore the one given via
-				 * the named pipe and thus skip everything until we find a new line
-				 */
-				if (cmd->action.args[0] || c == '\n') {
-					debug("execute %s", s);
-					cmd->action.cmd(cmd->action.args);
-					while (*p && *p != '\n')
-						p++;
-					continue;
-				}
-				/* no arguments were given in config.h so we parse the command line */
-				while (*p == ' ')
+		return;
+	}
+
+	cmdbuf[r] = '\0';
+	p = cmdbuf;
+	while (*p) {
+		/* find the command name */
+		for (; *p == ' ' || *p == '\n'; p++);
+		for (s = p; *p && *p != ' ' && *p != '\n'; p++);
+		if ((c = *p))
+			*p++ = '\0';
+		if (*s && (cmd = get_cmd_by_name(s)) != NULL) {
+			bool quote = false;
+			int argc = 0;
+			const char *args[MAX_ARGS], *arg;
+			memset(args, 0, sizeof(args));
+			/* if arguments were specified in config.h ignore the one given via
+			 * the named pipe and thus skip everything until we find a new line
+			 */
+			if (cmd->action.args[0] || c == '\n') {
+				debug("execute %s", s);
+				cmd->action.cmd(cmd->action.args);
+				while (*p && *p != '\n')
 					p++;
-				arg = p;
-				for (; (c = *p); p++) {
-					switch (*p) {
-					case '\\':
-						/* remove the escape character '\\' move every
-						 * following character to the left by one position
-						 */
-						switch (p[1]) {
-							case '\\':
-							case '\'':
-							case '\"': {
-								char *t = p+1;
-								do {
-									t[-1] = *t;
-								} while (*t++);
-							}
+				continue;
+			}
+			/* no arguments were given in config.h so we parse the command line */
+			while (*p == ' ')
+				p++;
+			arg = p;
+			for (; (c = *p); p++) {
+				switch (*p) {
+				case '\\':
+					/* remove the escape character '\\' move every
+					 * following character to the left by one position
+					 */
+					switch (p[1]) {
+						case '\\':
+						case '\'':
+						case '\"': {
+							char *t = p+1;
+							do {
+								t[-1] = *t;
+							} while (*t++);
 						}
-						break;
-					case '\'':
-					case '\"':
-						quote = !quote;
-						break;
-					case ' ':
-						if (!quote) {
-					case '\n':
-							/* remove trailing quote if there is one */
-							if (*(p - 1) == '\'' || *(p - 1) == '\"')
-								*(p - 1) = '\0';
-							*p++ = '\0';
-							/* remove leading quote if there is one */
-							if (*arg == '\'' || *arg == '\"')
-								arg++;
-							if (argc < MAX_ARGS)
-								args[argc++] = arg;
-
-							while (*p == ' ')
-								++p;
-							arg = p--;
-						}
-						break;
 					}
+					break;
+				case '\'':
+				case '\"':
+					quote = !quote;
+					break;
+				case ' ':
+					if (!quote) {
+				case '\n':
+						/* remove trailing quote if there is one */
+						if (*(p - 1) == '\'' || *(p - 1) == '\"')
+							*(p - 1) = '\0';
+						*p++ = '\0';
+						/* remove leading quote if there is one */
+						if (*arg == '\'' || *arg == '\"')
+							arg++;
+						if (argc < MAX_ARGS)
+							args[argc++] = arg;
 
-					if (c == '\n' || *p == '\n') {
-						if (!*p)
-							p++;
-						debug("execute %s", s);
-						for(int i = 0; i < argc; i++)
-							debug(" %s", args[i]);
-						debug("\n");
-						cmd->action.cmd(args);
-						break;
+						while (*p == ' ')
+							++p;
+						arg = p--;
 					}
+					break;
+				}
+
+				if (c == '\n' || *p == '\n') {
+					if (!*p)
+						p++;
+					debug("execute %s", s);
+					for(int i = 0; i < argc; i++)
+						debug(" %s", args[i]);
+					debug("\n");
+					cmd->action.cmd(args);
+					break;
 				}
 			}
 		}
@@ -1828,10 +1891,9 @@ main(int argc, char *argv[]) {
 		doupdate();
 		r = pselect(nfds + 1, &rd, NULL, NULL, NULL, &emptyset);
 
-		if (r == -1 && errno == EINTR)
-			continue;
-
 		if (r < 0) {
+			if (errno == EINTR)
+				continue;
 			perror("select()");
 			exit(EXIT_FAILURE);
 		}

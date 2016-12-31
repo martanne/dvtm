@@ -76,7 +76,7 @@ static Layout layouts[] = {
 	{ { MOD, 'V', KEY,     }, { toggleview,     { tags[TAG] }               } }, \
 	{ { MOD, 'T', KEY,     }, { toggletag,      { tags[TAG] }               } },
 
-/* you can at most specifiy MAX_ARGS (3) number of arguments */
+/* you can specifiy at most 3 arguments */
 static KeyBinding bindings[] = {
 	{ { MOD, 'c',          }, { create,         { NULL }                    } },
 	{ { MOD, 'C',          }, { create,         { NULL, NULL, "$CWD" }      } },
@@ -195,7 +195,12 @@ static Button tag_buttons[] = {
 #endif /* CONFIG_MOUSE */
 
 static Cmd commands[] = {
+	/* create [cmd]: create a new window, run `cmd` in the shell if specified */
 	{ "create", { create,	{ NULL } } },
+	/* focus <win_id>: focus the window whose `DVTM_WINDOW_ID` is `win_id` */
+	{ "focus",  { focusid,	{ NULL } } },
+	/* tag <win_id> <tag> [tag ...]: add +tag, remove -tag or set tag of the window with the given identifier */
+	{ "tag",    { tagid,	{ NULL } } },
 };
 
 /* gets executed when dvtm is started */
