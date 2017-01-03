@@ -1,126 +1,180 @@
-/* edit-stream.c --- invoke $EDITOR as filter */
-/* Copyright (C) 2016 Dmitry Bogatov <KAction@gnu.org> ISC licensed */
-
-#define _POSIX_C_SOURCE 200809L
-#include <stdlib.h>
-#include <sys/types.h>
+/* Invoke $EDITOR as a filter.
+ *
+ * Copyright (c) 2016 Dmitry Bogatov <KAction@gnu.org>
+ * Copyright (c) 2017 Marc André Tanner <mat@brain-dump.org>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-/* stdio.h would be overkill */
-#define write2(str) write(2, str, sizeof(str))
+static void error(const char *msg, ...) {
+	va_list ap;
+	va_start(ap, msg);
+	vfprintf(stderr, msg, ap);
+	va_end(ap);
+	if (errno)
+		fprintf(stderr, ": %s", strerror(errno));
+	fprintf(stderr, "\n");
+}
 
-int
-main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
-	int return_value = 1;
-	const char *tty = ttyname(2); /* POSIX.1-2001, did you knew? */
-	if (!tty) {
-		write2("stderr is not tty");
-		return 1;
+	int exit_status = EXIT_FAILURE, tmp_write = -1;
+
+	const char *editor = getenv("DVTM_EDITOR");
+	if (!editor)
+		editor = getenv("VISUAL");
+	if (!editor)
+		editor = getenv("EDITOR");
+	if (!editor)
+		editor = "vi";
+
+	char tempname[] = "/tmp/dvtm-editor.XXXXXX";
+	if ((tmp_write = mkstemp(tempname)) == -1) {
+		error("failed to open temporary file `%s'", tempname);
+		goto err;
 	}
-	int in = open(tty, O_RDONLY);
-	if (in == -1) {
-		write2("failed to open tty for reading");
-		return 1;
-	}
-	char tempname[] = "/tmp/edit-stream.XXXXXX";
-	int tempfd = mkstemp(tempname);
-	if (tempfd == -1) {
-		write2("failed to open temporary file");
-		goto err_close_tty;
-	}
+
 	/* POSIX does not mandates modes of temporary file. */
-	if (fchmod(tempfd, 0600) == -1) {
-		write2("failed to change mode of temporary file");
-		goto err_remove_tempfile;
+	if (fchmod(tmp_write, 0600) == -1) {
+		error("failed to change mode of temporary file `%s'", tempname);
+		goto err;
 	}
+
 	char buffer[2048];
 	ssize_t bytes;
-	while ((bytes = read(0, buffer, sizeof(buffer))) > 0) {
-		/* Here actually must be loop, since write(2) does not guarates
-		 * that it will be able to write everything. But I am reckless.
-                 */
-		if (write(tempfd, buffer, bytes) != bytes) {
-			write2("failed to write data to temporary file");
-			goto err_remove_tempfile;
-		}
+	while ((bytes = read(STDIN_FILENO, buffer, sizeof(buffer))) > 0) {
+		do {
+			ssize_t written = write(tmp_write, buffer, bytes);
+			if (written == -1) {
+				error("failed to write data to temporary file `%s'",
+				      tempname);
+				goto err;
+			}
+			bytes -= written;
+		} while (bytes > 0);
 	}
-	if (fsync(tempfd) == -1) {
-		write2("failed to fsync temporary file");
-		goto err_remove_tempfile;
+
+	if (fsync(tmp_write) == -1) {
+		error("failed to fsync temporary file `%s'", tempname);
+		goto err;
 	}
-	if (close(tempfd) == -1) {
-		write2("failed to close temporary file");
-		goto err_remove_tempfile;
+
+	struct stat stat_before;
+	if (fstat(tmp_write, &stat_before) == -1) {
+		error("failed to stat newly created temporary file `%s'", tempname);
+		goto err;
 	}
-	if (dup2(in, 0) == -1) {
-		write2("failed to set tty as stdin");
-		goto err_remove_tempfile;
+
+	if (close(tmp_write) == -1) {
+		error("failed to close temporary file `%s'", tempname);
+		goto err;
 	}
-	int stdout = dup(1);
-	if (stdout == -1) {
-		write2("failed to create copy of stdout");
-		goto err_remove_tempfile;
-	}
-	/* Descriptor 2 (stderr) still points to tty */
-	if (dup2(2, 1) == -1) {
-		write2("failed to set tty as stdout");
-		goto err_close_stdout;
-	}
-	const char *editor = getenv("EDITOR");
-	if (!editor) {
-		write2("EDITOR is not set");
-		goto err_close_stdout;
-	}
+
 	pid_t pid = fork();
-	if (pid == 0) {
-		close(stdout);
-		close(tempfd);
-		close(in);
-		execlp(editor, editor, tempname, NULL);
-		_exit(129);
-	}
-	int status;
-	if (wait(&status) == -1) {
-		write2("wait failed");
-		goto err_close_stdout;
-	}
-	if (!(WIFEXITED(status) && WEXITSTATUS(status) == 0)) {
-		write2("editor invocation failed");
-		goto err_close_stdout;
-	}
-	int tempfd_r = open(tempname, O_RDONLY);
-	if (tempfd_r == -1) {
-		write2("failed to open for reading edited temporary file");
-		goto err_close_stdout;
-	}
-	while ((bytes = read(tempfd_r, buffer, sizeof(buffer))) > 0) {
-		if (write(stdout, buffer, bytes) != bytes) {
-			write2("failed to write data to stdout");
-			goto err_close_tempfile_read;
+	if (pid == -1) {
+		error("failed to fork editor process");
+		goto err;
+	} else if (pid == 0) {
+		int tty = open("/dev/tty", O_RDWR);
+		if (tty == -1) {
+			error("failed to open /dev/tty");
+			_exit(1);
 		}
+
+		if (dup2(tty, STDIN_FILENO) == -1) {
+			error("failed to set tty as stdin");
+			_exit(1);
+		}
+
+		if (dup2(tty, STDOUT_FILENO) == -1) {
+			error("failed to set tty as stdout");
+			_exit(1);
+		}
+
+		if (dup2(tty, STDERR_FILENO) == -1) {
+			error("failed to set tty as stderr");
+			_exit(1);
+		}
+
+		close(tty);
+
+		const char *editor_argv[argc+2];
+		editor_argv[0] = editor;
+		for (int i = 1; i < argc; i++)
+			editor_argv[i] = argv[i];
+		editor_argv[argc] = tempname;
+		editor_argv[argc+1] = NULL;
+
+		execvp(editor, (char* const*)editor_argv);
+		error("failed to exec editor process `%s'", editor);
+		_exit(127);
 	}
 
-	return_value = 0;
+	int status;
+	if (waitpid(pid, &status, 0) == -1) {
+		error("waitpid failed");
+		goto err;
+	}
+	if (!WIFEXITED(status)) {
+		error("editor invocation failed");
+		goto err;
+	}
+	if ((status = WEXITSTATUS(status)) != 0) {
+		error("editor terminated with exit status: %d", status);
+		goto err;
+	}
 
-/* Clean up on error is best efford. Descriptors are closed, files
-   are unlinked, but nothing is checked. */
-err_close_tempfile_read:
-	close(tempfd_r);
-err_close_stdout:
-	close(stdout);
-err_remove_tempfile:
-	close(tempfd);
-	unlink(tempname);
-err_close_tty:
-	close(in);
+	int tmp_read = open(tempname, O_RDONLY);
+	if (tmp_read == -1) {
+		error("failed to open for reading of edited temporary file `%s'",
+		      tempname);
+		goto err;
+	}
 
-	close(0);
-	close(1);
-	close(2);
+	struct stat stat_after;
+	if (fstat(tmp_read, &stat_after) == -1) {
+		error("failed to stat edited temporary file `%s'", tempname);
+		goto err;
+	}
 
-	return return_value;
+	if (stat_before.st_mtime == stat_after.st_mtime)
+		goto ok; /* no modifications */
+
+	while ((bytes = read(tmp_read, buffer, sizeof(buffer))) > 0) {
+		do {
+			ssize_t written = write(STDOUT_FILENO, buffer, bytes);
+			if (written == -1) {
+				error("failed to write data to stdout");
+				goto err;
+			}
+			bytes -= written;
+		} while (bytes > 0);
+	}
+
+ok:
+	exit_status = EXIT_SUCCESS;
+err:
+	if (tmp_write != -1)
+		unlink(tempname);
+	return exit_status;
 }
