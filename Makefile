@@ -2,6 +2,7 @@ include config.mk
 
 SRC = dvtm.c vt.c
 OBJ = ${SRC:.c=.o}
+BIN = dvtm dvtm-status dvtm-pager
 
 all: clean options dvtm
 
@@ -45,12 +46,12 @@ dist: clean
 install: dvtm
 	@echo stripping executable
 	@${STRIP} dvtm
-	@echo installing executable file to ${DESTDIR}${PREFIX}/bin
 	@mkdir -p ${DESTDIR}${PREFIX}/bin
-	@cp -f dvtm ${DESTDIR}${PREFIX}/bin
-	@chmod 755 ${DESTDIR}${PREFIX}/bin/dvtm
-	@cp -f dvtm-status ${DESTDIR}${PREFIX}/bin
-	@chmod 755 ${DESTDIR}${PREFIX}/bin/dvtm-status
+	@for b in ${BIN}; do \
+		echo "installing ${DESTDIR}${PREFIX}/bin/$$b"; \
+		cp -f "$$b" "${DESTDIR}${PREFIX}/bin" && \
+		chmod 755 "${DESTDIR}${PREFIX}/bin/$$b"; \
+	done
 	@echo installing manual page to ${DESTDIR}${MANPREFIX}/man1
 	@mkdir -p ${DESTDIR}${MANPREFIX}/man1
 	@sed "s/VERSION/${VERSION}/g" < dvtm.1 > ${DESTDIR}${MANPREFIX}/man1/dvtm.1
@@ -59,9 +60,10 @@ install: dvtm
 	@TERMINFO=${TERMINFO} tic -s dvtm.info
 
 uninstall:
-	@echo removing executable file from ${DESTDIR}${PREFIX}/bin
-	@rm -f ${DESTDIR}${PREFIX}/bin/dvtm
-	@rm -f ${DESTDIR}${PREFIX}/bin/dvtm-status
+	@for b in ${BIN}; do \
+		echo "removing ${DESTDIR}${PREFIX}/bin/$$b"; \
+		rm -f "${DESTDIR}${PREFIX}/bin/$$b"; \
+	done
 	@echo removing manual page from ${DESTDIR}${MANPREFIX}/man1
 	@rm -f ${DESTDIR}${MANPREFIX}/man1/dvtm.1
 
