@@ -1086,45 +1086,25 @@ create(const char *args[]) {
 
 static void
 copymode(const char *args[]) {
-	if (!sel || sel->editor)
+	if (!args || !args[0] || !sel || sel->editor)
 		return;
+
+	bool colored = strstr(args[0], "pager") != NULL;
+
 	if (!(sel->editor = vt_create(sel->h - sel->has_title_line, sel->w, 0)))
 		return;
 
-	char *ed = getenv("DVTM_EDITOR");
-	int *to = &sel->editor_fds[0], *from = NULL;
+	int *to = &sel->editor_fds[0];
+	int *from = strstr(args[0], "editor") ? &sel->editor_fds[1] : NULL;
 	sel->editor_fds[0] = sel->editor_fds[1] = -1;
 
-	if (!ed)
-		ed = getenv("EDITOR");
-	if (!ed)
-		ed = getenv("PAGER");
-	if (!ed)
-		ed = editors[0].name;
-
-	const char **argv = (const char*[]){ ed, "-", NULL, NULL };
+	const char *argv[3] = { args[0], NULL, NULL };
 	char argline[32];
-	bool colored = false;
+	int line = vt_content_start(sel->app);
+	snprintf(argline, sizeof(argline), "+%d", line);
+	argv[1] = argline;
 
-	for (unsigned int i = 0; i < LENGTH(editors); i++) {
-		if (!strcmp(editors[i].name, ed)) {
-			for (int j = 1; editors[i].argv[j]; j++) {
-				if (strstr(editors[i].argv[j], "%d")) {
-					int line = vt_content_start(sel->app);
-					snprintf(argline, sizeof(argline), "+%d", line);
-					argv[j] = argline;
-				} else {
-					argv[j] = editors[i].argv[j];
-				}
-			}
-			if (editors[i].filter)
-				from = &sel->editor_fds[1];
-			colored = editors[i].color;
-			break;
-		}
-	}
-
-	if (vt_forkpty(sel->editor, ed, argv, NULL, NULL, to, from) < 0) {
+	if (vt_forkpty(sel->editor, args[0], argv, NULL, NULL, to, from) < 0) {
 		vt_destroy(sel->editor);
 		sel->editor = NULL;
 		return;
@@ -1151,8 +1131,8 @@ copymode(const char *args[]) {
 		sel->editor_fds[0] = -1;
 	}
 
-	if (args[0])
-		vt_write(sel->editor, args[0], strlen(args[0]));
+	if (args[1])
+		vt_write(sel->editor, args[1], strlen(args[1]));
 }
 
 static void
