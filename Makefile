@@ -1,51 +1,32 @@
 include config.mk
 
 SRC = dvtm.c vt.c
-OBJ = ${SRC:.c=.o}
 BIN = dvtm dvtm-status dvtm-pager
 
-all: clean options dvtm
+VERSION = $(shell git describe --always --dirty 2>/dev/null || echo "0.15-git")
+CFLAGS += -DVERSION=\"${VERSION}\"
+DEBUG_CFLAGS = ${CFLAGS} -UNDEBUG -O0 -g -ggdb -Wall -Wextra -Wno-unused-parameter
 
-options:
-	@echo dvtm build options:
-	@echo "CFLAGS   = ${CFLAGS}"
-	@echo "LDFLAGS  = ${LDFLAGS}"
-	@echo "CC       = ${CC}"
+all: dvtm
 
 config.h:
 	cp config.def.h config.h
 
-.c.o:
-	@echo CC $<
-	@${CC} -c ${CFLAGS} $<
-
-${OBJ}: config.h config.mk
-
-dvtm: ${OBJ}
-	@echo CC -o $@
-	@${CC} -o $@ ${OBJ} ${LDFLAGS}
+dvtm: config.h config.mk *.c *.h
+	${CC} ${CFLAGS} ${SRC} ${LDFLAGS} ${LIBS} -o $@
 
 debug: clean
-	@make CFLAGS='${DEBUG_CFLAGS}'
+	@$(MAKE) CFLAGS='${DEBUG_CFLAGS}'
 
 clean:
 	@echo cleaning
-	@rm -f dvtm ${OBJ} dvtm-${VERSION}.tar.gz
+	@rm -f dvtm
 
 dist: clean
 	@echo creating dist tarball
-	@mkdir -p dvtm-${VERSION}
-	@cp -R LICENSE Makefile README.md testsuite.sh config.def.h config.mk \
-		${SRC} vt.h forkpty-aix.c forkpty-sunos.c tile.c bstack.c \
-		tstack.c vstack.c grid.c fullscreen.c fibonacci.c \
-		dvtm-status dvtm.info dvtm.1 dvtm-${VERSION}
-	@tar -cf dvtm-${VERSION}.tar dvtm-${VERSION}
-	@gzip dvtm-${VERSION}.tar
-	@rm -rf dvtm-${VERSION}
+	@git archive --prefix=dvtm-${VERSION}/ -o dvtm-${VERSION}.tar.gz HEAD
 
-install: dvtm
-	@echo stripping executable
-	@${STRIP} dvtm
+install: all
 	@mkdir -p ${DESTDIR}${PREFIX}/bin
 	@for b in ${BIN}; do \
 		echo "installing ${DESTDIR}${PREFIX}/bin/$$b"; \
@@ -67,4 +48,4 @@ uninstall:
 	@echo removing manual page from ${DESTDIR}${MANPREFIX}/man1
 	@rm -f ${DESTDIR}${MANPREFIX}/man1/dvtm.1
 
-.PHONY: all options clean dist install uninstall debug
+.PHONY: all clean dist install uninstall debug
