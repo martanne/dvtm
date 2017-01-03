@@ -1,0 +1,78 @@
+.Dd $Mdocdate: December 27 2016 $
+.Dt DVTM-EDITOR 1
+.Os
+.Sh NAME
+.Nm dvtm-editor
+.Nd make a text editor act as a filter
+.
+.
+.Sh SYNOPSIS
+.
+.Nm
+ARGS...
+.
+.
+.Sh DESCRIPTION
+.
+The
+.Nm
+is a file buffering utility used by the
+.Xr dvtm 1
+terminal multiplexer.  It reads the standard input and save it to a temporary
+file, then opens an editor according to the environment variables.  The file can
+be edited and saved.
+.Pp
+Once the editor quits, if the file was not saved,
+.Nm
+does not output anything.  Otherwise, it output the content of the temporary
+file to stdout.
+.Pp
+.Xr dvtm 1
+will remove the escape sequences such as colouring and cursor control before to
+write to
+.Nm .
+.Pp
+.Cm ARGS
+are passed to the selected editor.  This is used by
+.Xr dvtm 1
+to jump to current line number.
+.
+.
+.Sh ENVIRONMENT VARIABLES
+.
+.Nm
+will try to find the user editor by checking these variables in order:
+.
+.Bl -tag -width 8
+.It Ev DVTM_EDITOR
+Permitting to invoke an editor specific to dvtm, or set particular flags.
+.
+.It Ev VISUAL , Ev EDITOR
+Falling back to global defaults:
+.Ev VISUAL
+and
+.Ev EDITOR .
+.El
+.Pp
+If no editor is found, the
+.Xr vi 1
+editor is used.
+.
+.
+.Sh FILES
+.
+The temporary files are created according to the template:
+.Pa /tmp/dvtm-editor.XXXXXX
+.
+.
+.Sh SEE ALSO
+.
+.Xr vi 1 ,
+.Xr dvtm 1 ,
+.Xr dvtm-pager 1
+.
+.
+.Sh AUTHOR
+.
+dvtm is written
+.An Marc André Tanner Aq Mt mat at brain-dump.org

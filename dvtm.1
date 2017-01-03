@@ -242,11 +242,12 @@ Toggle minimization of current window.
 .
 .Ss Copy mode
 .
-Copy mode gives easy access to past output by piping it to an editor. What
-ever the editor prints to stdout upon exiting will be stored in an internal
-register and can be pasted into other clients (via
-.Ic Mod-p
-)
+Copy mode gives easy access to past output by piping it to
+.Xr dvtm-editor 1 ,
+opening an editor.
+What the editor writes will be stored in an internal register and can be pasted
+into other clients (via
+.Ic Mod-p ).
 .
 .
 .Sh ENVIRONMENT VARIABLES
@@ -273,15 +274,14 @@ environment variable to a valid terminal name before launching dvtm.
 .
 .It Ev DVTM_EDITOR
 When entering the copymode dvtm pipes the whole scroll back buffer to
-.Ev DVTM_EDITOR
-which is launched with
-.Fl
-(indicating to read from stdin) as its only argument.
-If
-.Ev DVTM_EDITOR
-is not set
+.Xr dvtm-editor 1
+which opens the content in
+.Ev DVTM_EDITOR ,
+with fallbacks to
+.Ev VISUAL ,
 .Ev EDITOR
-is checked, if this is also not set the default value specified in
+and
+.Xr vi 1
 .Pa config.h
 is used instead.
 .El

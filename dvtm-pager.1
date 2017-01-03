@@ -1,0 +1,69 @@
+.Dd $Mdocdate: January 03 2017 $
+.Dt DVTM-PAGER 1
+.Os
+.Sh NAME
+.Nm dvtm-pager
+.Nd select apropriate pager for dvtm
+.
+.
+.Sh SYNOPSIS
+.
+.Nm
+ARGS...
+.
+.
+.Sh DESCRIPTION
+.
+The
+.Nm
+is an utility used by
+.Xr dvtm 1
+for choosing apropriate pager to displaying the scrollback history.
+.Pp
+It starts the pager with
+.Cm ARGS ,
+sending all scrollback to its standard input.
+.Nm
+does not output anything.  Otherwise, it output the content of the temporary
+file to stdout.
+.Pp
+.Xr dvtm 1
+will preserve the escape sequences such as colouring and cursor control while
+sending the scrollback to
+.Nm .
+.Pp
+.
+.
+.Sh ENVIRONMENT VARIABLES
+.
+.Nm
+will try to find the user pager by checking these variables in order:
+.
+.Bl -tag -width 8
+.It Ev DVTM_PAGER
+Permitting to invoke an editor specific to dvtm, or set particular flags such as
+.Fl R
+for
+.Xr less 1 .
+.
+.It Ev PAGER
+Falling back to global defaults:
+.Ev PAGER .
+.El
+.Pp
+If no pager is found, the
+.Xr less 1
+pager is used.
+.
+.
+.Sh SEE ALSO
+.
+.Xr less 1 ,
+.Xr dvtm 1 ,
+.Xr dvtm-editor 1
+.
+.
+.Sh AUTHOR
+.
+dvtm is written
+.An Marc André Tanner Aq Mt mat at brain-dump.org
