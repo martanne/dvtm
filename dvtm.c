@@ -683,7 +683,7 @@ resize(Client *c, int x, int y, int w, int h) {
 
 static Client*
 get_client_by_coord(unsigned int x, unsigned int y) {
-	if (y < way || y >= wah)
+	if (y < way || y >= way+wah)
 		return NULL;
 	if (isarrange(fullscreen))
 		return sel;
