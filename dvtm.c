@@ -866,14 +866,20 @@ viewprevtag(const char *args[]) {
 
 static void
 keypress(int code) {
+	int key = -1;
 	unsigned int len = 1;
 	char buf[8] = { '\e' };
 
 	if (code == '\e') {
 		/* pass characters following escape to the underlying app */
 		nodelay(stdscr, TRUE);
-		for (int t; len < sizeof(buf) && (t = getch()) != ERR; len++)
+		for (int t; len < sizeof(buf) && (t = getch()) != ERR; len++) {
+			if (t > 255) {
+				key = t;
+				break;
+			}
 			buf[len] = t;
+		}
 		nodelay(stdscr, FALSE);
 	}
 
@@ -884,6 +890,8 @@ keypress(int code) {
 				vt_write(c->term, buf, len);
 			else
 				vt_keypress(c->term, code);
+			if (key != -1)
+				vt_keypress(c->term, key);
 		}
 		if (!runinall)
 			break;
