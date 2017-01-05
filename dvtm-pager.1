@@ -1,6 +1,6 @@
-.Dd $Mdocdate: January 03 2017 $
+.Dd January 03, 2017
 .Dt DVTM-PAGER 1
-.Os
+.Os dvtm VERSION
 .Sh NAME
 .Nm dvtm-pager
 .Nd select apropriate pager for dvtm
@@ -14,46 +14,41 @@ ARGS...
 .
 .Sh DESCRIPTION
 .
-The
 .Nm
-is an utility used by
+is an utility used by the
 .Xr dvtm 1
-for choosing apropriate pager to displaying the scrollback history.
+terminal multiplexer to display its scrollback history using a suitable pager.
 .Pp
-It starts the pager with
-.Cm ARGS ,
-sending all scrollback to its standard input.
-.Nm
-does not output anything.  Otherwise, it output the content of the temporary
-file to stdout.
-.Pp
+The invoked pager is expected to display the data sent to its standard input.
+The data stream might contain ANSI color escape sequence.
+All command line arguments are forwarded verbatim.
 .Xr dvtm 1
-will preserve the escape sequences such as colouring and cursor control while
-sending the scrollback to
-.Nm .
-.Pp
+uses this to adjust the initial view port by passing
+.Sy +n ,
+meaning the start of line
+.Sy n
+should be displayed.
 .
 .
 .Sh ENVIRONMENT VARIABLES
 .
 .Nm
-will try to find the user pager by checking these variables in order:
+will try to find the preferred pager by checking these variables in order:
 .
-.Bl -tag -width 8
+.Bl -tag -width indent
 .It Ev DVTM_PAGER
-Permitting to invoke an editor specific to dvtm, or set particular flags such as
+Permitting to invoke a pager specific to dvtm, or set particular flags such as
 .Fl R
 for
 .Xr less 1 .
 .
 .It Ev PAGER
-Falling back to global defaults:
-.Ev PAGER .
+Falling back to the default pager.
 .El
 .Pp
-If no pager is found, the
+If none of these variables are set,
 .Xr less 1
-pager is used.
+is used.
 .
 .
 .Sh SEE ALSO
@@ -65,5 +60,5 @@ pager is used.
 .
 .Sh AUTHOR
 .
-dvtm is written
+dvtm is written by
 .An Marc André Tanner Aq Mt mat at brain-dump.org

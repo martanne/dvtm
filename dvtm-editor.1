@@ -1,6 +1,6 @@
-.Dd $Mdocdate: December 27 2016 $
+.Dd December 27, 2016
 .Dt DVTM-EDITOR 1
-.Os
+.Os dvtm VERSION
 .Sh NAME
 .Nm dvtm-editor
 .Nd make a text editor act as a filter
@@ -18,24 +18,23 @@ The
 .Nm
 is a file buffering utility used by the
 .Xr dvtm 1
-terminal multiplexer.  It reads the standard input and save it to a temporary
-file, then opens an editor according to the environment variables.  The file can
-be edited and saved.
+terminal multiplexer to implement its copy mode. It reads the standard input and saves it to a temporary
+file, then opens an editor according to the
+.Sx "ENVIRONMENT VARIABLES" .
 .Pp
-Once the editor quits, if the file was not saved,
+If the invoked editor terminates with a non-zero exit status or
+the file modification time remains unchanged,
 .Nm
-does not output anything.  Otherwise, it output the content of the temporary
+does not output anything.  Otherwise, it outputs the content of the modified temporary
 file to stdout.
 .Pp
+All command line arguments are forwarded verbatim.
 .Xr dvtm 1
-will remove the escape sequences such as colouring and cursor control before to
-write to
-.Nm .
-.Pp
-.Cm ARGS
-are passed to the selected editor.  This is used by
-.Xr dvtm 1
-to jump to current line number.
+uses this to adjust the initial view port by passing
+.Sy +n ,
+meaning the start of line
+.Sy n
+should be displayed.
 .
 .
 .Sh ENVIRONMENT VARIABLES
@@ -43,7 +42,7 @@ to jump to current line number.
 .Nm
 will try to find the user editor by checking these variables in order:
 .
-.Bl -tag -width 8
+.Bl -tag -width indent
 .It Ev DVTM_EDITOR
 Permitting to invoke an editor specific to dvtm, or set particular flags.
 .
@@ -54,16 +53,27 @@ and
 .Ev EDITOR .
 .El
 .Pp
-If no editor is found, the
+If no editor is found,
 .Xr vi 1
-editor is used.
+is used.
 .
 .
 .Sh FILES
 .
 The temporary files are created according to the template:
-.Pa /tmp/dvtm-editor.XXXXXX
+.Pa /tmp/dvtm-editor.XXXXXX .
+.Pp
+.Pa /dev/tty
+is opened to obtain a controlling tty which is used for the standard input/output
+streams of the invoked editor.
 .
+.Sh NOTES
+.
+Using
+.Xr vis 1
+as editor is particularly convenient because
+.Ic :wq!
+in visual mode will reduce the file to the currently active selection(s).
 .
 .Sh SEE ALSO
 .
@@ -74,5 +84,5 @@ The temporary files are created according to the template:
 .
 .Sh AUTHOR
 .
-dvtm is written
+dvtm is written by
 .An Marc André Tanner Aq Mt mat at brain-dump.org
