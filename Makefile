@@ -2,6 +2,7 @@ include config.mk
 
 SRC = dvtm.c vt.c
 BIN = dvtm dvtm-status dvtm-editor dvtm-pager
+MANUALS = dvtm.1 dvtm-editor.1 dvtm-pager.1
 
 VERSION = $(shell git describe --always --dirty 2>/dev/null || echo "0.15-git")
 CFLAGS += -DVERSION=\"${VERSION}\"
@@ -17,6 +18,12 @@ dvtm: config.h config.mk *.c *.h
 
 dvtm-editor: dvtm-editor.c
 	${CC} ${CFLAGS} $^ ${LDFLAGS} -o $@
+
+man:
+	@for m in ${MANUALS}; do \
+		echo "Generating $$m"; \
+		sed -e "s/VERSION/${VERSION}/" "$$m" | mandoc -W warning -T utf8 -T xhtml -O man=%N.%S.html -O style=mandoc.css 1> "$$m.html" || true; \
+	done
 
 debug: clean
 	@$(MAKE) CFLAGS='${DEBUG_CFLAGS}'
@@ -39,8 +46,10 @@ install: all
 	done
 	@echo installing manual page to ${DESTDIR}${MANPREFIX}/man1
 	@mkdir -p ${DESTDIR}${MANPREFIX}/man1
-	@sed "s/VERSION/${VERSION}/g" < dvtm.1 > ${DESTDIR}${MANPREFIX}/man1/dvtm.1
-	@chmod 644 ${DESTDIR}${MANPREFIX}/man1/dvtm.1
+	@for m in ${MANUALS}; do \
+		sed -e "s/VERSION/${VERSION}/" < "$$m" >  "${DESTDIR}${MANPREFIX}/man1/$$m" && \
+		chmod 644 "${DESTDIR}${MANPREFIX}/man1/$$m"; \
+	done
 	@echo installing terminfo description
 	@TERMINFO=${TERMINFO} tic -s dvtm.info
 
