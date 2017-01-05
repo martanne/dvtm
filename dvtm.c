@@ -322,22 +322,11 @@ showbar(void) {
 }
 
 static void
-drawbar(void) {
-	int sx, sy, x, y, width;
-	unsigned int occupied = 0, urgent = 0;
-	if (bar.pos == BAR_OFF)
-		return;
+drawbar_tags(unsigned int occupied, unsigned int urgent) {
+	int width;
 
-	for (Client *c = clients; c; c = c->next) {
-		occupied |= c->tags;
-		if (c->urgent)
-			urgent |= c->tags;
-	}
-
-	getyx(stdscr, sy, sx);
 	attrset(BAR_ATTR);
-	move(bar.y, 0);
-
+	printw(TAG_BEGIN);
 	for (unsigned int i = 0; i < LENGTH(tags); i++){
 		if (tagset[seltags] & (1 << i))
 			attrset(TAG_SEL);
@@ -348,15 +337,20 @@ drawbar(void) {
 		else
 			attrset(TAG_NORMAL);
 		printw(TAG_SYMBOL, tags[i]);
+
+		if (i < LENGTH(tags) - 1) {
+			attrset(BAR_ATTR);
+			printw(TAG_SEP);
+		}
 	}
+	attrset(BAR_ATTR);
+	printw(TAG_END);
 
-	attrset(runinall ? TAG_SEL : TAG_NORMAL);
-	addstr(layout->symbol);
-	attrset(TAG_NORMAL);
+}
 
-	getyx(stdscr, y, x);
-	(void)y;
-	int maxwidth = screen.w - x - 2;
+static void
+drawbar_status(int maxwidth) {
+	int width;
 
 	addch(BAR_BEGIN);
 	attrset(BAR_ATTR);
@@ -381,6 +375,37 @@ drawbar(void) {
 
 	attrset(TAG_NORMAL);
 	mvaddch(bar.y, screen.w - 1, BAR_END);
+}
+
+static void
+drawbar(void) {
+	int sx, sy, x, y, width;
+	unsigned int occupied = 0, urgent = 0;
+	if (bar.pos == BAR_OFF)
+		return;
+
+	for (Client *c = clients; c; c = c->next) {
+		occupied |= c->tags;
+		if (c->urgent)
+			urgent |= c->tags;
+	}
+
+	getyx(stdscr, sy, sx);
+	attrset(BAR_ATTR);
+	move(bar.y, 0);
+
+	drawbar_tags(occupied, urgent);
+
+	attrset(runinall ? TAG_SEL : TAG_NORMAL);
+	addstr(layout->symbol);
+	attrset(TAG_NORMAL);
+
+	getyx(stdscr, y, x);
+	(void)y;
+	int maxwidth = screen.w - x - 2;
+
+	drawbar_status(maxwidth);
+
 	attrset(NORMAL_ATTR);
 	move(sy, sx);
 	wnoutrefresh(stdscr);
