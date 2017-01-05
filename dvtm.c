@@ -187,6 +187,10 @@ static void focusnextnm(const char *args[]);
 static void focusprev(const char *args[]);
 static void focusprevnm(const char *args[]);
 static void focuslast(const char *args[]);
+static void focusup(const char *args[]);
+static void focusdown(const char *args[]);
+static void focusleft(const char *args[]);
+static void focusright(const char *args[]);
 static void killclient(const char *args[]);
 static void paste(const char *args[]);
 static void quit(const char *args[]);
@@ -1233,6 +1237,51 @@ static void
 focuslast(const char *args[]) {
 	if (lastsel)
 		focus(lastsel);
+}
+
+static void
+focusup(const char *args[]) {
+	if (!sel)
+		return;
+	/* avoid vertical separator, hence +1 in x direction */
+	Client *c = get_client_by_coord(sel->x + 1, sel->y - 1);
+	if (c)
+		focus(c);
+	else
+		focusprev(args);
+}
+
+static void
+focusdown(const char *args[]) {
+	if (!sel)
+		return;
+	Client *c = get_client_by_coord(sel->x, sel->y + sel->h);
+	if (c)
+		focus(c);
+	else
+		focusnext(args);
+}
+
+static void
+focusleft(const char *args[]) {
+	if (!sel)
+		return;
+	Client *c = get_client_by_coord(sel->x - 2, sel->y);
+	if (c)
+		focus(c);
+	else
+		focusprev(args);
+}
+
+static void
+focusright(const char *args[]) {
+	if (!sel)
+		return;
+	Client *c = get_client_by_coord(sel->x + sel->w + 1, sel->y);
+	if (c)
+		focus(c);
+	else
+		focusnext(args);
 }
 
 static void
