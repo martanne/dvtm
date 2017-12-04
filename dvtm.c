@@ -1801,6 +1801,7 @@ parse_args(int argc, char *argv[]) {
 				if (!(fifo = realpath(argv[arg], NULL)))
 					error("%s\n", strerror(errno));
 				setenv("DVTM_CMD_FIFO", fifo, 1);
+				free(fifo);
 				break;
 			}
 			default:
