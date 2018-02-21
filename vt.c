@@ -1833,7 +1833,7 @@ static void init_colors(void)
 	 *      0 and 0. Initialize all color-pairs in order to have consistent
 	 *      behaviour despite the implementation used.
 	 */
-	for (short i = 1; i < COLOR_PAIRS; i++)
+	for (int i = 1; i < COLOR_PAIRS; i++)
 		init_pair(i, 0, 0);
 	vt_color_reserve(COLOR_WHITE, COLOR_BLACK);
 }
