@@ -84,7 +84,7 @@
 #define LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 static bool is_utf8, has_default_colors;
-static short color_pairs_reserved, color_pairs_max, color_pair_current;
+static int color_pairs_reserved, color_pairs_max, color_pair_current;
 static short *color2palette, default_fg, default_bg;
 static char vt_term[32];
 
@@ -1833,7 +1833,7 @@ static void init_colors(void)
 	 *      0 and 0. Initialize all color-pairs in order to have consistent
 	 *      behaviour despite the implementation used.
 	 */
-	for (short i = 1; i < COLOR_PAIRS; i++)
+	for (int i = 1; i < COLOR_PAIRS; i++)
 		init_pair(i, 0, 0);
 	vt_color_reserve(COLOR_WHITE, COLOR_BLACK);
 }
