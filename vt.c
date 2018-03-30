@@ -65,7 +65,7 @@
 #  define NCURSES_EXT_COLORS 0
 # endif
 # if !NCURSES_EXT_COLORS
-#  define MAX_COLOR_PAIRS 256
+#  define MAX_COLOR_PAIRS MIN(COLOR_PAIRS, 256)
 # endif
 #endif
 #ifndef MAX_COLOR_PAIRS
@@ -84,7 +84,7 @@
 #define LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 static bool is_utf8, has_default_colors;
-static int color_pairs_reserved, color_pairs_max, color_pair_current;
+static short color_pairs_reserved, color_pairs_max, color_pair_current;
 static short *color2palette, default_fg, default_bg;
 static char vt_term[32];
 
@@ -1824,7 +1824,7 @@ static void init_colors(void)
 	if (default_bg == -1)
 		default_bg = COLOR_BLACK;
 	has_default_colors = (use_default_colors() == OK);
-	color_pairs_max = MIN(COLOR_PAIRS, MAX_COLOR_PAIRS);
+	color_pairs_max = MIN(MAX_COLOR_PAIRS, SHRT_MAX);
 	if (COLORS)
 		color2palette = calloc((COLORS + 2) * (COLORS + 2), sizeof(short));
 	/*
@@ -1833,7 +1833,7 @@ static void init_colors(void)
 	 *      0 and 0. Initialize all color-pairs in order to have consistent
 	 *      behaviour despite the implementation used.
 	 */
-	for (int i = 1; i < COLOR_PAIRS; i++)
+	for (short i = 1; i < MIN(COLOR_PAIRS, SHRT_MAX); i++)
 		init_pair(i, 0, 0);
 	vt_color_reserve(COLOR_WHITE, COLOR_BLACK);
 }
