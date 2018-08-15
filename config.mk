@@ -6,6 +6,9 @@ MANPREFIX = ${PREFIX}/share/man
 # leave empty to install into your home folder
 TERMINFO := ${DESTDIR}${PREFIX}/share/terminfo
 
+# the termcap file is shared among all programs
+TERMCAP = /usr/share/misc/termcap
+
 INCS = -I.
 LIBS = -lc -lutil -lncursesw
 CPPFLAGS = -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -D_XOPEN_SOURCE_EXTENDED
