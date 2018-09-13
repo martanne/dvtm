@@ -1,0 +1,64 @@
+.Dd January 03, 2017
+.Dt DVTM-PAGER 1
+.Os dvtm VERSION
+.Sh NAME
+.Nm dvtm-pager
+.Nd select apropriate pager for dvtm
+.
+.
+.Sh SYNOPSIS
+.
+.Nm
+ARGS...
+.
+.
+.Sh DESCRIPTION
+.
+.Nm
+is an utility used by the
+.Xr dvtm 1
+terminal multiplexer to display its scrollback history using a suitable pager.
+.Pp
+The invoked pager is expected to display the data sent to its standard input.
+The data stream might contain ANSI color escape sequence.
+All command line arguments are forwarded verbatim.
+.Xr dvtm 1
+uses this to adjust the initial view port by passing
+.Sy +n ,
+meaning the start of line
+.Sy n
+should be displayed.
+.
+.
+.Sh ENVIRONMENT VARIABLES
+.
+.Nm
+will try to find the preferred pager by checking these variables in order:
+.
+.Bl -tag -width indent
+.It Ev DVTM_PAGER
+Permitting to invoke a pager specific to dvtm, or set particular flags such as
+.Fl R
+for
+.Xr less 1 .
+.
+.It Ev PAGER
+Falling back to the default pager.
+.El
+.Pp
+If none of these variables are set,
+.Xr less 1
+is used.
+.
+.
+.Sh SEE ALSO
+.
+.Xr less 1 ,
+.Xr dvtm 1 ,
+.Xr dvtm-editor 1
+.
+.
+.Sh AUTHOR
+.
+dvtm is written by
+.An Marc André Tanner Aq Mt mat at brain-dump.org

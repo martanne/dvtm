@@ -1,6 +1,3 @@
-# dvtm version
-VERSION = 0.15
-
 # Customize below to fit your system
 
 PREFIX ?= /usr/local
@@ -12,10 +9,6 @@ TERMINFO := ${DESTDIR}${PREFIX}/share/terminfo
 INCS = -I.
 LIBS = -lc -lutil -lncursesw
 CPPFLAGS = -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -D_XOPEN_SOURCE_EXTENDED
-CFLAGS += -std=c99 ${INCS} -DVERSION=\"${VERSION}\" -DNDEBUG ${CPPFLAGS}
-LDFLAGS += ${LIBS}
-
-DEBUG_CFLAGS = ${CFLAGS} -UNDEBUG -O0 -g -ggdb -Wall -Wextra -Wno-unused-parameter
+CFLAGS += -std=c99 ${INCS} -DNDEBUG ${CPPFLAGS}
 
 CC ?= cc
-STRIP ?= strip
