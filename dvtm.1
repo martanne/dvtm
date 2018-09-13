@@ -1,283 +1,321 @@
-.TH DVTM 1 dvtm\-VERSION
-.nh
-.SH NAME
-dvtm \- dynamic virtual terminal manager
-.SH SYNOPSIS
-.B dvtm
-.RB [ \-v ]
-.RB [ \-M ]
-.RB [ \-m
-.IR modifier ]
-.RB [ \-d
-.IR delay ]
-.RB [ \-h
-.IR lines ]
-.RB [ \-t
-.IR title ]
-.RB [ \-s
-.IR status-fifo ]
-.RB [ \-c
-.IR cmd-fifo ]
-.RI [ command \ ... "" ]
-.SH DESCRIPTION
-dvtm is a dynamic tiling window manager for the console.
+.Dd December 27, 2016
+.Dt DVTM 1
+.Os dvtm VERSION
+.Sh NAME
+.Nm dvtm
+.Nd dynamic virtual terminal manager
+.
+.
+.Sh SYNOPSIS
+.
+.Nm
+.Op Fl v
+.Op Fl M
+.Op Fl m Ar modifier
+.Op Fl d Ar delay
+.Op Fl h Ar lines
+.Op Fl t Ar title
+.Op Fl s Ar status-fifo
+.Op Fl c Ar cmd-fifo
+.Op Ar command Ar ...
+.
+.
+.Sh DESCRIPTION
+.
+.Nm
+is a dynamic tiling window manager for the console.
+.Pp
 As a console window manager it tries to make it easy to work with multiple
 console based applications.
-.SH OPTIONS
-.TP
-.B \-v
+.
+.Bl -tag -width 8
+.It Fl v
 Print version information to standard output and exit.
-.TP
-.B \-M
+.
+.It Fl M
 Toggle default mouse grabbing upon startup. Use this to allow normal mouse operation
 under X.
-.TP
-.BI \-m \ modifier
+.
+.It Fl m Ar modifier
 Set command modifier at runtime.
-.TP
-.BI \-d \ delay
+.
+.It Fl d Ar delay
 Set the delay ncurses waits before deciding if a character that might be
 part of an escape sequence is actually part of an escape sequence.
-.TP
-.BI \-h \ lines
+.
+.It Fl h Ar lines
 Set the scrollback history buffer size at runtime.
-.TP
-.BI \-t \ title
+.
+.It Fl t Ar title
 Set a static terminal
-.I title
+.Ar title
 and don't change it to the one of the currently focused window.
-.TP
-.BI \-s \ status-fifo
+.
+.It Fl s Ar status-fifo
 Open or create the named pipe
-.I status-fifo
+.Pa status-fifo
 read its content and display it in the statusbar. See the
-.I dvtm-status
+.Xr dvtm-status 1
 script for an usage example.
-.TP
-.BI \-c \ cmd-fifo
+.
+.It Fl c Ar cmd-fifo
 Open or create the named pipe
-.I cmd-fifo
+.Pa cmd-fifo
 and look for commands to execute which were defined in
-.IR config.h .
-.TP
-.IR command \ ...
+.Pa config.h .
+.
+.It Ar command Ar ...
 Execute
-.IR command (s),
-each in a separate window.
-.SH USAGE
-.SS Keyboard commands
-.TP
-.B Mod
-Each keybinding begins with Mod which defaults to
-.BR ^g ,
+.Ar command
+(s), each in a separate window.
+.El
+.
+.
+.Sh USAGE
+.
+.Ss Keyboard commands
+.
+Each keybinding begins with
+.Ic Mod
+which defaults to
+.Ic ^g
 but can be changed in
-.I config.h
+.Pa config.h
 or with the
-.B \-m
+.Fl m
 command line option.
-.TP
-.B Mod\-c
+.
+.Bl -tag -width 8
+.It Ic Mod-c
 Create a new shell window.
-.TP
-.B Mod\-C
+.
+.It Ic Mod-C
 Create a new shell window using the current working directory of the focused window.
-.TP
-.B Mod\-x\-x
+.
+.It Ic Mod-x-x
 Close focused window.
-.TP
-.B Mod\-l
+.
+.It Ic Mod-l
 Increases the master area width about 5% (all except grid and
 fullscreen layout).
-.TP
-.B Mod\-h
+.
+.It Ic Mod-h
 Decreases the master area width about 5% (all except grid and
 fullscreen layout).
-.TP
-.B Mod\-i
+.
+.It Ic Mod-i
 Increase number of windows displayed in the master area.
-.TP
-.B Mod\-d
+.
+.It Ic Mod-d
 Decrease number of windows displayed in the master area.
-.TP
-.B Mod\-j
+.
+.It Ic Mod-j
 Focus next window.
-.TP
-.B Mod\-k
+.
+.It Ic Mod-k
 Focus previous window.
-.TP
-.B Mod\-J
-Focus next non minimized window.
-.TP
-.B Mod\-K
-Focus previous non minimized window.
-.TP
-.BI Mod\- n
-Focus the
-.IR n \-th
-window.
-.TP
-.B Mod\-Tab
+.
+.It Ic Mod-J
+Focus window below.
+.
+.It Ic Mod-K
+Focus window above.
+.
+.It Ic Mod-H
+Focus window to the left.
+.
+.It Ic Mod-L
+Focus window to the right.
+.
+.It Ic Mod-[0..9]
+Focus the [0..9]-th window.
+.
+.It Ic Mod-Tab
 Focus previously selected window.
-.TP
-.B Mod\-.
+.
+.It Ic Mod-.
 Toggle minimization of current window.
-.TP
-.B Mod\-m
+.
+.It Ic Mod-m
 Maximize current window (change to fullscreen layout).
-.TP
-.B Shift\-PageUp
-.TQ
-.B Mod\-PageUp
+.
+.It Ic Shift-PageUp
+.It Ic Mod-PageUp
 Scroll up.
-.TP
-.B Shift\-PageDown
-.TQ
-.B Mod\-PageDown
+.
+.It Ic Shift-PageDown
+.It Ic Mod-PageDown
 Scroll down.
-.TP
-.B Mod\-Space
+.
+.It Ic Mod-Space
 Toggle between defined layouts (affects all windows).
-.TP
-.B Mod\-Enter
+.
+.It Ic Mod-Enter
 Zooms/cycles current window to/from master area.
-.TP
-.B Mod\-f
+.
+.It Ic Mod-f
 Change to vertical stack tiling layout.
-.TP
-.B Mod\-b
+.
+.It Ic Mod-b
 Change to bottom stack tiling layout.
-.TP
-.B Mod\-g
+.
+.It Ic Mod-g
 Change to grid layout.
-.TP
-.B Mod\-s
+.
+.It Ic Mod-s
 Show/hide the status bar.
-.TP
-.B Mod\-S
+.
+.It Ic Mod-S
 Toggle position of the status bar between top and bottom.
-.TP
-.B Mod\-r
-.TQ
-.B Mod\-^L
+.
+.It Ic Mod-r
+.
+.It Ic Mod-^L
 Redraw whole screen.
-.TP
-.B Mod\-a
+.
+.It Ic Mod-a
 Toggle keyboard multiplexing mode, if activated keypresses are sent to all
 visible windows.
-.TP
-.B Mod\-M
+.
+.It Ic Mod-M
 Toggle dvtm mouse grabbing.
-.TP
-.B Mod\-e
+.
+.It Ic Mod-e
 Enter copy mode (see section below for further information).
-.TP
-.B Mod\-/
+.
+.It Ic Mod-/
 Enter copy mode and start searching forward (assumes a vi-like editor).
-.TP
-.B Mod\-p
+.
+.It Ic Mod-p
 Paste last copied text from copy mode at current cursor position.
-.TP
-.B Mod\-?
+.
+.It Ic Mod-?
 Show this manual page.
-.TP
-.B Mod\-Mod
+.
+.It Ic Mod-Mod
 Send the Mod key.
-.TP
-.B Mod-F[1..n]
-.TQ
-.B Mod-v-[1..n]
-View all windows with nth tag.
-.TP
-.B Mod-0
+.
+.It Ic Mod-F[1..n]
+.It Ic Mod-v-[1..n]
+View all windows with n-th tag.
+.
+.It Ic Mod-0
 View all windows with any tag.
-.TP
-.B Mod-v-Tab
+.
+.It Ic Mod-v-Tab
 Toggles to the previously selected tags.
-.TP
-.B Mod-V-[1..n]
+.
+.It Ic Mod-V-[1..n]
 Add/remove all windows with nth tag to/from the view.
-.TP
-.B Mod-t-[1..n]
+.
+.It Ic Mod-t-[1..n]
 Apply nth tag to focused window.
-.TP
-.B Mod-T-[1..n]
+.
+.It Ic Mod-T-[1..n]
 Add/remove nth tag to/from focused window.
-.TP
-.B Mod\-q\-q
+.
+.It Ic Mod-q-q
 Quit dvtm.
-.SS Mouse commands
-.TP
-.B Copy and Paste
+.El
+.
+.
+.Ss Mouse commands
+.
 By default dvtm captures mouse events to provide the actions listed below.
 Unfortunately this interferes with the standard X copy and paste mechanism.
 To work around this you need to hold down
-.B Shift
+.Ic Shift
 while selecting or pasting text.
 Alternatively you can disable mouse support at compile time, start dvtm with the
-.B -M
+.Fl M
 flag or toggle mouse support during runtime with
-.BR Mod\-M .
-.TP
-.B Button1 click
+.Ic Mod-M .
+.
+.Bl -tag -width 8
+.It Ic Button1 click
 Focus window.
-.TP
-.B Button1 double click
+.
+.It Ic Button1 double click
 Focus window and toggle maximization.
-.TP
-.B Button2 click
+.
+.It Ic Button2 click
 Zoom/cycle current window to/from master area.
-.TP
-.B Button3 click
+.
+.It Ic Button3 click
 Toggle minimization of current window.
-.SS Copy mode
-Copy mode gives easy access to past output by piping it to an editor. What
-ever the editor prints to stdout upon exiting will be stored in an internal
-register and can be pasted into other clients (via
-.B Mod\-p
-)
-.SH ENVIRONMENT VARIABLES
-.TP
-.B DVTM
+.El
+.
+.
+.Ss Copy mode
+.
+Copy mode gives easy access to past output by piping it to
+.Xr dvtm-editor 1 ,
+opening an editor.
+What the editor writes will be stored in an internal register and can be pasted
+into other clients (via
+.Ic Mod-p ).
+.
+.
+.Sh ENVIRONMENT VARIABLES
+.
+.Bl -tag -width 8
+.It Ev DVTM
 Each process spawned by dvtm will have this variable set to the dvtm version
 it is running under.
-.TP
-.B DVTM_WINDOW_ID
+.
+.It Ev DVTM_WINDOW_ID
 Each process also has access to its constant and unique window id.
-.TP
-.B DVTM_CMD_FIFO
+.
+.It Ev DVTM_CMD_FIFO
 If the -c command line argument was specified upon dvtm startup, this variable
 will be set to the file name of the named pipe. Thus allowing the process
 to send commands back to dvtm.
-.TP
-.B DVTM_TERM
+.
+.It Ev DVTM_TERM
 By default dvtm uses its own terminfo file and therefore sets
-.BR TERM=dvtm
+.Ev TERM=dvtm
 within the client windows. This can be overridden by setting the
-.BR DVTM_TERM
+.Ev DVTM_TERM
 environment variable to a valid terminal name before launching dvtm.
-.TP
-.B DVTM_EDITOR
+.
+.It Ev DVTM_EDITOR
 When entering the copymode dvtm pipes the whole scroll back buffer to
-.BR DVTM_EDITOR
-which is launched with
-.BR \-
-(indicating to read from stdin) as its only argument.
-If
-.BR DVTM_EDITOR
-is not set
-.BR EDITOR
-is checked, if this is also not set the default value specified in
-.BR config.h
+.Xr dvtm-editor 1
+which opens the content in
+.Ev DVTM_EDITOR ,
+with fallbacks to
+.Ev VISUAL ,
+.Ev EDITOR
+and
+.Xr vi 1
+.Pa config.h
 is used instead.
-.SH EXAMPLE
+.El
+.
+.
+.Sh EXAMPLE
+.
 See the
-.I dvtm-status
-script as an example of how to display text in the
-status bar.
-.SH CUSTOMIZATION
-dvtm is customized by creating a custom
-.I config.h
+.Xr dvtm-status 1
+script as an example of how to display text in the status bar.
+.
+.
+.Sh FILES
+.
+.Nm
+is customized by creating a custom
+.Pa config.h
 and (re)compiling the source code.
 This keeps it fast, secure and simple.
-.SH AUTHOR
-dvtm is written by Marc André Tanner <mat at brain-dump.org>
+.
+.
+.Sh SEE ALSO
+.
+.Xr abduco 1 ,
+.Xr dvtm-status 1
+.
+.
+.Sh AUTHOR
+.
+dvtm is written
+.An Marc André Tanner Aq Mt mat at brain-dump.org
