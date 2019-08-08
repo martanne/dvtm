@@ -1351,9 +1351,15 @@ static void put_wc(Vt *t, wchar_t wc)
 	}
 
 	if (t->escaped) {
-		if (t->elen + 1 < sizeof(t->ebuf)) {
-			t->ebuf[t->elen] = wc;
-			t->ebuf[++t->elen] = '\0';
+		char buf[MB_CUR_MAX];
+		size_t s = wcrtomb(buf, wc, NULL);
+		if (s == (size_t)-1) {
+			buf[0] = wc;
+			s = 1;
+		}
+		if (t->elen + s < sizeof(t->ebuf)) {
+			memcpy(t->ebuf + t->elen, buf, s);
+			t->ebuf[t->elen += s] = '\0';
 			try_interpret_escape_seq(t);
 		} else {
 			cancel_escape_sequence(t);
