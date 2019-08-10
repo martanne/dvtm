@@ -970,11 +970,13 @@ static void interpret_csi_priv_mode(Vt *t, int param[], int pcount, bool set)
 		case 1047:
 			if (!set)
 				buffer_clear(&t->buffer_alternate);
+			if (set && param[i] == 1049)
+				cursor_save(t);
 			t->buffer = set ? &t->buffer_alternate : &t->buffer_normal;
+			if (!set && param[i] == 1049)
+				cursor_restore(t);
 			vt_dirty(t);
-			if (param[i] != 1049)
-				break;
-			/* fall through */
+			break;
 		case 1048: /* save/restore cursor */
 			if (set)
 				cursor_save(t);
