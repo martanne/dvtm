@@ -1635,6 +1635,13 @@ pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *cwd, cons
 		if (cwd)
 			chdir(cwd);
 
+		struct sigaction sa;
+		memset(&sa, 0, sizeof sa);
+		sa.sa_flags = 0;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_handler = SIG_DFL;
+		sigaction(SIGPIPE, &sa, NULL);
+
 		execvp(p, (char *const *)argv);
 		fprintf(stderr, "\nexecv() failed.\nCommand: '%s'\n", argv[0]);
 		exit(1);
