@@ -41,14 +41,14 @@ install: all
 	@mkdir -p ${DESTDIR}${PREFIX}/bin
 	@for b in ${BIN}; do \
 		echo "installing ${DESTDIR}${PREFIX}/bin/$$b"; \
-		cp -f "$$b" "${DESTDIR}${PREFIX}/bin" && \
-		chmod 755 "${DESTDIR}${PREFIX}/bin/$$b"; \
+		cp -f "$$b" ${DESTDIR}${PREFIX}/bin && \
+		chmod 755 ${DESTDIR}${PREFIX}/bin/$$b; \
 	done
 	@echo installing manual page to ${DESTDIR}${MANPREFIX}/man1
 	@mkdir -p ${DESTDIR}${MANPREFIX}/man1
 	@for m in ${MANUALS}; do \
-		sed -e "s/VERSION/${VERSION}/" < "$$m" >  "${DESTDIR}${MANPREFIX}/man1/$$m" && \
-		chmod 644 "${DESTDIR}${MANPREFIX}/man1/$$m"; \
+		sed -e "s/VERSION/${VERSION}/" < "$$m" >  ${DESTDIR}${MANPREFIX}/man1/$$m && \
+		chmod 644 ${DESTDIR}${MANPREFIX}/man1/$$m; \
 	done
 	@echo installing terminfo description
 	@TERMINFO=${TERMINFO} tic -s dvtm.info
@@ -56,7 +56,7 @@ install: all
 uninstall:
 	@for b in ${BIN}; do \
 		echo "removing ${DESTDIR}${PREFIX}/bin/$$b"; \
-		rm -f "${DESTDIR}${PREFIX}/bin/$$b"; \
+		rm -f ${DESTDIR}${PREFIX}/bin/$$b; \
 	done
 	@echo removing manual page from ${DESTDIR}${MANPREFIX}/man1
 	@rm -f ${DESTDIR}${MANPREFIX}/man1/dvtm.1
