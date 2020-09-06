@@ -69,6 +69,7 @@ or use one of the distribution provided packages:
  * [openSUSE](http://software.opensuse.org/package/dvtm?search_term=dvtm)
  * [ArchLinux](http://www.archlinux.org/packages/?q=dvtm)
  * [Gentoo](http://packages.gentoo.org/package/app-misc/dvtm)
+ * [Guix System](http://guix.gnu.org/en/packages/dvtm-0.15/)
  * [Slackware](http://slackbuilds.org/result/?search=dvtm)
  * [FreeBSD](http://www.freshports.org/sysutils/dvtm/)
  * [NetBSD](http://www.pkgsrc.se/misc/dvtm/)
