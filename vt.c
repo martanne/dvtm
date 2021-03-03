@@ -184,6 +184,7 @@ struct Vt {
 	unsigned mousetrack:1;
 	unsigned graphmode:1;
 	unsigned savgraphmode:1;
+	unsigned truncate:1;
 	bool charsets[2];
 	/* buffers and parsing state */
 	char rbuf[BUFSIZ];
@@ -962,6 +963,9 @@ static void interpret_csi_priv_mode(Vt *t, int param[], int pcount, bool set)
 		case 6: /* set origin to relative/absolute (DECOM) */
 			t->relposmode = set;
 			break;
+		case 7:
+			t->truncate = !set;
+			break;
 		case 25: /* make cursor visible/invisible (DECCM) */
 			t->curshid = !set;
 			break;
@@ -1379,6 +1383,10 @@ static void put_wc(Vt *t, wchar_t wc)
 		}
 
 		if (b->curs_col >= b->cols) {
+			if (t->truncate && wc != '\n') {
+				b->curs_col++;
+				return;
+			}
 			b->curs_col = 0;
 			cursor_line_down(t);
 		}
