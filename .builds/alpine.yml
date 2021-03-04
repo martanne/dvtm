@@ -1,0 +1,10 @@
+image: alpine/latest
+packages:
+  - ncurses-dev
+  - make
+sources:
+  - https://github.com/martanne/dvtm
+tasks:
+  - build: |
+      cd dvtm
+      make
