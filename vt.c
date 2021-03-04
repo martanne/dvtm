@@ -1632,8 +1632,14 @@ pid_t vt_forkpty(Vt *t, const char *p, const char *argv[], const char *cwd, cons
 			setenv(envp[0], envp[1], 1);
 		setenv("TERM", vt_term, 1);
 
-		if (cwd)
-			chdir(cwd);
+		if (cwd) {
+			int err = chdir(cwd);
+			if (err) {
+				fprintf(stderr, "\nchdir() failed. ");
+				perror(cwd);
+				exit(1);
+			}
+		}
 
 		struct sigaction sa;
 		memset(&sa, 0, sizeof sa);
