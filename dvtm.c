@@ -1245,7 +1245,7 @@ focusprevnm(const char *args[]) {
 
 static void
 focuslast(const char *args[]) {
-	if (lastsel)
+	if (lastsel && isvisible(lastsel))
 		focus(lastsel);
 }
 
