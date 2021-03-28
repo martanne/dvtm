@@ -219,6 +219,9 @@ static void mouse_focus(const char *args[]);
 static void mouse_fullscreen(const char *args[]);
 static void mouse_minimize(const char *args[]);
 static void mouse_zoom(const char *args[]);
+static void mouse_toggleview(const char *args[]);
+static void mouse_view(const char *args[]);
+static void mouse_toggletag(const char *args[]);
 
 /* functions and variables available to layouts via config.h */
 static Client* nextvisible(Client *c);
@@ -241,6 +244,7 @@ static Client *lastsel = NULL;
 static Client *msel = NULL;
 static unsigned int seltags;
 static unsigned int tagset[2] = { 1, 1 };
+static int tsel = -1;
 static bool mouse_events_enabled = ENABLE_MOUSE;
 static Layout *layout = layouts;
 static StatusBar bar = { .fd = -1, .lastpos = BAR_POS, .pos = BAR_POS, .autohide = BAR_AUTOHIDE, .h = 1 };
@@ -703,6 +707,32 @@ get_client_by_coord(unsigned int x, unsigned int y) {
 		}
 	}
 	return NULL;
+}
+
+static int
+get_tag_by_coord(unsigned int x, unsigned int y) {
+	unsigned int i;
+	unsigned int pos = 0;
+	int tagfield, labellen;
+
+	if ((bar.pos == BAR_OFF) ||
+			(bar.pos == BAR_TOP && y >= bar.h) ||
+			(bar.pos == BAR_BOTTOM && y < screen.h - bar.h))
+		return -1;
+
+	/* Assumes TAG_SYMBOL includes '%s', a 2 character format specification */
+	tagfield = strlen(TAG_SYMBOL) - 2;
+
+	for (i = 0; i < LENGTH(tags); i++){
+		labellen = tagfield + strlen(tags[i]);
+		if (x >= pos && x < pos + labellen) {
+			debug("mouse event, x: %d y: %d tag: %d\n", x, y, i);
+			return i;
+		}
+		pos += labellen;
+	}
+
+	return -1;
 }
 
 static void
@@ -1535,6 +1565,24 @@ mouse_zoom(const char *args[]) {
 	zoom(NULL);
 }
 
+static void
+mouse_toggleview(const char *args[]) {
+	args[0] = tags[tsel];
+	toggleview(args);
+}
+
+static void
+mouse_view(const char *args[]) {
+	args[0] = tags[tsel];
+	view(args);
+}
+
+static void
+mouse_toggletag(const char *args[]) {
+	args[0] = tags[tsel];
+	toggletag(args);
+}
+
 static Cmd *
 get_cmd_by_name(const char *name) {
 	for (unsigned int i = 0; i < LENGTH(commands); i++) {
@@ -1648,8 +1696,19 @@ handle_mouse(void) {
 		return;
 	msel = get_client_by_coord(event.x, event.y);
 
-	if (!msel)
+	if (!msel) {
+		tsel = get_tag_by_coord(event.x, event.y);
+		if (tsel == -1)
+			return;
+		debug("mouse x:%d y:%d tag:%d mask:%d\n", event.x, event.y, tsel, event.bstate);
+		for (i = 0; i < LENGTH(tag_buttons); i++) {
+			if (event.bstate & tag_buttons[i].mask)
+				tag_buttons[i].action.cmd(tag_buttons[i].action.args);
+		}
+
+		tsel = -1;
 		return;
+	}
 
 	debug("mouse x:%d y:%d cx:%d cy:%d mask:%d\n", event.x, event.y, event.x - msel->x, event.y - msel->y, event.bstate);
 
