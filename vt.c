@@ -1979,3 +1979,9 @@ int vt_content_start(Vt *t)
 {
 	return t->buffer->scroll_above;
 }
+
+int vt_content_end(Vt *t)
+{
+	int curs_row = t->buffer->curs_row - t->buffer->lines;
+	return vt_content_start(t) + curs_row;
+}

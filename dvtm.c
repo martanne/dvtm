@@ -1121,7 +1121,7 @@ copymode(const char *args[]) {
 
 	const char *argv[3] = { args[0], NULL, NULL };
 	char argline[32];
-	int line = vt_content_start(sel->app);
+	int line = vt_content_end(sel->app);
 	snprintf(argline, sizeof(argline), "+%d", line);
 	argv[1] = argline;
 
