@@ -970,11 +970,13 @@ static void interpret_csi_priv_mode(Vt *t, int param[], int pcount, bool set)
 		case 1047:
 			if (!set)
 				buffer_clear(&t->buffer_alternate);
+			if (set && param[i] == 1049)
+				cursor_save(t);
 			t->buffer = set ? &t->buffer_alternate : &t->buffer_normal;
+			if (!set && param[i] == 1049)
+				cursor_restore(t);
 			vt_dirty(t);
-			if (param[i] != 1049)
-				break;
-			/* fall through */
+			break;
 		case 1048: /* save/restore cursor */
 			if (set)
 				cursor_save(t);
@@ -1351,9 +1353,15 @@ static void put_wc(Vt *t, wchar_t wc)
 	}
 
 	if (t->escaped) {
-		if (t->elen + 1 < sizeof(t->ebuf)) {
-			t->ebuf[t->elen] = wc;
-			t->ebuf[++t->elen] = '\0';
+		char buf[MB_CUR_MAX];
+		size_t s = wcrtomb(buf, wc, NULL);
+		if (s == (size_t)-1) {
+			buf[0] = wc;
+			s = 1;
+		}
+		if (t->elen + s < sizeof(t->ebuf)) {
+			memcpy(t->ebuf + t->elen, buf, s);
+			t->ebuf[t->elen += s] = '\0';
 			try_interpret_escape_seq(t);
 		} else {
 			cancel_escape_sequence(t);
