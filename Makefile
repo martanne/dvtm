@@ -52,6 +52,8 @@ install: all
 	done
 	@echo installing terminfo description
 	@TERMINFO=${TERMINFO} tic -s dvtm.info
+	infotocap dvtm.info >>$(TERMCAP)
+	cap_mkdb $(TERMCAP)
 
 uninstall:
 	@for b in ${BIN}; do \
