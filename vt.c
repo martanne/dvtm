@@ -971,6 +971,7 @@ static void interpret_csi_priv_mode(Vt *t, int param[], int pcount, bool set)
 			if (!set)
 				buffer_clear(&t->buffer_alternate);
 			t->buffer = set ? &t->buffer_alternate : &t->buffer_normal;
+			cursor_clamp(t);
 			vt_dirty(t);
 			if (param[i] != 1049)
 				break;
