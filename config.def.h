@@ -53,6 +53,10 @@ static Color colors[] = {
 #define TAG_OCCUPIED (COLOR(BLUE) | A_NORMAL)
 /* curses attributes for not selected tags which with urgent windows */
 #define TAG_URGENT (COLOR(BLUE) | A_NORMAL | A_BLINK)
+/* default cursor style set on all windows on creation
+ * https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h4-Functions-using-CSI-_-ordered-by-the-final-character-lparen-s-rparen:CSI-Ps-SP-q.1D81
+ */
+#define CURSOR_STYLE 1
 
 const char tags[][8] = { "1", "2", "3", "4", "5" };
 
