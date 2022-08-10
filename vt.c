@@ -192,6 +192,7 @@ struct Vt {
 	int srow, scol;          /* last known offset to display start row, start column */
 	char title[256];         /* xterm style window title */
 	vt_title_handler_t title_handler; /* hook which is called when title changes */
+	vt_curstyle_handler_t curstyle_handler; /* hook which is called when curstyle changes */
 	vt_urgent_handler_t urgent_handler; /* hook which is called upon bell */
 	void *data;              /* user supplied data */
 };
@@ -1101,6 +1102,11 @@ static void interpret_csi(Vt *t)
 		if (param_count == 1 && csiparam[0] == 6)
 			send_curs(t);
 		break;
+	case 'q': /* change cursor style */
+		if (t->curstyle_handler && param_count < 2
+				&& t->ebuf[t->elen - 2] == ' ')
+			t->curstyle_handler(t, param_count ? csiparam[0] : -1 );
+		break;
 	default:
 		break;
 	}
@@ -1878,6 +1884,11 @@ void vt_shutdown(void)
 void vt_title_handler_set(Vt *t, vt_title_handler_t handler)
 {
 	t->title_handler = handler;
+}
+
+void vt_curstyle_handler_set(Vt *t, vt_curstyle_handler_t handler)
+{
+	t->curstyle_handler = handler;
 }
 
 void vt_urgent_handler_set(Vt *t, vt_urgent_handler_t handler)

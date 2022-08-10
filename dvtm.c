@@ -69,6 +69,7 @@ struct Client {
 	volatile sig_atomic_t editor_died;
 	const char *cmd;
 	char title[255];
+	int curstyle;
 	int order;
 	pid_t pid;
 	unsigned short int id;
@@ -249,6 +250,7 @@ static const char *shell;
 static Register copyreg;
 static volatile sig_atomic_t running = true;
 static bool runinall = false;
+static char *curstyleseq;
 
 static void
 eprint(const char *errstr, ...) {
@@ -571,6 +573,18 @@ settitle(Client *c) {
 }
 
 static void
+setcurstyle(Client *c) {
+	int ct = -1;
+	char *term;
+	if (sel == c)
+		ct = c->curstyle;
+	if (ct+1 && (term = getenv("TERM")) && !strstr(term, "linux")) {
+		putp(tiparm(curstyleseq, ct));
+		fflush(stdout);
+	}
+}
+
+static void
 detachstack(Client *c) {
 	Client **tc;
 	for (tc = &stack; *tc && *tc != c; tc = &(*tc)->snext);
@@ -597,6 +611,7 @@ focus(Client *c) {
 		detachstack(c);
 		attachstack(c);
 		settitle(c);
+		setcurstyle(c);
 		c->urgent = false;
 		if (isarrange(fullscreen)) {
 			draw(c);
@@ -637,6 +652,16 @@ term_title_handler(Vt *term, const char *title) {
 	if (!isarrange(fullscreen) || sel == c)
 		draw_border(c);
 	applycolorrules(c);
+}
+
+static void
+term_curstyle_handler(Vt *term, const int style) {
+	Client *c = (Client *)vt_data_get(term);
+	if (style == -1 || style == 1) /* 1 or no parameter goes to default */
+		c->curstyle = CURSOR_STYLE;
+	else if (style > -1) /* otherwise pass it through */
+		c->curstyle = style;
+	setcurstyle(c);
 }
 
 static void
@@ -958,6 +983,8 @@ setup(void) {
 	nonl();
 	keypad(stdscr, TRUE);
 	mouse_setup();
+	if ((curstyleseq = tigetstr("Ss")) == NULL)
+		curstyleseq = "\E[%p1%d q";
 	raw();
 	vt_init();
 	vt_keytable_set(keytable, LENGTH(keytable));
@@ -1060,6 +1087,7 @@ create(const char *args[]) {
 		return;
 	c->tags = tagset[seltags];
 	c->id = ++cmdfifo.id;
+	c->curstyle = CURSOR_STYLE;
 	snprintf(buf, sizeof buf, "%d", c->id);
 
 	if (!(c->window = newwin(wah, waw, way, wax))) {
@@ -1095,6 +1123,7 @@ create(const char *args[]) {
 		free(cwd);
 	vt_data_set(c->term, c);
 	vt_title_handler_set(c->term, term_title_handler);
+	vt_curstyle_handler_set(c->term, term_curstyle_handler);
 	vt_urgent_handler_set(c->term, term_urgent_handler);
 	applycolorrules(c);
 	c->x = wax;

@@ -127,6 +127,8 @@ dvtm|dynamic virtual terminal manager,
 	smul=\E[4m,
 	tbc=\E[3g,
 	vpa=\E[%i%p1%dd,
+	Se=\E[0 q,
+	Ss=\E[%p1%d q,
 
 dvtm-256color|dynamic virtual terminal manager with 256 colors,
 	use=dvtm,
