@@ -10,36 +10,13 @@ DEBUG_CFLAGS = ${CFLAGS} -UNDEBUG -O0 -g -ggdb -Wall -Wextra -Wno-unused-paramet
 
 
 # Guess CURSESLIB and LIBS but prefer the user choices if possible
-NEWCURSES = "$(shell pkg-config --libs curses)"
-ifeq ($(.SHELLSTATUS),0)
-	CURSESLIB = $(NEWCURSES)
-endif
-
-NEWCURSES = "$(shell pkg-config --libs cursesw)"
-ifeq ($(.SHELLSTATUS),0)
-	CURSESLIB = $(NEWCURSES)
-endif
-
-NEWCURSES = "$(shell pkg-config --libs ncurses)"
-ifeq ($(.SHELLSTATUS),0)
-	CURSESLIB = $(NEWCURSES)
-endif
-
-NEWCURSES = "$(shell pkg-config --libs ncursesw)"
-ifeq ($(.SHELLSTATUS),0)
-	CURSESLIB = $(NEWCURSES)
-endif
-
-NEWCURSES = "$(shell pkg-config --libs $(CURSESLIB))"
-ifeq ($(.SHELLSTATUS),0)
-	CURSESLIB = $(NEWCURSES)
-endif
-
-ifeq ("$(shell basename $(shell command -v pkg-config))", "pkg-config")
+ifeq ("$(shell basename $(shell command -v pkg-config))","pkg-config")
+    pkgconfig = $(and $(findstring 0,$(and $(shell pkg-config --libs $(i)),$(.SHELLSTATUS))),$(i))
+    var := i # i or something
+    list := curses cursesw ncurses ncursesw
+    CURSESLIB = $(foreach $(var), $(list), $(pkgconfig))
     LIBS := $(shell pkg-config --libs $(CURSESLIB))
 endif
-
-
 
 all: dvtm dvtm-editor
 
