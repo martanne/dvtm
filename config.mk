@@ -11,10 +11,6 @@ CURSESLIB = ncursesw
 INCS = -I.
 LIBS = -lc -lutil -lncursesw
 
-ifeq ("$(shell basename $(shell command -v pkg-config))", "pkg-config")
-    LIBS := $(shell pkg-config --libs $(CURSESLIB))
-endif
-
 CPPFLAGS = -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -D_XOPEN_SOURCE_EXTENDED
 CFLAGS += -std=c99 ${INCS} -DNDEBUG ${CPPFLAGS}
 
