@@ -8,6 +8,16 @@ VERSION = $(shell git describe --always --dirty 2>/dev/null || echo "0.15-git")
 CFLAGS += -DVERSION=\"${VERSION}\"
 DEBUG_CFLAGS = ${CFLAGS} -UNDEBUG -O0 -g -ggdb -Wall -Wextra -Wno-unused-parameter
 
+
+# Guess CURSESLIB and LIBS but prefer the user choices if possible
+ifeq ("$(shell basename $(shell command -v pkg-config))","pkg-config")
+    pkgconfig = $(and $(findstring 0,$(and $(shell pkg-config --libs $(i)),$(.SHELLSTATUS))),$(i))
+    var := i # i or something
+    list := curses cursesw ncurses ncursesw
+    CURSESLIB = $(foreach $(var), $(list), $(pkgconfig))
+    LIBS := $(shell pkg-config --libs $(CURSESLIB))
+endif
+
 all: dvtm dvtm-editor
 
 config.h:
